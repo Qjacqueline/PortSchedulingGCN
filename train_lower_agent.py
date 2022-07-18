@@ -33,21 +33,15 @@ def get_args(**kwargs):
 
     parser.add_argument('--mission_num', type=int, default=cf.MISSION_NUM)
     parser.add_argument('--mission_num_each', type=int, default=cf.MISSION_NUM_ONE_QUAY_CRANE)
-    parser.add_argument('--m_max_num', type=int, default=10)
-    parser.add_argument('--dim_mission_fea', type=float, default=6)
-    parser.add_argument('--dim_mach_fea', type=int, default=cf.FEATURE_SIZE_MACHINE)
-    parser.add_argument('--dim_yard_fea', type=int, default=cf.FEATURE_SIZE_MACHINE + 2)
     parser.add_argument('--dim_action', type=int, default=cf.LOCK_STATION_NUM)
 
-    parser.add_argument('--hidden_size', type=int, default=32)
-    parser.add_argument('--n_layers', type=int, default=3)
     parser.add_argument('--device', type=str, default='cuda:0' if torch.cuda.is_available() else 'cpu')
-    parser.add_argument('--gamma', type=float, default=0.99)  # 0.9
+    parser.add_argument('--gamma', type=float, default=0.85)  # 0.9
     parser.add_argument('--epsilon', type=float, default=0.9)
     parser.add_argument('--lr', type=float, default=1e-5)
 
-    parser.add_argument('--batch_size', type=int, default=300)
-    parser.add_argument('--buffer_size', type=int, default=300000)
+    parser.add_argument('--batch_size', type=int, default=128)
+    parser.add_argument('--buffer_size', type=int, default=128000)
 
     parser.add_argument('--epoch_num', type=int, default=30)
     parser.add_argument('--collect_epoch_num', type=int, default=25)
@@ -65,11 +59,11 @@ if __name__ == '__main__':
     exp_dir = exp_dir(desc=f'{args.task}')
     rl_logger = SummaryWriter(exp_dir)
     rl_logger.add_text(tag='parameters', text_string=str(args))
-    rl_logger.add_text(tag='characteristic',
-                       text_string='New State')  # 'debug'
+    rl_logger.add_text(tag='characteristic', text_string='New State')  # 'debug'
 
     # env
-    train_solus = [read_input('train_1_'), read_input('train_2_'), read_input('train_3_'), read_input('train_4_')]
+    train_solus = [read_input('train_1_'), read_input('train_2_'), read_input('train_3_'), read_input('train_4_'),
+                   read_input('train_5_'), read_input('train_6_'), read_input('train_7_'), read_input('train_8_')]
     test_solus = [read_input('train_1_'), read_input('train_2_'), read_input('train_3_'), read_input('train_4_'),
                   read_input('train_5_'), read_input('train_6_'), read_input('train_7_'), read_input('train_8_'),
                   read_input('train_9_'), read_input('train_10_'), read_input('train_11_'), read_input('train_12_'),
@@ -98,14 +92,13 @@ if __name__ == '__main__':
     # ======================== Data ==========================
     data_buffer = LABuffer(buffer_size=args.buffer_size)
     collector = LACollector(train_solus=train_solus, test_solus=test_solus, data_buffer=data_buffer,
-                            mission_num=args.mission_num, m_max_num=args.m_max_num, agent=agent,
-                            save_path=args.save_path)
+                            mission_num=args.mission_num, agent=agent, save_path=args.save_path)
+    dl_train = DataLoader(dataset=data_buffer, batch_size=args.batch_size, shuffle=True)
 
     # =================== heuristic l_train ==================
     # collector.get_transition(
     #     read_json_from_file(cf.OUTPUT_SOLUTION_PATH + 'train_1_SA17139.76892920801.json'), test_solus[1])
-    # dl_train = DataLoader(dataset=data_buffer, batch_size=args.batch_size, collate_fn=la_collate_fn, num_workers=2,
-    #                       shuffle=True)
+    # dl_train = DataLoader(dataset=data_buffer, batch_size=args.batch_size, shuffle=True)
     # l_train(train_time=0, epoch_num=100, dl_train=dl_train, agent=agent, collector=collector,
     #         rl_logger=rl_logger)
     data_name = ['train_1_', 'train_2_', 'train_3_', 'train_4_']
@@ -114,10 +107,9 @@ if __name__ == '__main__':
     #
     # l_train(train_time=0, epoch_num=64, dl_train=dl_train, agent=agent, collector=collector,
     #         rl_logger=rl_logger)
+
     # ======================= collect =======================
-    # collector.collect_rl(10)
     collector.collect_rl(50)  # 100
-    dl_train = DataLoader(dataset=data_buffer, batch_size=args.batch_size, shuffle=True)
     for i in range(1, 30):
         logger.info("开始第" + str(i) + "训练")
         l_train(train_time=i + 1, epoch_num=args.epoch_num, dl_train=dl_train, agent=agent, collector=collector,

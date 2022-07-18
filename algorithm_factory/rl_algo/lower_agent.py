@@ -8,20 +8,20 @@
 """
 import os
 from abc import ABC, abstractmethod
-from typing import Callable, Dict, Any, List
+from typing import Callable, List
 
 import numpy as np
 import torch
 from tensorboardX import SummaryWriter
 from torch import nn
-from torch.utils.data import DataLoader
+from torch_geometric.loader import DataLoader
 from tqdm import tqdm
 
 import conf.configs as cf
 from algorithm_factory.algo_utils.data_buffer import LABuffer
-from algorithm_factory.algo_utils.machine_cal_methods import get_rnn_state_v2, get_state
-from algorithm_factory.algo_utils.net_models import Dueling_DQN, QNet
-from algorithm_factory.algo_utils.rl_methods import print_result, process_single_state
+from algorithm_factory.algo_utils.machine_cal_methods import get_state
+from algorithm_factory.algo_utils.net_models import QNet
+from algorithm_factory.algo_utils.rl_methods import print_result
 from algorithm_factory.algo_utils.rl_methods import soft_update
 from common.iter_solution import IterSolution
 from data_process.input_process import read_json_from_file
@@ -98,7 +98,7 @@ class DDQN(BaseAgent):
             action = torch.max(self.qf(state), 1)[1].item()
         return action
 
-    def update(self, batch: Dict[str, Any]):
+    def update(self, batch: List):
         s = batch[0].to(self.device)
         action = batch[1].unsqueeze(1).to(self.device)
         s_ = batch[2].to(self.device)
@@ -114,7 +114,7 @@ class DDQN(BaseAgent):
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
-        if self.train_count % 1 == 0:
+        if self.train_count % 10 == 0:
             self.sync_weight()
         self.train_count += 1
         return loss.detach(), q_eval.detach().mean(), q_eval_value.detach().mean()
@@ -126,7 +126,6 @@ class LACollector:
                  test_solus: List[IterSolution],
                  data_buffer: LABuffer,
                  mission_num: int,
-                 m_max_num: int,
                  agent: DDQN,
                  save_path: str):
         logger.info("创建data Collector")
@@ -134,14 +133,12 @@ class LACollector:
         self.test_solus = test_solus
         self.data_buffer = data_buffer
         self.mission_num = mission_num
-        self.m_max_num = m_max_num
         self.agent = agent
         self.best_result = [float('Inf') for _ in range(len(self.test_solus) + 1)]
         self.save_path = save_path
 
     def collect_rl(self, collect_epoch_num: int):
         for i in range(collect_epoch_num):
-            # logger.info("第" + str(i) + "轮收集RL交互数据")
             for solu in self.train_solus:
                 done = 0
                 pre_makespan = 0
@@ -160,7 +157,6 @@ class LACollector:
                         new_state = get_state(solu.iter_env, step + 1)
                         # reward = 0
                     pre_makespan = makespan
-
                     self.data_buffer.append(state, action, new_state, reward, done)
                     state = new_state
                     step += 1
@@ -208,7 +204,8 @@ class LACollector:
     def get_transition(self, assign_dict: dict, solu: IterSolution) -> None:
         done = 0
         pre_makespan = 0
-        state = get_rnn_state_v2(solu.iter_env, 0, self.m_max_num)
+        state = get_state(solu.iter_env, 0)
+        makespan = 0
         for step in range(self.mission_num):
             cur_mission = solu.iter_env.mission_list[step]
             action = assign_dict[cur_mission.idx]
@@ -220,7 +217,7 @@ class LACollector:
                 new_state = state
                 # reward = -makespan
             else:
-                new_state = get_rnn_state_v2(solu.iter_env, step + 1, self.m_max_num)
+                new_state = get_state(solu.iter_env, step + 1)
                 # reward = 0
 
             self.data_buffer.append(state, action, new_state, reward, done)
@@ -238,8 +235,7 @@ def l_train(train_time: int, epoch_num: int, dl_train: DataLoader, agent: DDQN, 
             total_q_eval = 0
             total_q_eval_value = 0
             for batch in pbar:
-                loss, q_eval, q_eval_value = agent.update(
-                    batch)  # s_mission, s_station, s_cross, s_yard, l_station, l_cross, l_yard
+                loss, q_eval, q_eval_value = agent.update(batch)
                 total_loss += loss.data
                 total_q_eval += q_eval.data
                 total_q_eval_value += q_eval_value.data
