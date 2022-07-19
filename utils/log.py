@@ -16,7 +16,7 @@ from conf import configs
 
 
 def exp_dir(desc: Optional[str] = None) -> str:
-    time_str = time.strftime('%m_%d_%H:%M:%S', time.localtime())
+    time_str = time.strftime('%m_%d_%H_%M', time.localtime())
     if desc:
         file_path = f'./runss/{desc}/{time_str}'
     else:

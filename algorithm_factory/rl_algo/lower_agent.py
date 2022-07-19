@@ -116,6 +116,8 @@ class DDQN(BaseAgent):
         self.optimizer.step()
         if self.train_count % 10 == 0:
             self.sync_weight()
+        if self.train_count % 1000 == 0:
+            self.gamma = self.gamma + 0.05
         self.train_count += 1
         return loss.detach(), q_eval.detach().mean(), q_eval_value.detach().mean()
 
@@ -184,9 +186,10 @@ class LACollector:
                     torch.save(self.agent.qf, self.save_path + '/eval_best.pkl')
                     torch.save(self.agent.qf_target, self.save_path + '/target_best.pkl')
                 solu.reset()
+            makespan_forall.append(sum(makespan_forall[0:len(self.train_solus)-1]))
             makespan_forall.append(sum(makespan_forall))
-            if sum(makespan_forall) < self.best_result[-1]:
-                self.best_result[-1] = sum(makespan_forall)
+            if makespan_forall[-1] < self.best_result[-1]:
+                self.best_result[-1] = makespan_forall[-1]
                 torch.save(self.agent.qf, self.save_path + '/eval_best_fixed.pkl')
                 torch.save(self.agent.qf_target, self.save_path + '/target_best_fixed.pkl')
         return makespan_forall
@@ -229,29 +232,31 @@ class LACollector:
 
 def l_train(train_time: int, epoch_num: int, dl_train: DataLoader, agent: DDQN, collector: LACollector,
             rl_logger: SummaryWriter) -> None:
-    for epoch in range(epoch_num):
-        with tqdm(dl_train, desc=f'epoch{epoch}', ncols=100) as pbar:
-            total_loss = 0
-            total_q_eval = 0
-            total_q_eval_value = 0
-            for batch in pbar:  # TODO 不需要所有都train 平均过10-100遍就够了
-                loss, q_eval, q_eval_value = agent.update(batch)
-                total_loss += loss.data
-                total_q_eval += q_eval.data
-                total_q_eval_value += q_eval_value.data
-            makespan = collector.eval()
-            rl_logger.add_scalar(tag=f'l_train/loss', scalar_value=total_loss / len(pbar),
-                                 global_step=epoch + train_time * epoch_num)
-            rl_logger.add_scalar(tag=f'l_train/q', scalar_value=total_q_eval / len(pbar),
-                                 global_step=epoch + train_time * epoch_num)
-            rl_logger.add_scalar(tag=f'l_train/q_all', scalar_value=total_q_eval_value / len(pbar),
-                                 global_step=epoch + train_time * epoch_num)
-            field_name = ['Epoch', 'loss']
-            value = [epoch, total_loss / len(pbar)]
-            for i in range(len(makespan)):
-                rl_logger.add_scalar(tag=f'l_train/makespan' + str(i + 1), scalar_value=makespan[i],
-                                     global_step=epoch + train_time * epoch_num)
-                field_name.append('makespan' + str(i + 1))
-                value.append(makespan[i])
-
-            print_result(field_name=field_name, value=value)
+    # for epoch in range(epoch_num):
+    # with tqdm(dl_train, desc=f'epoch{epoch}', ncols=100) as pbar:
+    total_loss = 0
+    total_q_eval = 0
+    total_q_eval_value = 0
+    # for batch in pbar:
+    batch = next(iter(dl_train))
+    loss, q_eval, q_eval_value = agent.update(batch)
+    total_loss += loss.data
+    total_q_eval += q_eval.data
+    total_q_eval_value += q_eval_value.data
+    rl_logger.add_scalar(tag=f'l_train/loss', scalar_value=total_loss,
+                         global_step=train_time)
+    rl_logger.add_scalar(tag=f'l_train/q', scalar_value=total_q_eval,
+                         global_step=train_time)
+    rl_logger.add_scalar(tag=f'l_train/q_all', scalar_value=total_q_eval_value,
+                         global_step=train_time)
+    if train_time % 20 == 0:
+        logger.info("开始第" + str(train_time) + "训练")
+        field_name = ['Epoch', 'loss']
+        value = [train_time, total_loss]
+        makespan = collector.eval()
+        for i in range(len(makespan)):
+            rl_logger.add_scalar(tag=f'l_train/makespan' + str(i + 1), scalar_value=makespan[i],
+                                 global_step=int(train_time / 20))
+            field_name.append('makespan' + str(i + 1))
+            value.append(makespan[i])
+        print_result(field_name=field_name, value=value)
