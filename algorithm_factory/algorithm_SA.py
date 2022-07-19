@@ -77,10 +77,10 @@ class SA(object):
                 best_makespan = tmp_solution.last_step_makespan
                 best_solution = tmp_solution
                 path = Cf.OUTPUT_SOLUTION_PATH + self.data_name
-                if tmp_solution.last_step_makespan < 17500:
-                    write_json_to_file(
-                        path + 'SA_' + str(Cf.MISSION_NUM_ONE_QUAY_CRANE) + "_" + str(best_makespan) + '.json',
-                        output_solution(best_solution.iter_env))
+                # if tmp_solution.last_step_makespan < 17500:
+                #     write_json_to_file(
+                #         path + 'SA_' + str(Cf.MISSION_NUM_ONE_QUAY_CRANE) + "_" + str(best_makespan) + '.json',
+                #         output_solution(best_solution.iter_env))
             # 根据温度判断是否选择这个解
             self.iter_solu = eval_solution(best_solution, tmp_solution, self.T0)
 

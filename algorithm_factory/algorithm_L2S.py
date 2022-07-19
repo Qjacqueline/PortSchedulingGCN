@@ -208,7 +208,7 @@ class L2S(object):
     def train_upper_level_agents(self):
         mission_attribute_list = derive_mission_attribute_list(self.train_envs)
         upper_agent = UA_V1()  # iter_mission_list, mission_attribute_list, deepcopy(self.train_envs)
-        upper_agent.l_train()
+        upper_agent.l_train(,
 
     def train_upper_agent_L2A(self):
         path, time_str = exp_file('UA_')

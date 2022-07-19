@@ -20,7 +20,7 @@ import conf.configs as cf
 from algorithm_factory.algo_utils.data_buffer import LABuffer
 from algorithm_factory.algo_utils.net_models import QNet
 from algorithm_factory.rl_algo.lower_agent import DDQN, LACollector, l_train
-from data_process.input_process import read_input
+from data_process.input_process import read_input, read_json_from_file
 from utils.log import exp_dir, Logger
 
 logger = Logger().get_logger()
@@ -91,30 +91,22 @@ if __name__ == '__main__':
 
     # ======================== Data ==========================
     data_buffer = LABuffer(buffer_size=args.buffer_size)
+    # dl_train = DataLoader(dataset=data_buffer, batch_size=args.batch_size, shuffle=True)
     collector = LACollector(train_solus=train_solus, test_solus=test_solus, data_buffer=data_buffer,
-                            mission_num=args.mission_num,agent=agent,
+                            batch_size=args.batch_size, mission_num=args.mission_num, agent=agent, rl_logger=rl_logger,
                             save_path=args.save_path)
 
     # =================== heuristic l_train ==================
     # collector.get_transition(
     #     read_json_from_file(cf.OUTPUT_SOLUTION_PATH + 'train_1_SA17139.76892920801.json'), test_solus[1])
-    # dl_train = DataLoader(dataset=data_buffer, batch_size=args.batch_size, shuffle=True)
-    # l_train(train_time=0, epoch_num=100, dl_train=dl_train, agent=agent, collector=collector,
-    #         rl_logger=rl_logger)
-    # data_name = ['train_1_', 'train_2_', 'train_3_', 'train_4_']
+    data_name = ['train_1_', 'train_2_', 'train_3_', 'train_4_', 'train_5_', 'train_6_', 'train_7_', 'train_8_']
     # data_name = ['train_2_']
-    # collector.collect_heuristics(data_name)
-    #
-    # l_train(train_time=0, epoch_num=64, dl_train=dl_train, agent=agent, collector=collector,
-    #         rl_logger=rl_logger)
+    collector.collect_heuristics(data_name)
 
     # ======================= collect =======================
     # collector.collect_rl(10)
-    collector.collect_rl(10)  # 100
-    dl_train = DataLoader(dataset=data_buffer, batch_size=args.batch_size, shuffle=True)
     for i in range(1, 2460):
-        l_train(train_time=i + 1, epoch_num=args.epoch_num, dl_train=dl_train, agent=agent, collector=collector,
-                rl_logger=rl_logger)
+        # l_train(train_time=i + 1, dl_train=dl_train, agent=agent, collector=collector, rl_logger=rl_logger)
         collector.collect_rl(1)  # 200
 
     # ======================== eval =========================

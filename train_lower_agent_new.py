@@ -108,8 +108,7 @@ if __name__ == '__main__':
     dl_train = DataLoader(dataset=data_buffer, batch_size=args.batch_size, shuffle=True)
     for i in range(1, 30):
         logger.info("开始第" + str(i) + "训练")
-        l_train(train_time=i + 1, epoch_num=args.epoch_num, dl_train=dl_train, agent=agent, collector=collector,
-                rl_logger=rl_logger)
+        l_train(train_time=i + 1, dl_train=dl_train, agent=agent, collector=collector, rl_logger=rl_logger)
         collector.collect_rl(100)  # 200
 
     # ======================== eval =========================
