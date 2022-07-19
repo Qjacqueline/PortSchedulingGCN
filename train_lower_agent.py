@@ -33,21 +33,15 @@ def get_args(**kwargs):
 
     parser.add_argument('--mission_num', type=int, default=cf.MISSION_NUM)
     parser.add_argument('--mission_num_each', type=int, default=cf.MISSION_NUM_ONE_QUAY_CRANE)
-    parser.add_argument('--m_max_num', type=int, default=10)
-    parser.add_argument('--dim_mission_fea', type=float, default=6)
-    parser.add_argument('--dim_mach_fea', type=int, default=cf.FEATURE_SIZE_MACHINE)
-    parser.add_argument('--dim_yard_fea', type=int, default=cf.FEATURE_SIZE_MACHINE + 2)
     parser.add_argument('--dim_action', type=int, default=cf.LOCK_STATION_NUM)
 
-    parser.add_argument('--hidden_size', type=int, default=32)
-    parser.add_argument('--n_layers', type=int, default=3)
     parser.add_argument('--device', type=str, default='cuda:0' if torch.cuda.is_available() else 'cpu')
-    parser.add_argument('--gamma', type=float, default=0.1)  # 0.9
+    parser.add_argument('--gamma', type=float, default=0.85)  # 0.9
     parser.add_argument('--epsilon', type=float, default=0.9)
     parser.add_argument('--lr', type=float, default=1e-5)
 
-    parser.add_argument('--batch_size', type=int, default=300)
-    parser.add_argument('--buffer_size', type=int, default=300000)
+    parser.add_argument('--batch_size', type=int, default=128)
+    parser.add_argument('--buffer_size', type=int, default=128000)
 
     parser.add_argument('--epoch_num', type=int, default=30)
     parser.add_argument('--collect_epoch_num', type=int, default=25)
@@ -69,7 +63,8 @@ if __name__ == '__main__':
                        text_string='New State')  # 'debug'
 
     # env
-    train_solus = [read_input('train_1_'), read_input('train_2_'), read_input('train_3_'), read_input('train_4_')]
+    train_solus = [read_input('train_1_'), read_input('train_2_'), read_input('train_3_'), read_input('train_4_'),
+                   read_input('train_5_'), read_input('train_6_'), read_input('train_7_'), read_input('train_8_')]
     test_solus = [read_input('train_1_'), read_input('train_2_'), read_input('train_3_'), read_input('train_4_'),
                   read_input('train_5_'), read_input('train_6_'), read_input('train_7_'), read_input('train_8_'),
                   read_input('train_9_'), read_input('train_10_'), read_input('train_11_'), read_input('train_12_'),

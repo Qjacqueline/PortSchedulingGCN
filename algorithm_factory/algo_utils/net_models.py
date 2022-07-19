@@ -6,14 +6,80 @@
 @Author  ：JacQ
 @Date    ：2022/3/30 9:41
 """
-from typing import Sequence, List
+from typing import Sequence
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Categorical
-from torch.nn.utils.rnn import pad_packed_sequence, PackedSequence
 from torch_geometric.nn import GCNConv
+
+
+class QNet(nn.Module):
+    def __init__(self, device: torch.device, hidden=128):
+        super(QNet, self).__init__()
+        self.device = device
+        self.conv1 = GCNConv(3, hidden)
+        self.conv2 = GCNConv(hidden, hidden)
+        self.linear = FlattenMlp(22 * hidden, 4, (hidden, hidden))
+
+    def forward(self, state) -> torch.Tensor:
+        x, edge_index, edge_weight = state.x, state.edge_index, state.edge_weight
+        x = self.conv1(x, edge_index, edge_weight)  # 传入卷积层
+        x = F.leaky_relu_(x)  # 激活函数
+        x = F.dropout(x, training=self.training)  # dropout层,防止过拟合
+        x = self.conv2(x, edge_index, edge_weight)  # 第二层卷积层
+        x = self.linear(x.reshape(int(len(x) / 22), -1))  # fixme
+        return F.log_softmax(x, dim=1)  # 将经过两层卷积得到的特征输入log_softmax函数得到概率分布
+
+
+# class Dueling_DQN(nn.Module):
+#     def __init__(self, m_max_num: int, dim_mission_fea: int, dim_mach_fea: int, dim_yard_fea: int, hidden_size: int,
+#                  n_layers: int, device: torch.device):
+#         super(Dueling_DQN, self).__init__()
+#         self.device = device
+#         self.m_max_num = m_max_num
+#         self.hidden_size = hidden_size
+#         self.n_layers = n_layers
+#         self.output_dim = 8
+#         model = nn.ModuleDict()
+#         model['rnn_station'] = nn.GRU(dim_mach_fea, hidden_size, n_layers, batch_first=True)
+#         model['emb_station'] = FlattenMlp(input_dim=hidden_size, hidden_sizes=(64,), output_dim=self.output_dim)
+#         model['rnn_cross'] = nn.GRU(dim_mach_fea, hidden_size, n_layers, batch_first=True)
+#         model['emb_cross'] = FlattenMlp(input_dim=hidden_size, hidden_sizes=(64,), output_dim=self.output_dim)
+#         model['rnn_yard'] = nn.GRU(dim_yard_fea, hidden_size, n_layers, batch_first=True)
+#         model['emb_yard'] = FlattenMlp(input_dim=hidden_size, hidden_sizes=(64,), output_dim=self.output_dim)
+#         model['adv_mlp'] = FlattenMlp(input_dim=dim_mission_fea + 3 * 8, hidden_sizes=(64,), output_dim=1)
+#         model['val_mlp'] = FlattenMlp(input_dim=dim_mission_fea + 2 * 8, hidden_sizes=(64,), output_dim=1)
+#
+#         self.model = model.to(self.device)
+#
+#     def forward(self, s_mission, s_station, s_cross, s_yard) -> torch.Tensor:
+#         cross_emb = self.forward_pack_sequence(s_cross, 'cross')
+#         yard_emb = self.forward_pack_sequence(s_yard, 'yard')
+#         ls_adv: List[torch.Tensor] = []
+#         for station in s_station:
+#             station_emb = self.forward_pack_sequence(station, 'station')
+#             station_out = self.model['adv_mlp'](
+#                 torch.cat((s_mission / 1000.0, station_emb, cross_emb, yard_emb), dim=1))
+#             ls_adv.append(station_out)
+#         adv = torch.cat(ls_adv, 1)
+#         val = self.model['val_mlp'](torch.cat((s_mission / 1000.0, cross_emb, yard_emb), dim=1)).repeat(1,
+#                                                                                                         adv.shape[
+#                                                                                                             1])
+#         x = adv + val - adv.mean(1, keepdim=True)
+#         return x
+#
+#     def forward_pack_sequence(self, m_p: PackedSequence, m_n: str) -> torch.tensor:
+#         m_p, _ = self.model['rnn_' + m_n](m_p.to(self.device))
+#         m_s, m_l = pad_packed_sequence(m_p, batch_first=True, total_length=self.m_max_num + 1)
+#         m_s = self.model['emb_' + m_n](m_s).squeeze()
+#         if m_s.dim() != 3:
+#             m_s = m_s.unsqueeze(0)
+#         index = m_l.to(self.device) - torch.ones(len(m_l), dtype=torch.int64, device=self.device)
+#         index = index.view(-1, 1, 1).repeat(1, 1, self.output_dim)
+#         m_emb = torch.gather(m_s, dim=1, index=index)
+#         return m_emb.reshape(-1, self.output_dim)
 
 
 class Actor(nn.Module):
@@ -73,160 +139,50 @@ class Critic(nn.Module):
         return x
 
 
-class QNet(nn.Module):
+class ActorNew(nn.Module):
     def __init__(self, device: torch.device, hidden=128):
-        super(QNet, self).__init__()
+        super(ActorNew, self).__init__()
         self.device = device
-        self.conv1 = GCNConv(3, hidden)
-        self.conv2 = GCNConv(hidden, hidden)
-        self.linear = FlattenMlp(22 * hidden, 4, (hidden, hidden))
+        model = nn.ModuleDict()
+        model['conv1'] = GCNConv(3, hidden)
+        model['conv2'] = GCNConv(hidden, hidden)
+        model['linear'] = FlattenMlp(22 * hidden, 1, (hidden, hidden))
+        self.model = model.to(self.device)
 
     def forward(self, state) -> torch.Tensor:
         x, edge_index, edge_weight = state.x, state.edge_index, state.edge_weight
-        x = self.conv1(x, edge_index, edge_weight)  # 传入卷积层
+        x = self.model['conv1'](x, edge_index, edge_weight)  # 传入卷积层
         x = F.leaky_relu_(x)  # 激活函数
         x = F.dropout(x, training=self.training)  # dropout层,防止过拟合
-        x = self.conv2(x, edge_index, edge_weight)  # 第二层卷积层
-        x = self.linear(x.reshape(int(len(x)/22), -1))  # fixme
-        return F.log_softmax(x, dim=1)  # 将经过两层卷积得到的特征输入log_softmax函数得到概率分布
-
-
-class Dueling_DQN(nn.Module):
-    def __init__(self, m_max_num: int, dim_mission_fea: int, dim_mach_fea: int, dim_yard_fea: int, hidden_size: int,
-                 n_layers: int, device: torch.device):
-        super(Dueling_DQN, self).__init__()
-        self.device = device
-        self.m_max_num = m_max_num
-        self.hidden_size = hidden_size
-        self.n_layers = n_layers
-        self.output_dim = 8
-        model = nn.ModuleDict()
-        model['rnn_station'] = nn.GRU(dim_mach_fea, hidden_size, n_layers, batch_first=True)
-        model['emb_station'] = FlattenMlp(input_dim=hidden_size, hidden_sizes=(64,), output_dim=self.output_dim)
-        model['rnn_cross'] = nn.GRU(dim_mach_fea, hidden_size, n_layers, batch_first=True)
-        model['emb_cross'] = FlattenMlp(input_dim=hidden_size, hidden_sizes=(64,), output_dim=self.output_dim)
-        model['rnn_yard'] = nn.GRU(dim_yard_fea, hidden_size, n_layers, batch_first=True)
-        model['emb_yard'] = FlattenMlp(input_dim=hidden_size, hidden_sizes=(64,), output_dim=self.output_dim)
-        model['adv_mlp'] = FlattenMlp(input_dim=dim_mission_fea + 3 * 8, hidden_sizes=(64,), output_dim=1)
-        model['val_mlp'] = FlattenMlp(input_dim=dim_mission_fea + 2 * 8, hidden_sizes=(64,), output_dim=1)
-
-        self.model = model.to(self.device)
-
-    def forward(self, s_mission, s_station, s_cross, s_yard) -> torch.Tensor:
-        cross_emb = self.forward_pack_sequence(s_cross, 'cross')
-        yard_emb = self.forward_pack_sequence(s_yard, 'yard')
-        ls_adv: List[torch.Tensor] = []
-        for station in s_station:
-            station_emb = self.forward_pack_sequence(station, 'station')
-            station_out = self.model['adv_mlp'](
-                torch.cat((s_mission / 1000.0, station_emb, cross_emb, yard_emb), dim=1))
-            ls_adv.append(station_out)
-        adv = torch.cat(ls_adv, 1)
-        val = self.model['val_mlp'](torch.cat((s_mission / 1000.0, cross_emb, yard_emb), dim=1)).repeat(1,
-                                                                                                        adv.shape[
-                                                                                                            1])
-        x = adv + val - adv.mean(1, keepdim=True)
-        return x
-
-    def forward_pack_sequence(self, m_p: PackedSequence, m_n: str) -> torch.tensor:
-        m_p, _ = self.model['rnn_' + m_n](m_p.to(self.device))
-        m_s, m_l = pad_packed_sequence(m_p, batch_first=True, total_length=self.m_max_num + 1)
-        m_s = self.model['emb_' + m_n](m_s).squeeze()
-        if m_s.dim() != 3:
-            m_s = m_s.unsqueeze(0)
-        index = m_l.to(self.device) - torch.ones(len(m_l), dtype=torch.int64, device=self.device)
-        index = index.view(-1, 1, 1).repeat(1, 1, self.output_dim)
-        m_emb = torch.gather(m_s, dim=1, index=index)
-        return m_emb.reshape(-1, self.output_dim)
-
-
-class ActorNew(nn.Module):
-    def __init__(self, m_max_num: int, dim_mach_fea: int, dim_yard_fea: int, hidden_size: int,
-                 n_layers: int, device: torch.device):
-        super(ActorNew, self).__init__()
-        self.device = device
-        self.m_max_num = m_max_num
-        self.hidden_size = hidden_size
-        self.n_layers = n_layers
-        model = nn.ModuleDict()
-        model['rnn_station'] = nn.GRU(dim_mach_fea, hidden_size, n_layers, batch_first=True)
-        model['emb_station'] = FlattenMlp(input_dim=hidden_size, output_dim=1)
-        model['comb_station'] = FlattenMlp(input_dim=4, output_dim=1)
-        model['rnn_cross'] = nn.GRU(dim_mach_fea, hidden_size, n_layers, batch_first=True)
-        model['emb_cross'] = FlattenMlp(input_dim=hidden_size, output_dim=1)
-        model['rnn_yard'] = nn.GRU(dim_yard_fea, hidden_size, n_layers, batch_first=True)
-        model['emb_yard'] = FlattenMlp(input_dim=hidden_size, output_dim=1)
-        model['mlp'] = FlattenMlp(input_dim=9, output_dim=1)
-
-        self.model = model.to(self.device)
-
-    def forward(self, s_mission, s_station, s_cross, s_yard) -> torch.Tensor:
-        if s_mission.dim() == 1:
-            s_mission = s_mission.unsqueeze(0)
-        cross_emb = self.forward_pack_sequence(s_cross, 'cross')
-        yard_emb = self.forward_pack_sequence(s_yard, 'yard')
-        ls: List[torch.Tensor] = []
-        for station in s_station:
-            station_emb = self.forward_pack_sequence(station, 'station')
-            ls.append(station_emb)
-        x = self.model['comb_station'](torch.cat(ls, 1))
-        x = F.leaky_relu_(self.model['mlp'](torch.cat((s_mission, x, cross_emb, yard_emb), dim=1)))
-        x = torch.sigmoid(x) * (240.0 - 60.0) + torch.tensor(60.0)
-        return x
-
-    def forward_pack_sequence(self, m_p: PackedSequence, m_n: str) -> torch.tensor:
-        m_p, _ = self.model['rnn_' + m_n](m_p.to(self.device))
-        m_s, m_l = pad_packed_sequence(m_p, batch_first=True, total_length=self.m_max_num + 1)
-        m_s = self.model['emb_' + m_n](m_s).squeeze()
-        if m_s.dim() == 1:
-            m_s = m_s.unsqueeze(0)
-        index = m_l.to(self.device) - torch.ones(len(m_l), dtype=torch.int64, device=self.device)
-        m_emb = torch.gather(m_s, dim=1, index=index.unsqueeze(1))
-        return m_emb
+        x = self.model['conv2'](x, edge_index, edge_weight)  # 第二层卷积层
+        x = self.model['linear'](x.reshape(int(len(x) / 22), -1))
+        y = torch.sigmoid(x) * (240.0 - 60.0) + torch.tensor(60.0)  # fixme
+        return y
 
 
 class CriticNew(nn.Module):
-    def __init__(self, m_max_num: int, dim_mach_fea: int, dim_yard_fea: int, hidden_size: int,
-                 n_layers: int, device: torch.device):
+    def __init__(self, device: torch.device, hidden=128):
         super(CriticNew, self).__init__()
         self.device = device
-        self.m_max_num = m_max_num
-        self.hidden_size = hidden_size
-        self.n_layers = n_layers
         model = nn.ModuleDict()
-        model['rnn_station'] = nn.GRU(dim_mach_fea, hidden_size, n_layers, batch_first=True)
-        model['emb_station'] = FlattenMlp(input_dim=hidden_size, output_dim=1)
-        model['comb_station'] = FlattenMlp(input_dim=4, output_dim=1)
-        model['rnn_cross'] = nn.GRU(dim_mach_fea, hidden_size, n_layers, batch_first=True)
-        model['emb_cross'] = FlattenMlp(input_dim=hidden_size, output_dim=1)
-        model['rnn_yard'] = nn.GRU(dim_yard_fea, hidden_size, n_layers, batch_first=True)
-        model['emb_yard'] = FlattenMlp(input_dim=hidden_size, output_dim=1)
-        model['mlp'] = FlattenMlp(input_dim=10, output_dim=1)
+        model['conv1'] = GCNConv(3, hidden)
+        model['conv2'] = GCNConv(hidden, hidden)
+        model['linear1'] = FlattenMlp(22 * hidden, 4, (hidden, hidden))
+        model['linear2'] = FlattenMlp(4 + 2, 1, (hidden, hidden))
+        self.model = model.to(self.device)
 
         self.model = model.to(self.device)
 
-    def forward(self, s_mission, s_station, s_cross, s_yard, action) -> torch.Tensor:
-        if s_mission.dim() == 1:
-            s_mission = s_mission.unsqueeze(0)
-        cross_emb = self.forward_pack_sequence(s_cross, 'cross')
-        yard_emb = self.forward_pack_sequence(s_yard, 'yard')
-        ls: List[torch.Tensor] = []
-        for station in s_station:
-            station_emb = self.forward_pack_sequence(station, 'station')
-            ls.append(station_emb)
-        x = self.model['comb_station'](torch.cat(ls, 1))
-        x = self.model['mlp'](torch.cat((s_mission, x, cross_emb, yard_emb, action), dim=1))
+    def forward(self, state, u_act, l_act) -> torch.Tensor:
+        x, edge_index, edge_weight = state.x, state.edge_index, state.edge_weight
+        x = self.model['conv1'](x, edge_index, edge_weight)  # 传入卷积层
+        x = F.leaky_relu_(x)  # 激活函数
+        x = F.dropout(x, training=self.training)  # dropout层,防止过拟合
+        x = self.model['conv2'](x, edge_index, edge_weight)  # 第二层卷积层
+        x = self.model['linear1'](x.reshape(int(len(x) / 22), -1))  # fixme
+        x = F.leaky_relu_(x)  # 激活函数
+        x = self.model['linear2'](torch.cat((x, u_act, l_act), dim=1))  # fixme
         return x
-
-    def forward_pack_sequence(self, m_p: PackedSequence, m_n: str) -> torch.tensor:
-        m_p, _ = self.model['rnn_' + m_n](m_p.to(self.device))
-        m_s, m_l = pad_packed_sequence(m_p, batch_first=True, total_length=self.m_max_num + 1)
-        m_s = self.model['emb_' + m_n](m_s).squeeze()
-        if m_s.dim() == 1:
-            m_s = m_s.unsqueeze(0)
-        index = m_l.to(self.device) - torch.ones(len(m_l), dtype=torch.int64, device=self.device)
-        m_emb = torch.gather(m_s, dim=1, index=index.unsqueeze(1))
-        return m_emb
 
 
 class MLP(nn.Module):

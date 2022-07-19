@@ -15,7 +15,7 @@ import conf.configs as cf
 from algorithm_factory.algo_utils import sort_missions
 from algorithm_factory.algo_utils.machine_cal_methods import del_station_afterwards, del_machine, process_insert, \
     crossover_process_by_order, yard_crane_process_by_order, \
-    process_init_solution_for_l2i, quay_crane_process_by_order, process_init_solution_for_l2a
+    process_init_solution_for_l2i,process_init_solution_for_l2a
 from algorithm_factory.algo_utils.mission_cal_methods import derive_mission_attribute_list
 from algorithm_factory.algo_utils.operators import inter_relocate_latest_station_longest_mission_to_earliest_machine, \
     inter_swap_latest_station_random_mission_earliest_machine, \
