@@ -1130,6 +1130,7 @@ def get_yard_crane_state(iter_solution: PortEnv, cur_time: float, cur_mission: M
 
         if yard_crane.idx[2:4] == cur_mission.yard_block_loc[0]:
             temp_cur_time = cur_time + cur_mission.transfer_time_c2y
+
             yard_crane_attr[2] = abs(
                 yard_crane.location[0] - cur_mission.yard_block_loc[1]) * cf.SLOT_LENGTH / cf.YARDCRANE_SPEED_X + abs(
                 yard_crane.location[1] - cur_mission.yard_block_loc[2]) * cf.SLOT_WIDTH / cf.YARDCRANE_SPEED_Y
@@ -1145,6 +1146,8 @@ def get_yard_crane_state(iter_solution: PortEnv, cur_time: float, cur_mission: M
 
         node_attr_list.append(yard_crane_attr)
     return node_attr_list
+
+# def find_nearest_mission_yard_crane(cur_time: float):
 
 
 def get_state(iter_solution: PortEnv, step_number: int, cur_mission: Mission = None):

@@ -20,7 +20,7 @@ import conf.configs as cf
 from algorithm_factory.algo_utils.data_buffer import UANewBuffer
 from algorithm_factory.algo_utils.net_models import QNet, ActorNew, CriticNew
 from algorithm_factory.rl_algo.lower_agent import DDQN
-from algorithm_factory.rl_algo.upper_agent import ACNew, UANewCollector, h_new_train
+from algorithm_factory.rl_algo.upper_agent import ACUpper, UANewCollector, h_new_train
 from data_process.input_process import read_input
 from utils.log import exp_dir, Logger
 
@@ -98,12 +98,12 @@ if __name__ == '__main__':
     random.seed(args.seed)
 
     # ========================= Policy ======================
-    u_agent = ACNew(actor=ActorNew(args.device),
-                    critic=CriticNew(args.device),
-                    actor_lr=args.actor_lr,
-                    critic_lr=args.critic_lr,
-                    gamma=args.u_gamma,
-                    device=args.device)
+    u_agent = ACUpper(actor=ActorNew(args.device),
+                      critic=CriticNew(args.device),
+                      actor_lr=args.actor_lr,
+                      critic_lr=args.critic_lr,
+                      gamma=args.u_gamma,
+                      device=args.device)
     l_agent = DDQN(
         eval_net=QNet(device=args.device),
         target_net=QNet(device=args.device),
@@ -137,7 +137,7 @@ if __name__ == '__main__':
 
     # ======================== collect and train (upper lower combine) =========================
     for i in range(100):
-        u_collector.collect_rl(10)
+        u_collector.collect_rl(1)
         logger.info("开始第" + str(i) + "训练")
         h_new_train(train_time=i + 1, epoch_num=args.epoch_num, u_dl_train=u_dl_train, u_agent=u_agent, l_agent=l_agent,
                     u_collector=u_collector, rl_logger=rl_logger)

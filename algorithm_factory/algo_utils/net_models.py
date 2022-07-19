@@ -156,7 +156,7 @@ class ActorNew(nn.Module):
         x = F.dropout(x, training=self.training)  # dropout层,防止过拟合
         x = self.model['conv2'](x, edge_index, edge_weight)  # 第二层卷积层
         x = self.model['linear'](x.reshape(int(len(x) / 22), -1))
-        y = torch.sigmoid(x) * (240.0 - 60.0) + torch.tensor(60.0)  # fixme
+        y = torch.tanh(x) * 90.0 + torch.tensor(150.0)  # fixme
         return y
 
 

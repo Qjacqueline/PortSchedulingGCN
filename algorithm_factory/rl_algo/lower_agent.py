@@ -234,7 +234,7 @@ def l_train(train_time: int, epoch_num: int, dl_train: DataLoader, agent: DDQN, 
             total_loss = 0
             total_q_eval = 0
             total_q_eval_value = 0
-            for batch in pbar:
+            for batch in pbar:  # TODO 不需要所有都train 平均过10-100遍就够了
                 loss, q_eval, q_eval_value = agent.update(batch)
                 total_loss += loss.data
                 total_q_eval += q_eval.data

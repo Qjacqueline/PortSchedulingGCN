@@ -53,7 +53,7 @@ class BaseAgent(ABC, nn.Module):
         soft_update(self.target_net, self.eval_net, self.soft_target_tau)
 
 
-class ACNew(BaseAgent):
+class ACUpper(BaseAgent):
     def __init__(self,
                  actor: ActorNew,
                  critic: CriticNew,
@@ -63,7 +63,7 @@ class ACNew(BaseAgent):
                  device: torch.device,
                  loss_fn: Callable = nn.MSELoss(),
                  ) -> None:
-        super(ACNew, self).__init__()
+        super(ACUpper, self).__init__()
         logger.info("创建DDPG u_agent")
         self.actor = actor.to(device)
         self.critic = critic.to(device)
@@ -128,7 +128,7 @@ class UANewCollector:
                  m_max_num: int,
                  each_quay_m_num: int,
                  data_buffer: UANewBuffer,
-                 u_agent: ACNew,
+                 u_agent: ACUpper,
                  l_agent: DDQN,
                  save_path: str):
         logger.info("创建data Collector")
@@ -233,7 +233,7 @@ class UANewCollector:
         mission.release_time = adjust_time
 
 
-def u_train(epoch_num: int, dl_train: DataLoader, agent: ACNew, collector: UANewCollector,
+def u_train(epoch_num: int, dl_train: DataLoader, agent: ACUpper, collector: UANewCollector,
             rl_logger: SummaryWriter) -> None:
     for epoch in range(epoch_num):
         with tqdm(dl_train, desc=f'epoch{epoch}', ncols=100) as pbar:
@@ -259,8 +259,9 @@ def u_train(epoch_num: int, dl_train: DataLoader, agent: ACNew, collector: UANew
                        makespan[2], makespan[3], makespan[4]])
 
 
-def h_new_train(train_time: int, epoch_num: int, u_dl_train: DataLoader, u_agent: ACNew, l_agent: DDQN,
+def h_new_train(train_time: int, epoch_num: int, u_dl_train: DataLoader, u_agent: ACUpper, l_agent: DDQN,
                 u_collector: UANewCollector, rl_logger: SummaryWriter) -> None:
+    i = 0
     for epoch in range(epoch_num):
         with tqdm(u_dl_train, desc=f'epoch{epoch}', ncols=100) as pbar:
             total_policy_loss = 0
@@ -269,14 +270,15 @@ def h_new_train(train_time: int, epoch_num: int, u_dl_train: DataLoader, u_agent
             total_q_eval = 0
             total_q_eval_value = 0
             for batch in pbar:
-                policy_loss, vf_loss = u_agent.update(batch)
-                total_policy_loss += policy_loss.data
-                total_vf_loss += vf_loss.data
+                if i % 2 == 0:  # FixMe
+                    policy_loss, vf_loss = u_agent.update(batch)  # TODO upper
+                    total_policy_loss += policy_loss.data
+                    total_vf_loss += vf_loss.data
                 loss, q_eval, q_eval_value = l_agent.update(batch)
                 total_loss += loss.data
                 total_q_eval += q_eval.data
                 total_q_eval_value += q_eval_value.data
-
+                i = i + 1
             makespan = u_collector.eval()
             rl_logger.add_scalar(tag=f'u_train/policy_loss', scalar_value=total_policy_loss / len(pbar),
                                  global_step=epoch + train_time * epoch_num)

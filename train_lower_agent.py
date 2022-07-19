@@ -43,7 +43,7 @@ def get_args(**kwargs):
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--buffer_size', type=int, default=128000)
 
-    parser.add_argument('--epoch_num', type=int, default=30)
+    parser.add_argument('--epoch_num', type=int, default=1)
     parser.add_argument('--collect_epoch_num', type=int, default=25)
 
     parser.add_argument('-save_path', type=str, default=cf.MODEL_PATH)
@@ -93,7 +93,6 @@ if __name__ == '__main__':
     data_buffer = LABuffer(buffer_size=args.buffer_size)
     collector = LACollector(train_solus=train_solus, test_solus=test_solus, data_buffer=data_buffer,
                             mission_num=args.mission_num, agent=agent, save_path=args.save_path)
-    dl_train = DataLoader(dataset=data_buffer, batch_size=args.batch_size, shuffle=True)
 
     # =================== heuristic l_train ==================
     # collector.get_transition(
@@ -110,11 +109,12 @@ if __name__ == '__main__':
 
     # ======================= collect =======================
     collector.collect_rl(50)  # 100
+    dl_train = DataLoader(dataset=data_buffer, batch_size=args.batch_size, shuffle=True)
     for i in range(1, 30):
         logger.info("开始第" + str(i) + "训练")
         l_train(train_time=i + 1, epoch_num=args.epoch_num, dl_train=dl_train, agent=agent, collector=collector,
                 rl_logger=rl_logger)
-        collector.collect_rl(100)  # 200
+        collector.collect_rl(1)
 
     # ======================== eval =========================
     agent.qf = torch.load(args.save_path + '/eval_best_fixed.pkl')
