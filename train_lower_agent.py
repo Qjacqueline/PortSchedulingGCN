@@ -42,7 +42,7 @@ def get_args(**kwargs):
     parser.add_argument('--hidden_size', type=int, default=32)
     parser.add_argument('--n_layers', type=int, default=3)
     parser.add_argument('--device', type=str, default='cuda:0' if torch.cuda.is_available() else 'cpu')
-    parser.add_argument('--gamma', type=float, default=0.99)  # 0.9
+    parser.add_argument('--gamma', type=float, default=0.1)  # 0.9
     parser.add_argument('--epsilon', type=float, default=0.9)
     parser.add_argument('--lr', type=float, default=1e-5)
 

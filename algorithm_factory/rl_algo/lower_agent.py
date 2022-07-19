@@ -114,8 +114,10 @@ class DDQN(BaseAgent):
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
-        if self.train_count % 1 == 0:
+        if self.train_count % 10 == 0:
             self.sync_weight()
+        if self.train_count % 1000 == 0:
+            self.gamma = self.gamma + 0.05
         self.train_count += 1
         return loss.detach(), q_eval.detach().mean(), q_eval_value.detach().mean()
 
