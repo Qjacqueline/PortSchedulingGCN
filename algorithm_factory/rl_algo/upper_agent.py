@@ -170,44 +170,36 @@ class UANewCollector:
 
                 state = new_state
             solu.reset()
-        self.train(True)
+        self.train()
 
-    def train(self, train_upper_flag=False):
+    def train(self):
         total_policy_loss = 0
         total_vf_loss = 0
         total_loss = 0
         total_q_eval = 0
         total_q_eval_value = 0
-        batch_num = 0
-        if train_upper_flag:
-            for _, batch in enumerate(self.u_dl_train):
-                # train upper
-                policy_loss, vf_loss = self.u_agent.update(batch)  # TODO upper
-                total_policy_loss += policy_loss.data
-                total_vf_loss += vf_loss.data
-                # train lower
-                loss, q_eval, q_eval_value = self.l_agent.update(batch)
-                total_loss += loss.data
-                total_q_eval += q_eval.data
-                total_q_eval_value += q_eval_value.data
-                batch_num += 1
-        else:
-            batch = next(iter(self.u_dl_train))
+        train_batch_num = 0
+        # train upper
+        batch = next(iter(self.u_dl_train))
+        policy_loss, vf_loss = self.u_agent.update(batch)  # TODO upper
+        total_policy_loss += policy_loss.data
+        total_vf_loss += vf_loss.data
+        for i in range(3):
             # train lower
             loss, q_eval, q_eval_value = self.l_agent.update(batch)
             total_loss += loss.data
             total_q_eval += q_eval.data
             total_q_eval_value += q_eval_value.data
-            batch_num += 1
-        self.rl_logger.add_scalar(tag=f'u_train/policy_loss', scalar_value=total_policy_loss / batch_num,
+            train_batch_num += 1
+        self.rl_logger.add_scalar(tag=f'u_train/policy_loss', scalar_value=total_policy_loss,
                                   global_step=self.train_time)
-        self.rl_logger.add_scalar(tag=f'u_train/vf_loss', scalar_value=total_vf_loss / batch_num,
+        self.rl_logger.add_scalar(tag=f'u_train/vf_loss', scalar_value=total_vf_loss,
                                   global_step=self.train_time)
-        self.rl_logger.add_scalar(tag=f'u_train/q_loss', scalar_value=total_loss / batch_num,
+        self.rl_logger.add_scalar(tag=f'u_train/q_loss', scalar_value=total_loss / train_batch_num,
                                   global_step=self.train_time)
-        self.rl_logger.add_scalar(tag=f'u_train/q', scalar_value=total_q_eval / batch_num,
+        self.rl_logger.add_scalar(tag=f'u_train/q', scalar_value=total_q_eval / train_batch_num,
                                   global_step=self.train_time)
-        self.rl_logger.add_scalar(tag=f'u_train/q_all', scalar_value=total_q_eval_value / batch_num,
+        self.rl_logger.add_scalar(tag=f'u_train/q_all', scalar_value=total_q_eval_value / train_batch_num,
                                   global_step=self.train_time)
         # 每20次eval一次
         if self.train_time % 20 == 0:

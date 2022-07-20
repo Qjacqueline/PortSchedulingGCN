@@ -19,7 +19,7 @@ import conf.configs as cf
 from algorithm_factory.algo_utils.data_buffer import LABuffer
 from algorithm_factory.algo_utils.net_models import QNet
 from algorithm_factory.rl_algo.lower_agent import DDQN, LACollector
-from data_process.input_process import read_input, read_json_from_file
+from data_process.input_process import read_input
 from utils.log import exp_dir, Logger
 
 logger = Logger().get_logger()
@@ -92,7 +92,9 @@ if __name__ == '__main__':
     collector = LACollector(train_solus=train_solus, test_solus=test_solus, data_buffer=data_buffer,
                             batch_size=args.batch_size, mission_num=args.mission_num, agent=agent, rl_logger=rl_logger,
                             save_path=args.save_path)
-
+    agent.qf = torch.load(args.save_path + '/eval_best_fixed.pkl')
+    agent.qf_target = torch.load(args.save_path + '/target_best_fixed.pkl')
+    makespan_forall, reward_forall = collector.eval()
     # =================== heuristic l_train ==================
     # collector.get_transition(
     #     read_json_from_file(cf.OUTPUT_SOLUTION_PATH + 'train_1_SA17139.76892920801.json'), test_solus[1])

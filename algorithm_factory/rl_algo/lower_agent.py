@@ -234,7 +234,7 @@ class LACollector:
                 solu.reset()
             makespan_forall.append(sum(makespan_forall[0:len(self.train_solus) - 1]))
             makespan_forall.append(sum(makespan_forall))
-            reward_forall.append(sum(total_reward[0:len(self.train_solus) - 1]))
+            reward_forall.append(sum(reward_forall[0:len(self.train_solus) - 1]))
             if makespan_forall[-1] < self.best_result[-1]:
                 self.best_result[-1] = makespan_forall[-1]
                 torch.save(self.agent.qf, self.save_path + '/eval_best_fixed.pkl')
