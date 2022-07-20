@@ -36,8 +36,8 @@ def get_args(**kwargs):
     parser.add_argument('--dim_action', type=int, default=cf.LOCK_STATION_NUM)
 
     parser.add_argument('--device', type=str, default='cuda:0' if torch.cuda.is_available() else 'cpu')
-    parser.add_argument('--gamma', type=float, default=0.85)  # 0.9
-    parser.add_argument('--epsilon', type=float, default=0.9)
+    parser.add_argument('--gamma', type=float, default=0)  # 0.9
+    parser.add_argument('--epsilon', type=float, default=0.4)
     parser.add_argument('--lr', type=float, default=1e-5)
 
     parser.add_argument('--batch_size', type=int, default=128)
@@ -59,7 +59,7 @@ if __name__ == '__main__':
     exp_dir = exp_dir(desc=f'{args.task}')
     rl_logger = SummaryWriter(exp_dir)
     rl_logger.add_text(tag='parameters', text_string=str(args))
-    rl_logger.add_text(tag='characteristic', text_string='New State')  # 'debug'
+    rl_logger.add_text(tag='characteristic', text_string='gamma=1')  # 'debug'
 
     # env
     train_solus = [read_input('train_1_'), read_input('train_2_'), read_input('train_3_'), read_input('train_4_'),
@@ -101,11 +101,11 @@ if __name__ == '__main__':
     #     read_json_from_file(cf.OUTPUT_SOLUTION_PATH + 'train_1_SA17139.76892920801.json'), test_solus[1])
     data_name = ['train_1_', 'train_2_', 'train_3_', 'train_4_', 'train_5_', 'train_6_', 'train_7_', 'train_8_']
     # data_name = ['train_2_']
-    collector.collect_heuristics(data_name)
+    # collector.collect_heuristics(data_name)
 
     # ======================= collect =======================
     # collector.collect_rl(10)
-    for i in range(1, 2460):
+    for i in range(1,50):
         # l_train(train_time=i + 1, dl_train=dl_train, agent=agent, collector=collector, rl_logger=rl_logger)
         collector.collect_rl(1)  # 200
 
