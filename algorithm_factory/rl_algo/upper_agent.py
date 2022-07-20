@@ -135,7 +135,7 @@ class UANewCollector:
         self.u_dl_train = None
         self.u_agent = u_agent
         self.l_agent = l_agent
-        self.best_result = [float('Inf') for _ in range(len(self.test_solus))]
+        self.best_result = [float('Inf') for _ in range(len(self.test_solus) + 2)]
         self.rl_logger = rl_logger
         self.save_path = save_path
         self.pre_makespan = 0
@@ -167,10 +167,8 @@ class UANewCollector:
                 if self.train_time > 1 and self.train_time % 2 == 0:
                     self.train()
                 self.train_time = self.train_time + 1
-
                 state = new_state
             solu.reset()
-        self.train()
 
     def train(self):
         total_policy_loss = 0
@@ -181,11 +179,12 @@ class UANewCollector:
         train_batch_num = 0
         # train upper
         batch = next(iter(self.u_dl_train))
-        policy_loss, vf_loss = self.u_agent.update(batch)  # TODO upper
+        policy_loss, vf_loss = self.u_agent.update(batch)
         total_policy_loss += policy_loss.data
         total_vf_loss += vf_loss.data
         for i in range(3):
             # train lower
+            batch = next(iter(self.u_dl_train))
             loss, q_eval, q_eval_value = self.l_agent.update(batch)
             total_loss += loss.data
             total_q_eval += q_eval.data
@@ -243,13 +242,15 @@ class UANewCollector:
                 reward_forall.append(total_reward)
                 if makespan < self.best_result[i]:
                     self.best_result[i] = solu.last_step_makespan
-            makespan_forall.append(sum(makespan_forall[0:len(self.train_solus) - 1]))
+            makespan_forall.append(sum(makespan_forall[0:len(self.train_solus)]))
             makespan_forall.append(sum(makespan_forall))
-            reward_forall.append(sum(reward_forall[0:len(self.train_solus) - 1]))
+            reward_forall.append(sum(reward_forall[0:len(self.train_solus)]))
+            if makespan_forall[-2] < self.best_result[-2]:
+                self.best_result[-2] = makespan_forall[-2]
             if makespan_forall[-1] < self.best_result[-1]:
                 self.best_result[-1] = makespan_forall[-1]
-                torch.save(self.l_agent.qf, self.save_path + '/eval_best_l.pkl')
-                torch.save(self.l_agent.qf_target, self.save_path + '/target_best_l.pkl')
+                torch.save(self.l_agent.qf, self.save_path + '/eval_best_la.pkl')
+                torch.save(self.l_agent.qf_target, self.save_path + '/target_best_la.pkl')
                 torch.save(self.u_agent.actor, self.save_path + '/actor_best_fixed.pkl')
                 torch.save(self.u_agent.critic, self.save_path + '/critic_best_fixed.pkl')
             return makespan_forall, reward_forall

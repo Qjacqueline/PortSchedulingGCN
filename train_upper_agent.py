@@ -57,7 +57,7 @@ def get_args(**kwargs):
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--buffer_size', type=int, default=128000)  # 需要大于训练算例数乘以每个算例任务数
 
-    parser.add_argument('--epoch_num', type=int, default=5)
+    parser.add_argument('--epoch_num', type=int, default=100)
     parser.add_argument('-save_path', type=str, default=cf.MODEL_PATH)
 
     parser.add_argument('--device', type=str, default='cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -133,7 +133,6 @@ if __name__ == '__main__':
     # ======================== collect and train (upper lower combine) =========================
     for i in range(args.epoch_num):
         u_collector.collect_rl()
-        data_buffer.clear()
 
     # ======================== eval =========================
     l_agent.qf = torch.load(args.save_path + '/eval_best_la.pkl')
