@@ -138,7 +138,8 @@ if __name__ == '__main__':
     # ======================== eval =========================
     l_agent.qf = torch.load(args.save_path + '/eval_best_la.pkl')
     l_agent.qf_target = torch.load(args.save_path + '/target_best_la.pkl')
-
+    l_agent.u_agent.actor = torch.load(args.save_path + '/actor_best_fixed.pkl')
+    l_agent.u_agent.critic = torch.load(args.save_path + '/critic_best_fixed.pkl')
     makespan_forall, reward = u_collector.eval()
     for makespan in makespan_forall:
         print("初始la分配makespan为" + str(makespan))

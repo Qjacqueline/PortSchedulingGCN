@@ -248,8 +248,8 @@ class UANewCollector:
             reward_forall.append(sum(reward_forall[0:len(self.train_solus) - 1]))
             if makespan_forall[-1] < self.best_result[-1]:
                 self.best_result[-1] = makespan_forall[-1]
-                torch.save(self.l_agent.qf, self.save_path + '/eval_best_l.pkl')
-                torch.save(self.l_agent.qf_target, self.save_path + '/target_best_l.pkl')
+                torch.save(self.l_agent.qf, self.save_path + '/eval_best_la.pkl')
+                torch.save(self.l_agent.qf_target, self.save_path + '/target_best_la.pkl')
                 torch.save(self.u_agent.actor, self.save_path + '/actor_best_fixed.pkl')
                 torch.save(self.u_agent.critic, self.save_path + '/critic_best_fixed.pkl')
             return makespan_forall, reward_forall
