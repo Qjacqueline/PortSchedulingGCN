@@ -116,8 +116,8 @@ class DDQN(BaseAgent):
         self.optimizer.step()
         if self.train_count % 10 == 0:
             self.sync_weight()
-        if self.train_count % 1000 == 0:
-            self.gamma = self.gamma + 0.05
+        if self.train_count % 200 == 0 and self.epsilon < 0.9:
+            self.epsilon = self.epsilon + 0.05
         self.train_count += 1
         return loss.detach(), q_eval.detach().mean(), q_eval_value.detach().mean()
 
@@ -199,20 +199,26 @@ class LACollector:
     def eval(self):
         with torch.no_grad():
             makespan_forall = []
+            reward_forall = []
             for i in range(len(self.test_solus)):
                 solu = self.test_solus[i]
                 state = get_state(solu.iter_env, 0)
+                pre_makespan = 0
+                total_reward = 0
                 for step in range(self.mission_num):
                     cur_mission = solu.iter_env.mission_list[step]
-                    action = self.agent.forward(state)
+                    action = self.agent.forward(state, False)
                     makespan = solu.step_v2(action, cur_mission, step)
+                    total_reward += (pre_makespan - makespan)
                     if step == self.mission_num - 1:
                         new_state = state
                     else:
                         new_state = get_state(solu.iter_env, step + 1)
+                    pre_makespan = makespan
                     state = new_state
                     step += 1
                 makespan_forall.append(makespan)
+                reward_forall.append(total_reward)
                 if makespan < self.best_result[i]:
                     self.best_result[i] = makespan
                     torch.save(self.agent.qf, self.save_path + '/eval_best.pkl')
@@ -220,6 +226,7 @@ class LACollector:
                 solu.reset()
             makespan_forall.append(sum(makespan_forall[0:len(self.train_solus) - 1]))
             makespan_forall.append(sum(makespan_forall))
+            reward_forall.append(sum(total_reward[0:len(self.train_solus) - 1]))
             if makespan_forall[-1] < self.best_result[-1]:
                 self.best_result[-1] = makespan_forall[-1]
                 torch.save(self.agent.qf, self.save_path + '/eval_best_fixed.pkl')

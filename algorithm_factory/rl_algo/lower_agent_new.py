@@ -112,6 +112,8 @@ class DDQN(BaseAgent):
         self.optimizer.step()
         if self.train_count % 10 == 0:
             self.sync_weight()
+        if self.train_count % 200 == 0 and self.epsilon < 0.9:
+            self.epsilon = self.epsilon + 0.05
         self.train_count += 1
         return loss.detach(), q_eval.detach().mean(), q_eval_value.detach().mean()
 
@@ -121,17 +123,23 @@ class LACollector:
                  train_solus: List[IterSolution],
                  test_solus: List[IterSolution],
                  data_buffer: LABuffer,
+                 batch_size: int,
                  mission_num: int,
                  agent: DDQN,
+                 rl_logger: SummaryWriter,
                  save_path: str):
         logger.info("创建data Collector")
         self.train_solus = train_solus
         self.test_solus = test_solus
         self.data_buffer = data_buffer
+        self.batch_size = batch_size
+        self.dl_train = None
         self.mission_num = mission_num
         self.agent = agent
+        self.rl_logger = rl_logger
         self.best_result = [float('Inf') for _ in range(len(self.test_solus) + 1)]
         self.save_path = save_path
+        self.train_time = 0
 
     def collect_rl(self, collect_epoch_num: int):
         for i in range(collect_epoch_num):
@@ -142,7 +150,6 @@ class LACollector:
                 for step in range(self.mission_num):
                     cur_mission = solu.iter_env.mission_list[step]
                     action = self.agent.forward(state)
-                    # print(action)
                     makespan = solu.step_v2(action, cur_mission, step)
                     reward = (pre_makespan - makespan)  # exp(-makespan / 10000)
                     if step == self.mission_num - 1:
@@ -154,9 +161,36 @@ class LACollector:
                         # reward = 0
                     pre_makespan = makespan
                     self.data_buffer.append(state, action, new_state, reward, done)
+                    if self.train_time % 2 == 0:
+                        self.train()
+                    self.train_time = self.train_time + 1
                     state = new_state
                     step += 1
                 solu.reset()
+
+    def train(self):
+        total_loss = 0
+        total_q_eval = 0
+        total_q_eval_value = 0
+        # for batch in pbar:
+        batch = next(iter(self.dl_train))
+        loss, q_eval, q_eval_value = self.agent.update(batch)
+        total_loss += loss.data
+        total_q_eval += q_eval.data
+        total_q_eval_value += q_eval_value.data
+        self.rl_logger.add_scalar(tag=f'l_train/loss', scalar_value=total_loss, global_step=self.train_time)
+        self.rl_logger.add_scalar(tag=f'l_train/q', scalar_value=total_q_eval, global_step=self.train_time)
+        self.rl_logger.add_scalar(tag=f'l_train/q_all', scalar_value=total_q_eval_value, global_step=self.train_time)
+        if self.train_time % 20 == 0:
+            field_name = ['Epoch', 'loss']
+            value = [self.train_time, total_loss]
+            makespan = self.eval()
+            for i in range(len(makespan)):
+                self.rl_logger.add_scalar(tag=f'l_train/makespan' + str(i + 1), scalar_value=makespan[i],
+                                          global_step=int(self.train_time / 20))
+                field_name.append('makespan' + str(i + 1))
+                value.append(makespan[i])
+            print_result(field_name=field_name, value=value)
 
     def eval(self):
         with torch.no_grad():
@@ -166,7 +200,7 @@ class LACollector:
                 state = get_state(solu.iter_env, 0)
                 for step in range(self.mission_num):
                     cur_mission = solu.iter_env.mission_list[step]
-                    action = self.agent.forward(state)
+                    action = self.agent.forward(state, False)
                     makespan = solu.step_v2(action, cur_mission, step)
                     if step == self.mission_num - 1:
                         new_state = state
@@ -180,9 +214,10 @@ class LACollector:
                     torch.save(self.agent.qf, self.save_path + '/eval_best.pkl')
                     torch.save(self.agent.qf_target, self.save_path + '/target_best.pkl')
                 solu.reset()
+            makespan_forall.append(sum(makespan_forall[0:len(self.train_solus) - 1]))
             makespan_forall.append(sum(makespan_forall))
-            if sum(makespan_forall) < self.best_result[-1]:
-                self.best_result[-1] = sum(makespan_forall)
+            if makespan_forall[-1] < self.best_result[-1]:
+                self.best_result[-1] = makespan_forall[-1]
                 torch.save(self.agent.qf, self.save_path + '/eval_best_fixed.pkl')
                 torch.save(self.agent.qf_target, self.save_path + '/target_best_fixed.pkl')
         return makespan_forall
@@ -191,8 +226,9 @@ class LACollector:
         logger.info("收集启发式方法数据")
         filenames = os.listdir(cf.OUTPUT_SOLUTION_PATH)
         for i in range(len(data_ls)):
-            selected = [x for x in filenames if x[0:14] == data_ls[i][0:8] + str("SA_100_")]
-            solu = self.test_solus[int(data_ls[i][6]) - 1]
+            selected = [x for x in filenames if
+                        x[0:14] == data_ls[i][0:8] + "SA_" + str(cf.MISSION_NUM_ONE_QUAY_CRANE) + "_"]
+            solu = self.train_solus[int(data_ls[i][6]) - 1]
             for file in selected:
                 print(file)
                 self.get_transition(read_json_from_file(cf.OUTPUT_SOLUTION_PATH + file), solu)
@@ -203,6 +239,8 @@ class LACollector:
         state = get_state(solu.iter_env, 0)
         makespan = 0
         for step in range(self.mission_num):
+            if self.train_time == 1:
+                self.dl_train = DataLoader(dataset=self.data_buffer, batch_size=self.batch_size, shuffle=True)
             cur_mission = solu.iter_env.mission_list[step]
             action = assign_dict[cur_mission.idx]
             makespan = solu.step_v2(action, cur_mission, step)
@@ -215,8 +253,10 @@ class LACollector:
             else:
                 new_state = get_state(solu.iter_env, step + 1)
                 # reward = 0
-
             self.data_buffer.append(state, action, new_state, reward, done)
+            if self.train_time > 1:
+                self.train()
+            self.train_time = self.train_time + 1
             state = new_state
             step += 1
         print(makespan)

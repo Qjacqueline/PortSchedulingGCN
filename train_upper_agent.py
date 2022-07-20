@@ -83,7 +83,9 @@ if __name__ == '__main__':
     train_solus = [read_input('train_1_'), read_input('train_2_'), read_input('train_3_'), read_input('train_4_')]
     test_solus = [read_input('train_1_'), read_input('train_2_'), read_input('train_3_'), read_input('train_4_'),
                   read_input('train_5_'), read_input('train_6_'), read_input('train_7_'), read_input('train_8_'),
-                  read_input('train_9_'), read_input('train_10_')]
+                  read_input('train_9_'), read_input('train_10_'), read_input('train_11_'), read_input('train_12_'),
+                  read_input('train_13_'), read_input('train_14_'), read_input('train_15_'), read_input('train_16_'),
+                  read_input('train_17_'), read_input('train_18_'), read_input('train_19_'), read_input('train_0_')]
     # test_solus = [read_input('train_21_'), read_input('train_22_'), read_input('train_23_'), read_input('train_24_'),
     #               read_input('train_25_'), read_input('train_26_'), read_input('train_27_'), read_input('train_28_'),
     #               read_input('train_29_'), read_input('train_30_')]

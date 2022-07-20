@@ -15,6 +15,46 @@ from torch.distributions import Categorical
 from torch_geometric.nn import GCNConv
 
 
+class MLP(nn.Module):
+    def __init__(self,
+                 input_dim: int,
+                 output_dim: int = 0,
+                 hidden_sizes: Sequence[int] = (256, 256),
+                 activation: nn.Module = nn.LeakyReLU()
+                 ) -> None:
+        """
+        Multilayer Perceptron
+
+        Args:
+            input_dim: dimension of input is [batch_size, input_dim]
+            output_dim: dimension of output is [batch_size, output_dim]
+            hidden_sizes: a sequence consisting of number of neurons per hidden layer
+            activation: activation function
+        """
+        super().__init__()
+        net = nn.Sequential()
+        dim_last_layer = input_dim
+        for i, num_neurons in enumerate(hidden_sizes):
+            net.add_module(f'fc{i}', nn.Linear(dim_last_layer, num_neurons))
+            net.add_module(f'act{i}', activation)
+            dim_last_layer = num_neurons
+        net.add_module('output layer', nn.Linear(dim_last_layer, output_dim))
+        self.model = net
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.model(x)
+
+
+class FlattenMlp(MLP):
+    """
+    Flatten inputs along dimension 1 ([u_action, u_state]).
+    """
+
+    def forward(self, *inputs):
+        flat_inputs = torch.cat(inputs, dim=1)
+        return super().forward(flat_inputs)
+
+
 class QNet(nn.Module):
     def __init__(self, device: torch.device, hidden=128):
         super(QNet, self).__init__()
@@ -183,46 +223,6 @@ class CriticNew(nn.Module):
         x = F.leaky_relu_(x)  # 激活函数
         x = self.model['linear2'](torch.cat((x, u_act, l_act), dim=1))  # fixme
         return x
-
-
-class MLP(nn.Module):
-    def __init__(self,
-                 input_dim: int,
-                 output_dim: int = 0,
-                 hidden_sizes: Sequence[int] = (256, 256),
-                 activation: nn.Module = nn.LeakyReLU()
-                 ) -> None:
-        """
-        Multilayer Perceptron
-
-        Args:
-            input_dim: dimension of input is [batch_size, input_dim]
-            output_dim: dimension of output is [batch_size, output_dim]
-            hidden_sizes: a sequence consisting of number of neurons per hidden layer
-            activation: activation function
-        """
-        super().__init__()
-        net = nn.Sequential()
-        dim_last_layer = input_dim
-        for i, num_neurons in enumerate(hidden_sizes):
-            net.add_module(f'fc{i}', nn.Linear(dim_last_layer, num_neurons))
-            net.add_module(f'act{i}', activation)
-            dim_last_layer = num_neurons
-        net.add_module('output layer', nn.Linear(dim_last_layer, output_dim))
-        self.model = net
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.model(x)
-
-
-class FlattenMlp(MLP):
-    """
-    Flatten inputs along dimension 1 ([u_action, u_state]).
-    """
-
-    def forward(self, *inputs):
-        flat_inputs = torch.cat(inputs, dim=1)
-        return super().forward(flat_inputs)
 
 
 if __name__ == "__main__":

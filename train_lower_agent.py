@@ -36,8 +36,8 @@ def get_args(**kwargs):
     parser.add_argument('--dim_action', type=int, default=cf.LOCK_STATION_NUM)
 
     parser.add_argument('--device', type=str, default='cuda:0' if torch.cuda.is_available() else 'cpu')
-    parser.add_argument('--gamma', type=float, default=0.85)  # 0.9
-    parser.add_argument('--epsilon', type=float, default=0.9)
+    parser.add_argument('--gamma', type=float, default=0.9)  # 0.9
+    parser.add_argument('--epsilon', type=float, default=0.1)
     parser.add_argument('--lr', type=float, default=1e-5)
 
     parser.add_argument('--batch_size', type=int, default=128)
