@@ -35,14 +35,14 @@ def get_args(**kwargs):
     parser.add_argument('--dim_action', type=int, default=cf.LOCK_STATION_NUM)
 
     parser.add_argument('--device', type=str, default='cuda:0' if torch.cuda.is_available() else 'cpu')
-    parser.add_argument('--gamma', type=float, default=0.9)  # 0.9
+    parser.add_argument('--gamma', type=float, default=0.5)  # 0.9
     parser.add_argument('--epsilon', type=float, default=0.1)
     parser.add_argument('--lr', type=float, default=1e-5)
 
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--buffer_size', type=int, default=128000)
 
-    parser.add_argument('--epoch_num', type=int, default=50)
+    parser.add_argument('--epoch_num', type=int, default=100)
 
     parser.add_argument('-save_path', type=str, default=cf.MODEL_PATH)
     command_list = []
@@ -61,7 +61,8 @@ if __name__ == '__main__':
 
     # env
     train_solus = [read_input('train_1_'), read_input('train_2_'), read_input('train_3_'), read_input('train_4_'),
-                   read_input('train_5_'), read_input('train_6_'), read_input('train_7_'), read_input('train_8_')]
+                   read_input('train_5_'), read_input('train_6_'), read_input('train_7_'), read_input('train_8_'),
+                   read_input('train_9_'), read_input('train_10_')]
     test_solus = [read_input('train_1_'), read_input('train_2_'), read_input('train_3_'), read_input('train_4_'),
                   read_input('train_5_'), read_input('train_6_'), read_input('train_7_'), read_input('train_8_'),
                   read_input('train_9_'), read_input('train_10_'), read_input('train_11_'), read_input('train_12_'),

@@ -141,7 +141,7 @@ class LACollector:
         self.mission_num = mission_num
         self.agent = agent
         self.rl_logger = rl_logger
-        self.best_result = [float('Inf') for _ in range(len(self.test_solus) + 1)]
+        self.best_result = [float('Inf') for _ in range(len(self.test_solus) + 2)]
         self.save_path = save_path
         self.train_time = 0
 
@@ -232,9 +232,11 @@ class LACollector:
                 if makespan < self.best_result[i]:
                     self.best_result[i] = makespan
                 solu.reset()
-            makespan_forall.append(sum(makespan_forall[0:len(self.train_solus) - 1]))
+            makespan_forall.append(sum(makespan_forall[0:len(self.train_solus)]))
             makespan_forall.append(sum(makespan_forall))
-            reward_forall.append(sum(reward_forall[0:len(self.train_solus) - 1]))
+            reward_forall.append(sum(reward_forall[0:len(self.train_solus)]))
+            if makespan_forall[-2] < self.best_result[-2]:
+                self.best_result[-2] = makespan_forall[-2]
             if makespan_forall[-1] < self.best_result[-1]:
                 self.best_result[-1] = makespan_forall[-1]
                 torch.save(self.agent.qf, self.save_path + '/eval_best_fixed.pkl')
