@@ -104,7 +104,7 @@ if __name__ == '__main__':
     # collector.collect_rl(10)
     for i in range(1, 2460):
         # l_train(train_time=i + 1, dl_train=dl_train, agent=agent, collector=collector, rl_logger=rl_logger)
-        collector.collect_rl(1)  # 200
+        collector.collect_rl()  # 200
 
     # ======================== eval =========================
     agent.qf = torch.load(args.save_path + '/eval_best_fixed.pkl')

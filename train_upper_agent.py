@@ -15,12 +15,11 @@ import numpy as np
 import torch
 from tensorboardX import SummaryWriter
 
-from torch_geometric.loader import DataLoader
 import conf.configs as cf
 from algorithm_factory.algo_utils.data_buffer import UANewBuffer
 from algorithm_factory.algo_utils.net_models import QNet, ActorNew, CriticNew
 from algorithm_factory.rl_algo.lower_agent import DDQN
-from algorithm_factory.rl_algo.upper_agent import ACUpper, UANewCollector, h_new_train
+from algorithm_factory.rl_algo.upper_agent import ACUpper, UANewCollector
 from data_process.input_process import read_input
 from utils.log import exp_dir, Logger
 
@@ -55,12 +54,10 @@ def get_args(**kwargs):
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--l_gamma', type=float, default=0.9)
 
-    parser.add_argument('--u_batch_size', type=int, default=100 * 4)
-    parser.add_argument('--u_buffer_size', type=int, default=100 * 4)
-    parser.add_argument('--l_batch_size', type=int, default=30)
-    parser.add_argument('--l_buffer_size', type=int, default=30000)
+    parser.add_argument('--batch_size', type=int, default=128)
+    parser.add_argument('--buffer_size', type=int, default=128000)  # 需要大于训练算例数乘以每个算例任务数
 
-    parser.add_argument('--epoch_num', type=int, default=1000)
+    parser.add_argument('--epoch_num', type=int, default=5)
     parser.add_argument('-save_path', type=str, default=cf.MODEL_PATH)
 
     parser.add_argument('--device', type=str, default='cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -79,16 +76,12 @@ if __name__ == '__main__':
     rl_logger.add_text(tag='parameters', text_string=str(args))
     rl_logger.add_text(tag='characteristic', text_string='init_ua_n')
 
-    data_name = ['train_1_', 'train_2_', 'train_3_', 'train_4_']
     train_solus = [read_input('train_1_'), read_input('train_2_'), read_input('train_3_'), read_input('train_4_')]
     test_solus = [read_input('train_1_'), read_input('train_2_'), read_input('train_3_'), read_input('train_4_'),
                   read_input('train_5_'), read_input('train_6_'), read_input('train_7_'), read_input('train_8_'),
                   read_input('train_9_'), read_input('train_10_'), read_input('train_11_'), read_input('train_12_'),
                   read_input('train_13_'), read_input('train_14_'), read_input('train_15_'), read_input('train_16_'),
                   read_input('train_17_'), read_input('train_18_'), read_input('train_19_'), read_input('train_0_')]
-    # test_solus = [read_input('train_21_'), read_input('train_22_'), read_input('train_23_'), read_input('train_24_'),
-    #               read_input('train_25_'), read_input('train_26_'), read_input('train_27_'), read_input('train_28_'),
-    #               read_input('train_29_'), read_input('train_30_')]
     for solu in train_solus:
         solu.ua_n_init()
     for solu in test_solus:
@@ -118,18 +111,18 @@ if __name__ == '__main__':
     l_agent.qf_target = torch.load(args.save_path + '/target_best_fixed.pkl')
 
     # ======================== Data ==========================
-    data_buffer = UANewBuffer(buffer_size=args.u_buffer_size)
+    data_buffer = UANewBuffer(buffer_size=args.buffer_size)
     u_collector = UANewCollector(train_solus=train_solus, test_solus=test_solus, mission_num=args.mission_num,
                                  m_max_num=args.m_max_num, each_quay_m_num=args.each_quay_m_num,
-                                 data_buffer=data_buffer,
-                                 u_agent=u_agent, l_agent=l_agent, save_path=args.save_path)
+                                 data_buffer=data_buffer, batch_size=args.batch_size, u_agent=u_agent,
+                                 l_agent=l_agent, rl_logger=rl_logger, save_path=args.save_path)
 
-    init_makespans = u_collector.eval(True)
+    init_makespans, reward = u_collector.eval(l_eval_flag=True)
     for makespan in init_makespans:
         print("初始la分配makespan为" + str(makespan))
 
-    u_collector.collect_rl(10)
-    u_dl_train = DataLoader(dataset=data_buffer, batch_size=args.u_batch_size, shuffle=True)
+    # u_dl_train = DataLoader(dataset=data_buffer, batch_size=args.u_batch_size, shuffle=True)
+
     # ======================== collect and train (only upper) =========================
     # for i in range(100):
     #     u_collector.collect_rl()
@@ -138,18 +131,15 @@ if __name__ == '__main__':
     #     u_data_buffer.clear()
 
     # ======================== collect and train (upper lower combine) =========================
-    for i in range(100):
-        u_collector.collect_rl(1)
-        logger.info("开始第" + str(i) + "训练")
-        h_new_train(train_time=i + 1, epoch_num=args.epoch_num, u_dl_train=u_dl_train, u_agent=u_agent, l_agent=l_agent,
-                    u_collector=u_collector, rl_logger=rl_logger)
+    for i in range(args.epoch_num):
+        u_collector.collect_rl()
         data_buffer.clear()
 
     # ======================== eval =========================
     l_agent.qf = torch.load(args.save_path + '/eval_best_la.pkl')
     l_agent.qf_target = torch.load(args.save_path + '/target_best_la.pkl')
 
-    makespan_forall = u_collector.eval()
+    makespan_forall, reward = u_collector.eval()
     for makespan in makespan_forall:
         print("初始la分配makespan为" + str(makespan))
 

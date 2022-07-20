@@ -1076,7 +1076,7 @@ def get_quay_cranes_state(iter_solution: PortEnv):
     node_attr_list = []
     for quay_crane in iter_solution.quay_cranes.values():
         if any(quay_crane.process_time):
-            quay_crane_attr = [quay_crane.process_time[-1][2], 0, 0]  # fixme
+            quay_crane_attr = [quay_crane.process_time[-1][2], 0, 0]  # fixme 结合upper后感觉可以添加没释放任务数信息？
         else:
             quay_crane_attr = [0, 0, 0]
         node_attr_list.append(quay_crane_attr)
@@ -1146,6 +1146,7 @@ def get_yard_crane_state(iter_solution: PortEnv, cur_time: float, cur_mission: M
 
         node_attr_list.append(yard_crane_attr)
     return node_attr_list
+
 
 # def find_nearest_mission_yard_crane(cur_time: float):
 

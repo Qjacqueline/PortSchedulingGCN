@@ -14,12 +14,11 @@ import random
 import numpy as np
 import torch
 from tensorboardX import SummaryWriter
-from torch_geometric.loader import DataLoader
 
 import conf.configs as cf
 from algorithm_factory.algo_utils.data_buffer import LABuffer
 from algorithm_factory.algo_utils.net_models import QNet
-from algorithm_factory.rl_algo.lower_agent import DDQN, LACollector, l_train
+from algorithm_factory.rl_algo.lower_agent import DDQN, LACollector
 from data_process.input_process import read_input, read_json_from_file
 from utils.log import exp_dir, Logger
 
@@ -43,8 +42,7 @@ def get_args(**kwargs):
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--buffer_size', type=int, default=128000)
 
-    parser.add_argument('--epoch_num', type=int, default=1)
-    parser.add_argument('--collect_epoch_num', type=int, default=25)
+    parser.add_argument('--epoch_num', type=int, default=50)
 
     parser.add_argument('-save_path', type=str, default=cf.MODEL_PATH)
     command_list = []
@@ -91,7 +89,6 @@ if __name__ == '__main__':
 
     # ======================== Data ==========================
     data_buffer = LABuffer(buffer_size=args.buffer_size)
-    # dl_train = DataLoader(dataset=data_buffer, batch_size=args.batch_size, shuffle=True)
     collector = LACollector(train_solus=train_solus, test_solus=test_solus, data_buffer=data_buffer,
                             batch_size=args.batch_size, mission_num=args.mission_num, agent=agent, rl_logger=rl_logger,
                             save_path=args.save_path)
@@ -99,20 +96,18 @@ if __name__ == '__main__':
     # =================== heuristic l_train ==================
     # collector.get_transition(
     #     read_json_from_file(cf.OUTPUT_SOLUTION_PATH + 'train_1_SA17139.76892920801.json'), test_solus[1])
-    data_name = ['train_1_', 'train_2_', 'train_3_', 'train_4_', 'train_5_', 'train_6_', 'train_7_', 'train_8_']
+    # data_name = ['train_1_', 'train_2_', 'train_3_', 'train_4_', 'train_5_', 'train_6_', 'train_7_', 'train_8_']
     # data_name = ['train_2_']
-    collector.collect_heuristics(data_name)
+    # collector.collect_heuristics(data_name)
 
-    # ======================= collect =======================
-    # collector.collect_rl(10)
-    for i in range(1, 2460):
-        # l_train(train_time=i + 1, dl_train=dl_train, agent=agent, collector=collector, rl_logger=rl_logger)
-        collector.collect_rl(1)  # 200
+    # ======================= train =======================
+    for i in range(1, args.epoch_num):
+        collector.collect_rl()  # 200
 
     # ======================== eval =========================
     agent.qf = torch.load(args.save_path + '/eval_best_fixed.pkl')
     agent.qf_target = torch.load(args.save_path + '/target_best_fixed.pkl')
-    makespan_forall = collector.eval()
+    makespan_forall, reward_forall = collector.eval()
     for makespan in makespan_forall:
         print("初始la分配makespan为" + str(makespan))
 

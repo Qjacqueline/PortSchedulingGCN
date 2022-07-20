@@ -145,55 +145,65 @@ class LACollector:
         self.save_path = save_path
         self.train_time = 0
 
-    def collect_rl(self, collect_epoch_num: int):
-        for i in range(collect_epoch_num):
-            for solu in self.train_solus:
-                done = 0
-                pre_makespan = 0
-                state = get_state(solu.iter_env, 0)
-                for step in range(self.mission_num):
-                    cur_mission = solu.iter_env.mission_list[step]
-                    action = self.agent.forward(state)
-                    makespan = solu.step_v2(action, cur_mission, step)
-                    reward = (pre_makespan - makespan)  # exp(-makespan / 10000)
-                    if step == self.mission_num - 1:
-                        done = 1
-                        new_state = state
-                        # reward = -makespan
-                    else:
-                        new_state = get_state(solu.iter_env, step + 1)
-                        # reward = 0
-                    pre_makespan = makespan
-                    self.data_buffer.append(state, action, new_state, reward, done)
-                    if self.train_time % 2 == 0:
-                        self.train()
-                    self.train_time = self.train_time + 1
-                    state = new_state
-                    step += 1
-                solu.reset()
+    def collect_rl(self):
+        for solu in self.train_solus:
+            done = 0
+            pre_makespan = 0
+            state = get_state(solu.iter_env, 0)
+            for step in range(self.mission_num):
+                cur_mission = solu.iter_env.mission_list[step]
+                action = self.agent.forward(state)
+                makespan = solu.step_v2(action, cur_mission, step)
+                reward = (pre_makespan - makespan)  # exp(-makespan / 10000)
+                if step == self.mission_num - 1:
+                    done = 1
+                    new_state = state
+                    # reward = -makespan
+                else:
+                    new_state = get_state(solu.iter_env, step + 1)
+                    # reward = 0
+                pre_makespan = makespan
+                self.data_buffer.append(state, action, new_state, reward, done)
 
-    def train(self):
+                # train & eval
+                if self.train_time == 0:
+                    self.dl_train = DataLoader(dataset=self.data_buffer, batch_size=self.batch_size, shuffle=True)
+                if self.train_time > 1 and self.train_time % 2 == 0:
+                    self.train()
+                self.train_time = self.train_time + 1
+
+                state = new_state
+                step += 1
+            solu.reset()
+
+    def train(self, train_num: int = 1):
         total_loss = 0
         total_q_eval = 0
         total_q_eval_value = 0
-        # for batch in pbar:
-        batch = next(iter(self.dl_train))
-        loss, q_eval, q_eval_value = self.agent.update(batch)
-        total_loss += loss.data
-        total_q_eval += q_eval.data
-        total_q_eval_value += q_eval_value.data
+        for i in range(train_num):
+            batch = next(iter(self.dl_train))
+            loss, q_eval, q_eval_value = self.agent.update(batch)
+            total_loss += loss.data
+            total_q_eval += q_eval.data
+            total_q_eval_value += q_eval_value.data
         self.rl_logger.add_scalar(tag=f'l_train/loss', scalar_value=total_loss, global_step=self.train_time)
         self.rl_logger.add_scalar(tag=f'l_train/q', scalar_value=total_q_eval, global_step=self.train_time)
         self.rl_logger.add_scalar(tag=f'l_train/q_all', scalar_value=total_q_eval_value, global_step=self.train_time)
+        # 每20次eval一次
         if self.train_time % 20 == 0:
             field_name = ['Epoch', 'loss']
             value = [self.train_time, total_loss]
-            makespan = self.eval()
-            for i in range(len(makespan)):
-                self.rl_logger.add_scalar(tag=f'l_train/makespan' + str(i + 1), scalar_value=makespan[i],
+            makespan_forall, reward_forall = self.eval()
+            for i in range(len(makespan_forall)):
+                self.rl_logger.add_scalar(tag=f'l_train/makespan' + str(i + 1),
+                                          scalar_value=makespan_forall[i],
                                           global_step=int(self.train_time / 20))
                 field_name.append('makespan' + str(i + 1))
-                value.append(makespan[i])
+                value.append(makespan_forall[i])
+            for i in range(len(reward_forall)):
+                self.rl_logger.add_scalar(tag=f'l_train_r/reward' + str(i + 1),
+                                          scalar_value=reward_forall[i],
+                                          global_step=int(self.train_time / 20))
             print_result(field_name=field_name, value=value)
 
     def eval(self):
@@ -221,8 +231,6 @@ class LACollector:
                 reward_forall.append(total_reward)
                 if makespan < self.best_result[i]:
                     self.best_result[i] = makespan
-                    torch.save(self.agent.qf, self.save_path + '/eval_best.pkl')
-                    torch.save(self.agent.qf_target, self.save_path + '/target_best.pkl')
                 solu.reset()
             makespan_forall.append(sum(makespan_forall[0:len(self.train_solus) - 1]))
             makespan_forall.append(sum(makespan_forall))
@@ -231,7 +239,7 @@ class LACollector:
                 self.best_result[-1] = makespan_forall[-1]
                 torch.save(self.agent.qf, self.save_path + '/eval_best_fixed.pkl')
                 torch.save(self.agent.qf_target, self.save_path + '/target_best_fixed.pkl')
-        return makespan_forall
+        return makespan_forall, reward_forall
 
     def collect_heuristics(self, data_ls: List[str]) -> None:
         logger.info("收集启发式方法数据")
@@ -286,7 +294,7 @@ def l_train(train_time: int, epoch_num: int, dl_train: DataLoader, agent: DDQN, 
                 total_loss += loss.data
                 total_q_eval += q_eval.data
                 total_q_eval_value += q_eval_value.data
-            makespan = collector.eval()
+            makespan, reward = collector.eval()
             rl_logger.add_scalar(tag=f'l_train/loss', scalar_value=total_loss / len(pbar),
                                  global_step=epoch + train_time * epoch_num)
             rl_logger.add_scalar(tag=f'l_train/q', scalar_value=total_q_eval / len(pbar),
