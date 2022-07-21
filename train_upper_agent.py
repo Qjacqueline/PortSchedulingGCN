@@ -50,14 +50,14 @@ def get_args(**kwargs):
 
     parser.add_argument('--hidden_size', type=int, default=32)
     parser.add_argument('--n_layers', type=int, default=3)
-    parser.add_argument('--epsilon', type=float, default=0.8)
-    parser.add_argument('--lr', type=float, default=1e-4)
+    parser.add_argument('--epsilon', type=float, default=0.6)
+    parser.add_argument('--lr', type=float, default=1e-2)
     parser.add_argument('--l_gamma', type=float, default=0.9)
 
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--buffer_size', type=int, default=128000)  # 需要大于训练算例数乘以每个算例任务数
 
-    parser.add_argument('--epoch_num', type=int, default=100)
+    parser.add_argument('--epoch_num', type=int, default=10)
     parser.add_argument('-save_path', type=str, default=cf.MODEL_PATH)
 
     parser.add_argument('--device', type=str, default='cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -76,7 +76,11 @@ if __name__ == '__main__':
     rl_logger.add_text(tag='parameters', text_string=str(args))
     rl_logger.add_text(tag='characteristic', text_string='init_ua_n')
 
-    train_solus = [read_input('train_1_'), read_input('train_2_'), read_input('train_3_'), read_input('train_4_')]
+    train_solus = [read_input('train_1_'), read_input('train_2_'), read_input('train_3_'), read_input('train_4_'),
+                   read_input('train_5_'), read_input('train_6_'), read_input('train_7_'), read_input('train_8_'),
+                   read_input('train_9_'), read_input('train_10_'), read_input('train_11_'), read_input('train_12_'),
+                   read_input('train_13_'), read_input('train_14_'), read_input('train_15_'), read_input('train_16_'),
+                   read_input('train_17_'), read_input('train_18_')]
     test_solus = [read_input('train_1_'), read_input('train_2_'), read_input('train_3_'), read_input('train_4_'),
                   read_input('train_5_'), read_input('train_6_'), read_input('train_7_'), read_input('train_8_'),
                   read_input('train_9_'), read_input('train_10_'), read_input('train_11_'), read_input('train_12_'),
@@ -137,8 +141,8 @@ if __name__ == '__main__':
     # ======================== eval =========================
     l_agent.qf = torch.load(args.save_path + '/eval_best_la.pkl')
     l_agent.qf_target = torch.load(args.save_path + '/target_best_la.pkl')
-    l_agent.u_agent.actor = torch.load(args.save_path + '/actor_best_fixed.pkl')
-    l_agent.u_agent.critic = torch.load(args.save_path + '/critic_best_fixed.pkl')
+    u_agent.actor = torch.load(args.save_path + '/actor_best_fixed.pkl')
+    u_agent.critic = torch.load(args.save_path + '/critic_best_fixed.pkl')
     makespan_forall, reward = u_collector.eval()
     for makespan in makespan_forall:
         print("初始la分配makespan为" + str(makespan))

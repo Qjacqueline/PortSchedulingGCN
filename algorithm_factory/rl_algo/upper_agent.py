@@ -150,7 +150,7 @@ class UANewCollector:
             for step in range(self.mission_num):
                 cur_mission = solu.iter_env.mission_list[step]  # fixme 先同场桥的->同交叉口->时间相近 现在是依照到达交叉口的顺序
                 u_action = self.u_agent(state)
-                l_action = self.l_agent.forward(state)  # fixme 需要探索么？
+                l_action = self.l_agent.forward(state, False)  # fixme 需要探索么？
                 makespan = self.process(solu, cur_mission, u_action, l_action, step, self.each_quay_m_num)
                 reward = (pre_makespan - makespan)
                 if step != self.mission_num - 1:
@@ -182,28 +182,30 @@ class UANewCollector:
         policy_loss, vf_loss = self.u_agent.update(batch)
         total_policy_loss += policy_loss.data
         total_vf_loss += vf_loss.data
-        for i in range(3):
-            # train lower
-            batch = next(iter(self.u_dl_train))
-            loss, q_eval, q_eval_value = self.l_agent.update(batch)
-            total_loss += loss.data
-            total_q_eval += q_eval.data
-            total_q_eval_value += q_eval_value.data
-            train_batch_num += 1
+        # for i in range(3):
+        #     # train lower
+        #     batch = next(iter(self.u_dl_train))
+        #     loss, q_eval, q_eval_value = self.l_agent.update(batch)
+        #     total_loss += loss.data
+        #     total_q_eval += q_eval.data
+        #     total_q_eval_value += q_eval_value.data
+        #     train_batch_num += 1
         self.rl_logger.add_scalar(tag=f'u_train/policy_loss', scalar_value=total_policy_loss,
                                   global_step=self.train_time)
         self.rl_logger.add_scalar(tag=f'u_train/vf_loss', scalar_value=total_vf_loss,
                                   global_step=self.train_time)
-        self.rl_logger.add_scalar(tag=f'u_train/q_loss', scalar_value=total_loss / train_batch_num,
-                                  global_step=self.train_time)
-        self.rl_logger.add_scalar(tag=f'u_train/q', scalar_value=total_q_eval / train_batch_num,
-                                  global_step=self.train_time)
-        self.rl_logger.add_scalar(tag=f'u_train/q_all', scalar_value=total_q_eval_value / train_batch_num,
-                                  global_step=self.train_time)
+        # self.rl_logger.add_scalar(tag=f'u_train/q_loss', scalar_value=total_loss / train_batch_num,
+        #                           global_step=self.train_time)
+        # self.rl_logger.add_scalar(tag=f'u_train/q', scalar_value=total_q_eval / train_batch_num,
+        #                           global_step=self.train_time)
+        # self.rl_logger.add_scalar(tag=f'u_train/q_all', scalar_value=total_q_eval_value / train_batch_num,
+        #                           global_step=self.train_time)
         # 每20次eval一次
         if self.train_time % 20 == 0:
-            field_name = ['Epoch', 'policy_loss', 'vf_loss', 'q_loss']
-            value = [self.train_time, total_policy_loss, total_vf_loss, total_loss]
+            # field_name = ['Epoch', 'policy_loss', 'vf_loss', 'q_loss']
+            # value = [self.train_time, total_policy_loss, total_vf_loss, total_loss]
+            field_name = ['Epoch', 'policy_loss', 'vf_loss']
+            value = [self.train_time, total_policy_loss, total_vf_loss]
             makespan, reward = self.eval()
             for i in range(len(makespan)):
                 self.rl_logger.add_scalar(tag=f'l_train/makespan' + str(i + 1), scalar_value=makespan[i],
