@@ -157,19 +157,35 @@ def get_crossover_index_in_whole(mission: Mission):
     return crossover_index, yard_crane_index
 
 
+def get_est_arrive_crossover_time(port_env: PortEnv, mission: Mission):
+    min_tmp_time = float('Inf')
+    for station in port_env.lock_stations.values():
+        arrive_station_time = mission.machine_start_time[1] + station.distance_to_exit / (sum(cf.VEHICLE_SPEED) / 2.0)
+        transfer_time_station_crossover = port_env.station_to_crossover_matrix[int(station.idx[-1]) - 1][
+                                              int(mission.crossover_id[-1]) - 1] / (sum(cf.VEHICLE_SPEED) / 2.0)
+        if any(station.process_time) and arrive_station_time < station.process_time[-1][-1]:
+            tmp_time = station.process_time[-1][-1] + mission.station_process_time + \
+                       transfer_time_station_crossover + 30  # 30: WAIT_TIME_DELAY
+        else:
+            tmp_time = arrive_station_time + mission.station_process_time + transfer_time_station_crossover
+        if min_tmp_time > tmp_time:
+            min_tmp_time = tmp_time
+    return min_tmp_time
+
+
 # ==================== machine process missions  ====================
 def quay_crane_process_by_order(port_env):
     # 阶段一：岸桥
     for qc in port_env.quay_cranes.values():
         for mission in qc.missions.values():
             port_env.mission_list.append(mission)
-            qc.mission_list.append(mission)
+            # qc.mission_list.append(mission)
 
 
 def buffer_process_by_order(port_env):
     # 阶段二：缓冲区
     for qc, buffer in zip(port_env.quay_cranes.values(), port_env.buffers.values()):
-        for mission in qc.mission_list:
+        for mission in qc.missions.values():
             buffer_process_one_order(mission, buffer)
 
 
@@ -388,6 +404,10 @@ def output_solution(solution: PortEnv) -> dict:
 
 
 # ==================== machine process missions  ====================
+def quay_crane_release_mission(port_env: PortEnv, mission: Mission):
+    port_env.quay_cranes[mission.quay_crane_id].mission_list.append(mission)
+
+
 def station_process_by_least_distance(port_env, buffer_flag=False):
     station_assign_dict = {}
     # 阶段四：锁站
@@ -1075,11 +1095,8 @@ def get_data_onegraph(self, machines, stage_index):
 def get_quay_cranes_state(iter_solution: PortEnv):
     node_attr_list = []
     for quay_crane in iter_solution.quay_cranes.values():
-        if any(quay_crane.process_time):
-            quay_crane_attr = [quay_crane.process_time[-1][2], 0, 0]  # fixme 结合upper后感觉可以添加没释放任务数信息？
-        else:
-            quay_crane_attr = [0, 0, 0]
-        node_attr_list.append(quay_crane_attr)
+        node_attr_list.append(
+            [quay_crane.time_to_exit, cf.MISSION_NUM_ONE_QUAY_CRANE - len(quay_crane.mission_list), 0])
     return node_attr_list
 
 
@@ -1091,58 +1108,55 @@ def get_stations_state(iter_solution: PortEnv, cur_time: float):
                 sum(cf.VEHICLE_SPEED) / 2.0)  # 到达该station的当前时间
 
         if any(station.mission_list):
-            station_attr[0] = station.whole_occupy_time[-1][-1]
+            station_attr[0] = station.whole_occupy_time[-1][-1] - cur_time
             for i in range(len(station.mission_list) - 1, -1, -1):
-                cur_mission = station.mission_list[i]
-                if cur_mission.machine_start_time[4] + cur_mission.machine_process_time[4] <= temp_cur_time:
+                if station.process_time[i][-1] < temp_cur_time:
                     break  # 如果已有任务在到达之前完成，则跳出循环
-            station_attr[1] = len(station.mission_list) - i
+            station_attr[1] = len(station.mission_list) - i - 1
             if station.whole_occupy_time[-1][-1] > temp_cur_time:
                 station_attr[2] = assign_mission_to_least_wait_station_buffer(station).wait_time_delay
         node_attr_list.append(station_attr)
     return node_attr_list
 
 
-def get_crossovers_state(iter_solution: PortEnv, cur_time: float):
+def get_crossovers_state(iter_solution: PortEnv, est_time: float, cur_time: float):
     node_attr_list = []
     for crossover in iter_solution.crossovers.values():
         crossover_attr = [0, 0, 0]  # finish time/ to process number/ extra time
         if any(crossover.mission_list):
-            crossover_attr[0] = crossover.process_time[-1][2]
+            crossover_attr[0] = crossover.process_time[-1][2] - cur_time
             for i in range(len(crossover.mission_list) - 1, -1, -1):
-                cur_mission = crossover.mission_list[i]
-                if cur_mission.machine_start_time[6] + cur_mission.machine_process_time[6] <= cur_time:
+                if crossover.process_time[i][-1] <= est_time:
                     break  # 如果已有任务在到达之前完成，则跳出循环
-            handling_time_crossover = 5 * math.exp(len(crossover.mission_list) - i) + 35
+            handling_time_crossover = 5 * math.exp(len(crossover.mission_list) - i - 1) + 35
             if handling_time_crossover > 55:
                 handling_time_crossover = 55
-            crossover_attr[1] = len(crossover.mission_list) - i
+            crossover_attr[1] = len(crossover.mission_list) - i - 1
             crossover_attr[2] = handling_time_crossover
         node_attr_list.append(crossover_attr)
     return node_attr_list
 
 
-def get_yard_crane_state(iter_solution: PortEnv, cur_time: float, cur_mission: Mission):
+def get_yard_crane_state(iter_solution: PortEnv, est_time: float, cur_mission: Mission, cur_time: float):
     node_attr_list = []
     for yard_crane in iter_solution.yard_cranes.values():
-        yard_crane_attr = [0, 0, 10000]  # finish time/ to process number/ extra time
-        temp_cur_time = cur_time
+        yard_crane_attr = [0, 0, 300]  # finish time/ to process number/ extra time
+        temp_cur_time = est_time
 
         if yard_crane.idx[2:4] == cur_mission.yard_block_loc[0]:
-            temp_cur_time = cur_time + cur_mission.transfer_time_c2y
+            temp_cur_time = est_time + cur_mission.transfer_time_c2y
 
             yard_crane_attr[2] = abs(
-                yard_crane.location[0] - cur_mission.yard_block_loc[1]) * cf.SLOT_LENGTH / cf.YARDCRANE_SPEED_X + abs(
-                yard_crane.location[1] - cur_mission.yard_block_loc[2]) * cf.SLOT_WIDTH / cf.YARDCRANE_SPEED_Y
+                yard_crane.location[0] - cur_mission.yard_block_loc[1]) * cf.SLOT_LENGTH / yard_crane.x_move_rate + abs(
+                yard_crane.location[1] - cur_mission.yard_block_loc[2]) * cf.SLOT_WIDTH / yard_crane.y_move_rate
 
         if any(yard_crane.mission_list):
-            yard_crane_attr[0] = yard_crane.process_time[-1][2]
+            yard_crane_attr[0] = yard_crane.process_time[-1][2] - cur_time
             for i in range(len(yard_crane.mission_list) - 1, -1, -1):
-                cur_mission = yard_crane.mission_list[i]
-                if cur_mission.machine_start_time[8] + cur_mission.machine_process_time[8] <= temp_cur_time:
+                if yard_crane.process_time[i][-1] <= temp_cur_time:
                     break  # 如果已有任务在到达之前完成，则跳出循环
                 else:
-                    yard_crane_attr[1] = len(yard_crane.mission_list) - i
+                    yard_crane_attr[1] = len(yard_crane.mission_list) - i - 1
 
         node_attr_list.append(yard_crane_attr)
     return node_attr_list
@@ -1162,11 +1176,10 @@ def get_state(iter_solution: PortEnv, step_number: int, cur_mission: Mission = N
     # lock station: 到LS的时间在函数里面计算，因为可以精确计算
     node_attr_list.extend(get_stations_state(iter_solution, cur_time))
     # crossover：到CO时间用下界计算
-    cur_time = cur_mission.machine_start_time[1] + cur_mission.transfer_time_e2s_min \
-               + cur_mission.transfer_time_s2c_min + cur_mission.station_process_time
-    node_attr_list.extend(get_crossovers_state(iter_solution, cur_time))
+    tmp_time = get_est_arrive_crossover_time(iter_solution, cur_mission)
+    node_attr_list.extend(get_crossovers_state(iter_solution, tmp_time, cur_time))
     # yard crane： 到YC的时间在函数里面计算，因为可以精确计算
-    node_attr_list.extend(get_yard_crane_state(iter_solution, cur_time, cur_mission))
+    node_attr_list.extend(get_yard_crane_state(iter_solution, tmp_time, cur_mission, cur_time))
     # =========== 添加边 ===========
     edge_in_list, edge_out_list = [], []
     edge_list_for_this_stage = []
@@ -1175,14 +1188,15 @@ def get_state(iter_solution: PortEnv, step_number: int, cur_mission: Mission = N
     for station in iter_solution.lock_stations.values():
         edge_in_list.append(int(cur_mission.quay_crane_id[-1]) - 1)
         edge_out_list.append(int(station.idx[-1]) - 1 + 3)  # 锁站index+3
-        edge_weight.append(iter_solution.exit_to_station_matrix[int(station.idx[-1]) - 1])
+        edge_weight.append(iter_solution.exit_to_station_matrix[int(station.idx[-1]) - 1] / cur_mission.vehicle_speed)
     for station in iter_solution.lock_stations.values():
         edge_in_list.append(int(station.idx[-1]) - 1 + 3)
         edge_out_list.append(crossover_index)  # 交叉口
-        edge_weight.append(iter_solution.station_to_crossover_matrix[int(station.idx[-1]) - 1][crossover_index - 8])
+        edge_weight.append(iter_solution.station_to_crossover_matrix[int(station.idx[-1]) - 1][
+                               crossover_index - 8] / cur_mission.vehicle_speed)
     edge_in_list.append(crossover_index)
     edge_out_list.append(yard_crane_index)
-    edge_weight.append(cur_mission.transfer_time_c2y * cur_mission.vehicle_speed)
+    edge_weight.append(cur_mission.transfer_time_c2y)
     edge_list_for_this_stage.append(edge_in_list)
     edge_list_for_this_stage.append(edge_out_list)
     edge_index = torch.tensor(edge_list_for_this_stage)

@@ -44,6 +44,10 @@ class LABuffer(Dataset, ABC):
     def append(self, state, ac, new_state, r, done):
         if len(self.done) == self.buffer_size:
             self.pop()
+        norm = torch.tensor([[1 / 100, 0, 0], [0, 1, 0], [0, 0, 1 / 100]], dtype=torch.float32)
+        state.x = torch.mm(state.x, norm)
+        new_state.x = torch.mm(new_state.x, norm)
+        r = r / 100.0
         self.state.append(state)
         self.action.append(ac)
         self.state_.append(new_state)
@@ -144,6 +148,7 @@ class UANewBuffer(Dataset, ABC):
     def append(self, state, u_ac, l_ac, new_state, r, done):
         if len(self.done) == self.buffer_size:
             self.pop()
+        # TODO
         self.state.append(state)
         self.u_action.append(u_ac)
         self.l_action.append(l_ac)

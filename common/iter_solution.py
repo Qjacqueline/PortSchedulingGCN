@@ -15,7 +15,7 @@ import conf.configs as cf
 from algorithm_factory.algo_utils import sort_missions
 from algorithm_factory.algo_utils.machine_cal_methods import del_station_afterwards, del_machine, process_insert, \
     crossover_process_by_order, yard_crane_process_by_order, \
-    process_init_solution_for_l2i,process_init_solution_for_l2a
+    process_init_solution_for_l2i, process_init_solution_for_l2a, quay_crane_release_mission
 from algorithm_factory.algo_utils.mission_cal_methods import derive_mission_attribute_list
 from algorithm_factory.algo_utils.operators import inter_relocate_latest_station_longest_mission_to_earliest_machine, \
     inter_swap_latest_station_random_mission_earliest_machine, \
@@ -80,6 +80,8 @@ class IterSolution:
 
     def step_v2(self, action, mission, step_number, buffer_flag=True):
         curr_station = list(self.iter_env.lock_stations.values())[action]
+        # 岸桥处标记为释放
+        quay_crane_release_mission(port_env=self.iter_env, mission=mission)
         # 删除station之后的工序
         del_station_afterwards(port_env=self.iter_env, buffer_flag=buffer_flag, step_number=step_number)
         # 删除待插入station

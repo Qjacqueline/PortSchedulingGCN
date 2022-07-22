@@ -108,7 +108,7 @@ class DDQN(BaseAgent):
         q_next_value = self.qf_target.forward(s_)
         q_eval = q_eval_value.gather(1, action)
         q_next = q_next_value.gather(1, torch.max(q_next_value, 1)[1].unsqueeze(1))
-        q_target = rewards / 100.0 + self.gamma * q_next * (1.0 - done)
+        q_target = rewards + self.gamma * q_next * (1.0 - done)  # TODO
         loss = self.loss_func(q_eval, q_target.detach())
         # print(torch.mean(rewards)
         self.optimizer.zero_grad()
@@ -119,7 +119,7 @@ class DDQN(BaseAgent):
         if self.train_count % 200 == 0 and self.epsilon < 0.9:
             self.epsilon = self.epsilon + 0.05
         self.train_count += 1
-        return loss.detach(), q_eval.detach().mean(), q_eval_value.detach().mean()
+        return loss.detach().mean(), q_eval.detach().mean(), q_eval_value.detach().mean()
 
 
 class LACollector:

@@ -258,8 +258,8 @@ def cal_station_to_location():
     station_to_location = {}
     for i in range(cf.LOCK_STATION_NUM):
         station_to_location['S' + str(i + 1)] = first_station + np.array([i * s_dx, 0])
-    # TODO , 'S5': first_station + np.array([4 * s_dx, 0]),
-    #                            'S6': first_station + np.array([5 * s_dx, 0])
+    # 'S5': first_station + np.array([4 * s_dx, 0]),
+    #  'S6': first_station + np.array([5 * s_dx, 0])
     return station_to_location
 
 
@@ -479,6 +479,8 @@ def cal_transfer_time(instance: PortEnv):
     instance.station_to_crossover_min = [min(row) for row in
                                          list(map(list, zip(*instance.station_to_crossover_matrix)))]
     for quay_crane in instance.quay_cranes.values():
+        quay_crane.time_to_exit = (cf.QUAYCRANE_EXIT_SPACE + (
+                int(quay_crane.idx[-1]) - 1) * cf.QUAYCRANE_CRANE_SPACE) / (sum(cf.VEHICLE_SPEED) / 2.0)
         for mission in quay_crane.missions.values():
             # 提前计算停车位置
             curr_yard_loc = mission.yard_block_loc  # 任务堆存堆场的位置 ('A1',5,6)

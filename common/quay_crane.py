@@ -13,3 +13,4 @@ class QuayCrane(Machine):
     def __init__(self, quay_crane_id, missions, location):
         super(QuayCrane, self).__init__(quay_crane_id, location)
         self.missions = missions  # TOS分派的任务
+        self.time_to_exit = 0
