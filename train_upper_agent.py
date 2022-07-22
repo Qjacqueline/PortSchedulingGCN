@@ -77,10 +77,7 @@ if __name__ == '__main__':
     rl_logger.add_text(tag='characteristic', text_string='init_ua_n')
 
     train_solus = [read_input('train_1_'), read_input('train_2_'), read_input('train_3_'), read_input('train_4_'),
-                   read_input('train_5_'), read_input('train_6_'), read_input('train_7_'), read_input('train_8_'),
-                   read_input('train_9_'), read_input('train_10_'), read_input('train_11_'), read_input('train_12_'),
-                   read_input('train_13_'), read_input('train_14_'), read_input('train_15_'), read_input('train_16_'),
-                   read_input('train_17_'), read_input('train_18_')]
+                   read_input('train_5_'), read_input('train_6_'), read_input('train_7_'), read_input('train_8_')]
     test_solus = [read_input('train_1_'), read_input('train_2_'), read_input('train_3_'), read_input('train_4_'),
                   read_input('train_5_'), read_input('train_6_'), read_input('train_7_'), read_input('train_8_'),
                   read_input('train_9_'), read_input('train_10_'), read_input('train_11_'), read_input('train_12_'),
@@ -121,9 +118,9 @@ if __name__ == '__main__':
                                  data_buffer=data_buffer, batch_size=args.batch_size, u_agent=u_agent,
                                  l_agent=l_agent, rl_logger=rl_logger, save_path=args.save_path)
 
-    init_makespans, reward = u_collector.eval(l_eval_flag=True)
-    for makespan in init_makespans:
-        print("初始la分配makespan为" + str(makespan))
+    # init_makespans, reward = u_collector.eval(l_eval_flag=True)
+    # for makespan in init_makespans:
+    #     print("初始la分配makespan为" + str(makespan))
 
     # u_dl_train = DataLoader(dataset=data_buffer, batch_size=args.u_batch_size, shuffle=True)
 

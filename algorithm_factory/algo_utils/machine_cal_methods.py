@@ -1202,5 +1202,7 @@ def get_state(iter_solution: PortEnv, step_number: int, cur_mission: Mission = N
     edge_index = torch.tensor(edge_list_for_this_stage)
     edge_weight = torch.tensor(edge_weight, dtype=torch.float32)
     x = torch.tensor(node_attr_list, dtype=torch.float32)
+    norm = torch.tensor([[1 / 100, 0, 0], [0, 1/10, 0], [0, 0, 1 / 100]], dtype=torch.float32)
+    x = torch.mm(x, norm)
     data = Data(x=x, edge_index=edge_index, edge_weight=edge_weight)
     return data

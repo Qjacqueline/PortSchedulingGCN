@@ -61,8 +61,7 @@ if __name__ == '__main__':
 
     # env
     train_solus = [read_input('train_1_'), read_input('train_2_'), read_input('train_3_'), read_input('train_4_'),
-                   read_input('train_5_'), read_input('train_6_'), read_input('train_7_'), read_input('train_8_'),
-                   read_input('train_9_'), read_input('train_10_')]
+                   read_input('train_5_'), read_input('train_6_'), read_input('train_7_'), read_input('train_8_')]
     test_solus = [read_input('train_1_'), read_input('train_2_'), read_input('train_3_'), read_input('train_4_'),
                   read_input('train_5_'), read_input('train_6_'), read_input('train_7_'), read_input('train_8_'),
                   read_input('train_9_'), read_input('train_10_'), read_input('train_11_'), read_input('train_12_'),
