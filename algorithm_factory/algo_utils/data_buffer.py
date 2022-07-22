@@ -94,6 +94,7 @@ class UABuffer(Dataset, ABC):
     def append(self, state, ac, r, new_state, adjust):
         if len(self.action) == self.buffer_size:
             self.pop()
+        r = r / 100.0
         self.state.append(state)
         self.adjust.append(adjust)
         self.action.append(ac)

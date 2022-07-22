@@ -15,7 +15,6 @@ import torch
 from tensorboardX import SummaryWriter
 from torch import nn
 from torch_geometric.loader import DataLoader
-from tqdm import tqdm
 
 import conf.configs as cf
 from algorithm_factory.algo_utils.data_buffer import LABuffer
@@ -283,32 +282,3 @@ class LACollector:
         print(makespan)
         solu.reset()
 
-
-def l_train(train_time: int, epoch_num: int, dl_train: DataLoader, agent: DDQN, collector: LACollector,
-            rl_logger: SummaryWriter) -> None:
-    for epoch in range(epoch_num):
-        with tqdm(dl_train, desc=f'epoch{epoch}', ncols=100) as pbar:
-            total_loss = 0
-            total_q_eval = 0
-            total_q_eval_value = 0
-            for batch in pbar:
-                loss, q_eval, q_eval_value = agent.update(batch)
-                total_loss += loss.data
-                total_q_eval += q_eval.data
-                total_q_eval_value += q_eval_value.data
-            makespan, reward = collector.eval()
-            rl_logger.add_scalar(tag=f'l_train/loss', scalar_value=total_loss / len(pbar),
-                                 global_step=epoch + train_time * epoch_num)
-            rl_logger.add_scalar(tag=f'l_train/q', scalar_value=total_q_eval / len(pbar),
-                                 global_step=epoch + train_time * epoch_num)
-            rl_logger.add_scalar(tag=f'l_train/q_all', scalar_value=total_q_eval_value / len(pbar),
-                                 global_step=epoch + train_time * epoch_num)
-            field_name = ['Epoch', 'loss']
-            value = [epoch, total_loss / len(pbar)]
-            for i in range(len(makespan)):
-                rl_logger.add_scalar(tag=f'l_train/makespan' + str(i + 1), scalar_value=makespan[i],
-                                     global_step=epoch + train_time * epoch_num)
-                field_name.append('makespan' + str(i + 1))
-                value.append(makespan[i])
-
-            print_result(field_name=field_name, value=value)
