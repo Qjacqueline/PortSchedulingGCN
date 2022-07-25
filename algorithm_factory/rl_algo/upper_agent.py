@@ -20,7 +20,7 @@ from tqdm import tqdm
 
 from torch_geometric.loader import DataLoader
 from algorithm_factory.algo_utils.data_buffer import UANewBuffer
-from algorithm_factory.algo_utils.machine_cal_methods import get_state
+from algorithm_factory.algo_utils.machine_cal_methods import get_state, get_next_job_at_quay_cranes
 from algorithm_factory.algo_utils.net_models import ActorNew, CriticNew
 from algorithm_factory.algo_utils.rl_methods import print_result
 from algorithm_factory.algo_utils.rl_methods import soft_update
@@ -117,7 +117,7 @@ class ACUpper(BaseAgent):
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
         self.actor_optimizer.step()
-        return actor_loss, critic_loss
+        return actor_loss, critic_loss, u_action.mean()
 
 
 class UANewCollector:
@@ -148,71 +148,34 @@ class UANewCollector:
             pre_makespan = 0
             state = get_state(solu.iter_env, 0)
             for step in range(self.mission_num):
-                cur_mission = solu.iter_env.mission_list[step]  # fixme 先同场桥的->同交叉口->时间相近 现在是依照到达交叉口的顺序
+                cur_mission = get_next_job_at_quay_cranes(solu.iter_env, self.curr_time)
+                # cur_mission = solu.iter_env.mission_list[step]
+                solu.released_missions.append(cur_mission)
                 u_action = self.u_agent.forward(state)
+                # u_action = torch.tensor(300, dtype=torch.float)
                 l_action = self.l_agent.forward(state, False)  # fixme 需要探索么？
-                makespan = self.process(solu, cur_mission, u_action, l_action, step, self.each_quay_m_num)
+                makespan = self.process(solu, cur_mission, u_action, l_action, step)
                 reward = (pre_makespan - makespan)
                 if step != self.mission_num - 1:
-                    new_state = get_state(iter_solution=solu.iter_env, step_number=step + 1)
+                    new_state = get_state(iter_solution=solu.iter_env, cur_mission=cur_mission)
                     done = 0
                 else:
                     new_state = state
                     done = 1
-                self.data_buffer.append(state=state, u_ac=int(u_action), l_ac=l_action,
-                                        new_state=new_state, r=reward, done=done)
+                # update
+                state = new_state
+                pre_makespan = makespan
+
+                if step >= 3:
+                    self.data_buffer.append(state=state, u_ac=float(u_action), l_ac=l_action,
+                                            new_state=new_state, r=reward, done=done)
                 # train & eval
-                if self.train_time == 0:
+                if self.train_time == 3:
                     self.u_dl_train = DataLoader(dataset=self.data_buffer, batch_size=self.batch_size, shuffle=True)
-                if self.train_time > 1 and self.train_time % 2 == 0:
+                if self.train_time > 3 and self.train_time % 10 == 0:
                     self.train()
                 self.train_time = self.train_time + 1
-                state = new_state
             solu.reset()
-
-    def train(self):
-        total_policy_loss = 0
-        total_vf_loss = 0
-        total_loss = 0
-        total_q_eval = 0
-        total_q_eval_value = 0
-        train_batch_num = 0
-        # train upper
-        batch = next(iter(self.u_dl_train))
-        policy_loss, vf_loss = self.u_agent.update(batch)
-        total_policy_loss += policy_loss.data
-        total_vf_loss += vf_loss.data
-        for i in range(3):
-            # train lower
-            batch = next(iter(self.u_dl_train))
-            loss, q_eval, q_eval_value = self.l_agent.update(batch)
-            total_loss += loss.data
-            total_q_eval += q_eval.data
-            total_q_eval_value += q_eval_value.data
-            train_batch_num += 1
-        self.rl_logger.add_scalar(tag=f'u_train/policy_loss', scalar_value=total_policy_loss,
-                                  global_step=self.train_time)
-        self.rl_logger.add_scalar(tag=f'u_train/vf_loss', scalar_value=total_vf_loss,
-                                  global_step=self.train_time)
-        self.rl_logger.add_scalar(tag=f'u_train/q_loss', scalar_value=total_loss / train_batch_num,
-                                  global_step=self.train_time)
-        self.rl_logger.add_scalar(tag=f'u_train/q', scalar_value=total_q_eval / train_batch_num,
-                                  global_step=self.train_time)
-        self.rl_logger.add_scalar(tag=f'u_train/q_all', scalar_value=total_q_eval_value / train_batch_num,
-                                  global_step=self.train_time)
-        # 每20次eval一次
-        if self.train_time % 20 == 0:
-            # field_name = ['Epoch', 'policy_loss', 'vf_loss', 'q_loss']
-            # value = [self.train_time, total_policy_loss, total_vf_loss, total_loss]
-            field_name = ['Epoch', 'policy_loss', 'vf_loss']
-            value = [self.train_time, total_policy_loss, total_vf_loss]
-            makespan, reward = self.eval()
-            for i in range(len(makespan)):
-                self.rl_logger.add_scalar(tag=f'l_train/makespan' + str(i + 1), scalar_value=makespan[i],
-                                          global_step=self.train_time)
-                field_name.append('makespan' + str(i + 1))
-                value.append(makespan[i])
-            print_result(field_name=field_name, value=value)
 
     def eval(self, l_eval_flag=False):
         with torch.no_grad():
@@ -225,16 +188,18 @@ class UANewCollector:
                 total_reward = 0
                 self.curr_time = [0, 0, 0]
                 for step in range(self.mission_num):
-                    cur_mission = solu.iter_env.mission_list[step]
+                    cur_mission = get_next_job_at_quay_cranes(solu.iter_env, self.curr_time)
+                    # cur_mission = solu.iter_env.mission_list[step]
+                    solu.released_missions.append(cur_mission)
                     if l_eval_flag:
                         u_action = torch.tensor(90)
                     else:
                         u_action = self.u_agent.forward(state, False)
                     l_action = self.l_agent.forward(state, False)
-                    makespan = self.process(solu, cur_mission, u_action, l_action, step, self.each_quay_m_num)
+                    makespan = self.process(solu, cur_mission, u_action, l_action, step)
                     total_reward += (pre_makespan - makespan)
                     if step != self.mission_num - 1:
-                        new_state = get_state(iter_solution=solu.iter_env, step_number=step + 1)
+                        new_state = get_state(iter_solution=solu.iter_env, cur_mission=cur_mission)
                     else:
                         new_state = None
                     pre_makespan = makespan
@@ -249,38 +214,95 @@ class UANewCollector:
             reward_forall.append(sum(reward_forall[0:len(self.train_solus)]))
             if makespan_forall[-2] < self.best_result[-2]:
                 self.best_result[-2] = makespan_forall[-2]
-            if makespan_forall[-1] < self.best_result[-1]:
-                self.best_result[-1] = makespan_forall[-1]
                 torch.save(self.l_agent.qf, self.save_path + '/eval_best_la.pkl')
                 torch.save(self.l_agent.qf_target, self.save_path + '/target_best_la.pkl')
                 torch.save(self.u_agent.actor, self.save_path + '/actor_best_fixed.pkl')
                 torch.save(self.u_agent.critic, self.save_path + '/critic_best_fixed.pkl')
+            if makespan_forall[-1] < self.best_result[-1]:
+                self.best_result[-1] = makespan_forall[-1]
             return makespan_forall, reward_forall
 
-    def process(self, solu: IterSolution, mission: Mission, u_action: torch.Tensor, l_action: torch.Tensor, step: int,
-                each_quay_m_num: int):
-        self.process_release_adjust(mission, each_quay_m_num, u_action)
-        cur_makespan = solu.step_v2(action=l_action, mission=mission, step_number=step)
+    def train(self):
+        total_policy_loss = 0
+        total_vf_loss = 0
+        total_loss = 0
+        total_q_eval = 0
+        total_q_eval_value = 0
+        train_batch_num = 0
+
+        # train upper
+        batch = next(iter(self.u_dl_train))
+        policy_loss, vf_loss, u_action_mean = self.u_agent.update(batch)
+        total_policy_loss += policy_loss.data
+        total_vf_loss += vf_loss.data
+
+        # train lower
+        # for i in range(3):
+        #     batch = next(iter(self.u_dl_train))
+        #     loss, q_eval, q_eval_value = self.l_agent.update(batch)
+        #     total_loss += loss.data
+        #     total_q_eval += q_eval.data
+        #     total_q_eval_value += q_eval_value.data
+        #     train_batch_num += 1
+
+        # 画图&制表
+        self.rl_logger.add_scalar(tag=f'u_train/policy_loss', scalar_value=total_policy_loss,
+                                  global_step=self.train_time)
+        self.rl_logger.add_scalar(tag=f'u_train/vf_loss', scalar_value=total_vf_loss,
+                                  global_step=self.train_time)
+        self.rl_logger.add_scalar(tag=f'u_train/u_action_mean', scalar_value=u_action_mean,
+                                  global_step=self.train_time)
+        # self.rl_logger.add_scalar(tag=f'u_train/q_loss', scalar_value=total_loss / train_batch_num,
+        #                           global_step=self.train_time)
+        # self.rl_logger.add_scalar(tag=f'u_train/q', scalar_value=total_q_eval / train_batch_num,
+        #                           global_step=self.train_time)
+        # self.rl_logger.add_scalar(tag=f'u_train/q_all', scalar_value=total_q_eval_value / train_batch_num,
+        #                           global_step=self.train_time)
+
+        # 每20次eval一次
+        if self.train_time % 20 == 0:
+            makespan, reward = self.eval()
+            # field_name = ['Epoch', 'policy_loss', 'vf_loss', 'q_loss']
+            # value = [self.train_time, total_policy_loss, total_vf_loss, total_loss]
+            field_name = ['Epoch', 'policy_loss', 'vf_loss', 'u_action_mean', 'makespan_train', 'makespan_test',
+                          'reward']
+            value = [self.train_time, total_policy_loss, total_vf_loss, u_action_mean, makespan[-2], makespan[-1],
+                     reward[-1]]
+            self.rl_logger.add_scalar(tag=f'l_train/makespan_train', scalar_value=makespan[-2],
+                                      global_step=self.train_time)
+            self.rl_logger.add_scalar(tag=f'l_train/makespan_test', scalar_value=makespan[-1],
+                                      global_step=self.train_time)
+            # for i in range(len(makespan)):
+            #     self.rl_logger.add_scalar(tag=f'l_train/makespan' + str(i + 1), scalar_value=makespan[i],
+            #                               global_step=self.train_time)
+            #     field_name.append('makespan' + str(i + 1))
+            #     value.append(makespan[i])
+            print_result(field_name=field_name, value=value)
+
+    def process(self, solu: IterSolution, mission: Mission, u_action: torch.Tensor, l_action: torch.Tensor, step: int):
+        self.process_release_adjust(mission, self.each_quay_m_num, u_action)
+        cur_makespan = solu.step_v22(action=l_action, mission=mission, step_number=step)
         return cur_makespan
 
     def process_release_adjust(self, mission: Mission, each_quay_m_num, u_action=torch.tensor(0)):
-        adjust_time = mission.release_time
+        adjust_release_time = mission.release_time
         if int(mission.idx[1:]) % each_quay_m_num == 1:
             mission.release_time = 0
-            adjust_time = 0
+            adjust_release_time = 0  # 调整后的释放时间
+            self.curr_time[int(int(mission.idx[1:]) / each_quay_m_num)] = 120.0  # 下一个最早出发前往exit时间 min(60)+process(60)
         elif int(mission.idx[1:]) <= each_quay_m_num:
-            adjust_time = self.curr_time[0] + u_action.item()
-            self.curr_time[0] = adjust_time
+            adjust_release_time = self.curr_time[0] + u_action.item() - 120.0
+            self.curr_time[0] = adjust_release_time + 120.0
         elif 100 < int(mission.idx[1:]) <= each_quay_m_num * 2:
-            adjust_time = self.curr_time[1] + u_action.item()
-            self.curr_time[1] = adjust_time
+            adjust_release_time = self.curr_time[1] + u_action.item() - 120.0
+            self.curr_time[1] = adjust_release_time + 120.0
         elif 200 < int(mission.idx[1:]) <= each_quay_m_num * 3:
-            adjust_time = self.curr_time[2] + u_action.item()
-            self.curr_time[2] = adjust_time
+            adjust_release_time = self.curr_time[2] + u_action.item() - 120.0
+            self.curr_time[2] = adjust_release_time + 120.0
         transfer_time = mission.machine_start_time[1] - mission.release_time
-        mission.machine_start_time[0] = adjust_time
-        mission.machine_start_time[1] = adjust_time + transfer_time
-        mission.release_time = adjust_time
+        mission.machine_start_time[0] = adjust_release_time
+        mission.machine_start_time[1] = adjust_release_time + transfer_time
+        mission.release_time = adjust_release_time
 
 
 def h_new_train(train_time: int, epoch_num: int, u_dl_train: DataLoader, u_agent: ACUpper, l_agent: DDQN,
@@ -295,7 +317,7 @@ def h_new_train(train_time: int, epoch_num: int, u_dl_train: DataLoader, u_agent
             total_q_eval_value = 0
             for batch in pbar:
                 if i % 2 == 0:  # FixMe
-                    policy_loss, vf_loss = u_agent.update(batch)  # TODO upper
+                    policy_loss, vf_loss, u_action_mean = u_agent.update(batch)  # TODO upper
                     total_policy_loss += policy_loss.data
                     total_vf_loss += vf_loss.data
                 loss, q_eval, q_eval_value = l_agent.update(batch)

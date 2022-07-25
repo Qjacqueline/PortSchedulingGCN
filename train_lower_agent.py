@@ -95,6 +95,7 @@ if __name__ == '__main__':
     agent.qf = torch.load(args.save_path + '/eval_best_fixed.pkl')
     agent.qf_target = torch.load(args.save_path + '/target_best_fixed.pkl')
     makespan_forall, reward_forall = collector.eval()
+
     # =================== heuristic l_train ==================
     # collector.get_transition(
     #     read_json_from_file(cf.OUTPUT_SOLUTION_PATH + 'train_1_SA17139.76892920801.json'), test_solus[1])

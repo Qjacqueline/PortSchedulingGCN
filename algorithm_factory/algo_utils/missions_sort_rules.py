@@ -45,7 +45,7 @@ class sort_missions(object):
     def A_STATION(missions, station):
         missions.sort(
             key=lambda x: (
-                    x.machine_start_time[1] + station.distance_to_exit / x.vehicle_speed, int(x.idx[1:])))  # 按照到达锁站时间排序
+                x.machine_start_time[1] + station.distance_to_exit / x.vehicle_speed, int(x.idx[1:])))  # 按照到达锁站时间排序
 
     @staticmethod
     def A_EXIT(missions):

@@ -173,6 +173,19 @@ def get_est_arrive_crossover_time(port_env: PortEnv, mission: Mission):
     return min_tmp_time
 
 
+def get_next_job_at_quay_cranes(port_env: PortEnv, curr_time: list):
+    min_time = float('INF')
+    min_idx = None
+    for i in range(len(port_env.quay_cranes)):
+        tmp_time = port_env.quay_cranes['QC' + str(i + 1)].time_to_exit + curr_time[i]  # 下一个的最早到达exit时间
+        if tmp_time < min_time and len(port_env.quay_cranes['QC' + str(i + 1)].mission_list) < len(
+                port_env.quay_cranes['QC' + str(i + 1)].missions):
+            min_time = tmp_time
+            min_idx = i
+    return list(port_env.quay_cranes['QC' + str(min_idx + 1)].missions.values())[
+        len(port_env.quay_cranes['QC' + str(min_idx + 1)].mission_list)]
+
+
 # ==================== machine process missions  ====================
 def quay_crane_process_by_order(port_env):
     # 阶段一：岸桥
@@ -317,13 +330,18 @@ def match_mission_crossover(crossovers, mission):
     return curr_crossover
 
 
-def del_station_afterwards(port_env, buffer_flag=True, step_number=cf.MISSION_NUM):  # a_station2 a_crossover4 a_yard6
+def del_station_afterwards(port_env, buffer_flag=True, step_number=cf.MISSION_NUM, released_mission_ls=None):
+    # a_station2 a_crossover4 a_yard6
     if buffer_flag:
         crossover_stage = 5
     else:
         crossover_stage = 4
+    if any(released_mission_ls):
+        ls = released_mission_ls
+    else:
+        ls = port_env.mission_list
     for i in range(step_number):
-        mission = port_env.mission_list[i]
+        mission = ls[i]
         del mission.machine_list[crossover_stage:]
         del mission.machine_process_time[crossover_stage:]
         del mission.machine_start_time[crossover_stage:]
@@ -549,13 +567,17 @@ def assign_mission_to_station(mission, curr_station, buffer_flag=False):
         mission.stage = 4
 
 
-def crossover_process_by_order(port_env, buffer_flag=False, step_number=cf.MISSION_NUM):
+def crossover_process_by_order(port_env, buffer_flag=False, step_number=cf.MISSION_NUM, released_mission_ls=None):
     # 阶段五：交叉口 TODO 更新多辆等待 预assign
     crossover_assign_dict = {}
     for crossover_idx in port_env.crossovers.keys():
         crossover_assign_dict.setdefault(crossover_idx, [])
+    if any(released_mission_ls):
+        ls = released_mission_ls
+    else:
+        ls = port_env.mission_list
     for i in range(step_number):
-        mission = port_env.mission_list[i]
+        mission = ls[i]
         crossover = port_env.crossovers[mission.crossover_id]
         crossover_assign_dict[crossover.idx].append(mission)
     for crossover_idx in crossover_assign_dict.keys():
@@ -613,13 +635,17 @@ def assign_mission_to_crossover(lock_stations, crossovers, mission, buffer_flag=
         mission.stage = 6
 
 
-def yard_crane_process_by_order(port_env, buffer_flag=False, step_number=cf.MISSION_NUM):
+def yard_crane_process_by_order(port_env, buffer_flag=False, step_number=cf.MISSION_NUM, released_mission_ls=None):
     # 阶段六：场桥
     yard_crane_assign_dict = {}
     for yard_crane_idx in port_env.yard_cranes.keys():
         yard_crane_assign_dict.setdefault(yard_crane_idx, [])
+    if any(released_mission_ls):
+        ls = released_mission_ls
+    else:
+        ls = port_env.mission_list
     for i in range(step_number):
-        mission = port_env.mission_list[i]
+        mission = ls[i]
         yard_crane_assign_dict['YC' + mission.yard_block_loc[0]].append(mission)
     for yard_crane_idx in yard_crane_assign_dict:
         if any(yard_crane_assign_dict[yard_crane_idx]):
@@ -1165,7 +1191,7 @@ def get_yard_crane_state(iter_solution: PortEnv, est_time: float, cur_mission: M
 # def find_nearest_mission_yard_crane(cur_time: float):
 
 
-def get_state(iter_solution: PortEnv, step_number: int, cur_mission: Mission = None):
+def get_state(iter_solution: PortEnv, step_number: int = None, cur_mission: Mission = None):
     if cur_mission is None:
         cur_mission: Mission = iter_solution.mission_list[step_number]
     # =========== 添加点 ===========
@@ -1200,9 +1226,9 @@ def get_state(iter_solution: PortEnv, step_number: int, cur_mission: Mission = N
     edge_list_for_this_stage.append(edge_in_list)
     edge_list_for_this_stage.append(edge_out_list)
     edge_index = torch.tensor(edge_list_for_this_stage)
-    edge_weight = torch.tensor(edge_weight, dtype=torch.float32)
+    edge_weight = torch.tensor(edge_weight, dtype=torch.float32) / 100
     x = torch.tensor(node_attr_list, dtype=torch.float32)
-    norm = torch.tensor([[1 / 100, 0, 0], [0, 1/10, 0], [0, 0, 1 / 100]], dtype=torch.float32)
+    norm = torch.tensor([[1 / 100, 0, 0], [0, 1 / 10, 0], [0, 0, 1 / 100]], dtype=torch.float32)
     x = torch.mm(x, norm)
     data = Data(x=x, edge_index=edge_index, edge_weight=edge_weight)
     return data

@@ -33,6 +33,7 @@ class IterSolution:
         self.last_step_makespan: float = 0.0
         self.machine_chosen_num: list = [0] * len(self.init_env.lock_stations)
         self.attri_ls = None
+        self.released_missions = []
 
     def reset(self):
         self.iter_env = deepcopy(self.init_env)
@@ -92,6 +93,29 @@ class IterSolution:
         crossover_process_by_order(self.iter_env, buffer_flag, step_number + 1)
         # 阶段六：场桥
         yard_crane_process_by_order(self.iter_env, buffer_flag, step_number + 1)
+        cur_makespan = self.iter_env.cal_finish_time()
+        # station_makespan = self.cal_station_makespan()
+        # makespan_delta = cur_makespan - self.last_step_makespan
+        self.last_step_makespan = cur_makespan
+        return cur_makespan
+
+    def step_v22(self, action, mission, step_number, buffer_flag=True):
+        curr_station = list(self.iter_env.lock_stations.values())[action]
+        # 岸桥处标记为释放
+        quay_crane_release_mission(port_env=self.iter_env, mission=mission)
+        # 删除station之后的工序
+        del_station_afterwards(port_env=self.iter_env, buffer_flag=buffer_flag, step_number=step_number,
+                               released_mission_ls=self.released_missions)
+        # 删除待插入station
+        del_machine(curr_station, buffer_flag)
+        # 插入任务
+        process_insert(mission, curr_station, buffer_flag)
+        # 阶段五：交叉口
+        crossover_process_by_order(self.iter_env, buffer_flag, step_number + 1,
+                                   released_mission_ls=self.released_missions)
+        # 阶段六：场桥
+        yard_crane_process_by_order(self.iter_env, buffer_flag, step_number + 1,
+                                    released_mission_ls=self.released_missions)
         cur_makespan = self.iter_env.cal_finish_time()
         # station_makespan = self.cal_station_makespan()
         # makespan_delta = cur_makespan - self.last_step_makespan
