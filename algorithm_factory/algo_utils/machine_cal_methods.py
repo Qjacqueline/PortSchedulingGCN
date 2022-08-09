@@ -13,7 +13,6 @@ import random
 
 import numpy as np
 import torch
-from torch import float32
 from torch_geometric.data import Data
 
 import conf.configs as cf
@@ -186,6 +185,75 @@ def get_next_job_at_quay_cranes(port_env: PortEnv, curr_time: list):
         len(port_env.quay_cranes['QC' + str(min_idx + 1)].mission_list)]
 
 
+def get_cur_time_status(port_env: PortEnv, cur_time: float):
+    yard_cranes_set = get_yard_cranes_set(port_env)
+    qc_ls = {'QC1': [], 'QC2': [], 'QC3': []}
+    qc_ls_ls = []
+    ls_ls = {'S1': [], 'S2': [], 'S3': [], 'S4': []}
+    ls_co_ls = []
+    co_ls = {'CO1': [], 'CO2': [], 'CO3': []}
+    co_yc_ls = []
+    yc_ls = {}
+    for key in yard_cranes_set:
+        yc_ls.setdefault(key, [])
+    f_ls = []
+
+    for mission in port_env.mission_list:
+        if mission.machine_start_time[0] >= cur_time:
+            qc_ls[mission.quay_crane_id].append(mission)
+        elif mission.machine_start_time[2] > cur_time:
+            qc_ls_ls.append(mission)
+        elif mission.machine_start_time[4] + mission.machine_process_time[4] > cur_time:
+            ls_ls[mission.machine_list[4]].append(mission)
+        elif mission.machine_start_time[5] > cur_time:
+            ls_co_ls.append(mission)
+        elif mission.machine_start_time[5] + mission.machine_process_time[5] + mission.machine_process_time[6] \
+                > cur_time:
+            co_ls[mission.machine_list[6]].append(mission)
+        elif mission.machine_start_time[7] > cur_time:
+            co_yc_ls.append(mission)
+        elif mission.total_process_time + mission.release_time > cur_time:
+            yc_ls[mission.machine_list[8][2:]].append(mission)
+        else:
+            f_ls.append(mission)
+
+    return qc_ls, qc_ls_ls, ls_ls, ls_co_ls, co_ls, co_yc_ls, yc_ls, f_ls
+
+
+def get_cur_time_status_v2(port_env: PortEnv, cur_time: float):
+    yard_cranes_set = get_yard_cranes_set(port_env)
+    qc_ls = {'QC1': [], 'QC2': [], 'QC3': []}
+    qc_ls_ls = []
+    ls_ls = {'S1': [], 'S2': [], 'S3': [], 'S4': []}
+    ls_co_ls = []
+    co_ls = {'CO1': [], 'CO2': [], 'CO3': []}
+    co_yc_ls = []
+    yc_ls = {}
+    for key in yard_cranes_set:
+        yc_ls.setdefault(key, [])
+    f_ls = []
+
+    for mission in port_env.mission_list:
+        if mission.machine_start_time[1] >= cur_time:
+            qc_ls[mission.quay_crane_id].append(mission)
+        elif mission.machine_start_time[2] > cur_time:
+            ls_ls[mission.machine_list[4]].append(mission)
+        elif mission.machine_start_time[4] + mission.machine_process_time[4] > cur_time:
+            ls_ls[mission.machine_list[4]].append(mission)
+        elif mission.machine_start_time[5] > cur_time:
+            co_ls[mission.machine_list[6]].append(mission)
+        elif mission.machine_start_time[6] + mission.machine_process_time[6] > cur_time:
+            co_ls[mission.machine_list[6]].append(mission)
+        elif mission.machine_start_time[7] > cur_time:
+            yc_ls[mission.machine_list[8][2:]].append(mission)
+        elif mission.machine_start_time[8] + mission.machine_process_time[8] > cur_time:
+            yc_ls[mission.machine_list[8][2:]].append(mission)
+        else:
+            f_ls.append(mission)
+
+    return qc_ls, qc_ls_ls, ls_ls, ls_co_ls, co_ls, co_yc_ls, yc_ls, f_ls
+
+
 # ==================== machine process missions  ====================
 def quay_crane_process_by_order(port_env):
     # 阶段一：岸桥
@@ -266,24 +334,13 @@ def station_process_by_random(port_env, buffer_flag=False):
             assign_mission_to_station(mission, port_env.lock_stations[station_idx], buffer_flag)
 
 
-def station_process_by_least_wait(port_env, buffer_flag=False):
+def station_process_by_least_wait(port_env, buffer_flag=True):
     # 阶段四：锁站
     station_assign_dict = {}
     for station_idx in port_env.lock_stations.keys():
         station_assign_dict.setdefault(station_idx, [])
     for mission in port_env.mission_list:
-        min_wait_time = float('inf')
-        min_station = list(port_env.lock_stations.items())[0][1]
-        for curr_station in port_env.lock_stations.values():
-            transfer_time_station = curr_station.distance_to_exit / mission.vehicle_speed
-            arrive_time_station = mission.total_process_time + mission.release_time + transfer_time_station
-            if any(curr_station.process_time):
-                wait_time = max(curr_station.process_time[-1][-1] - arrive_time_station, 0)
-            else:
-                wait_time = 0
-            if wait_time < min_wait_time:
-                min_wait_time = wait_time
-                min_station = curr_station
+        min_station = find_min_wait_station(port_env, mission)
         assign_mission_to_station(mission, min_station, buffer_flag)
         station_assign_dict[min_station.idx].append(mission)
     # for station_idx in station_assign_dict.keys():
@@ -291,6 +348,22 @@ def station_process_by_least_wait(port_env, buffer_flag=False):
     #                                     port_env.lock_stations[station_idx])
     # for mission in station_assign_dict[station_idx]:
     #     assign_mission_to_station(mission, port_env.lock_stations[station_idx], buffer_flag)
+
+
+def find_min_wait_station(port_env: PortEnv, mission: Mission):
+    min_wait_time = float('inf')
+    min_station = list(port_env.lock_stations.items())[0][1]
+    for curr_station in port_env.lock_stations.values():
+        transfer_time_station = curr_station.distance_to_exit / mission.vehicle_speed
+        arrive_time_station = mission.total_process_time + mission.release_time + transfer_time_station
+        if any(curr_station.process_time):
+            wait_time = max(curr_station.process_time[-1][-1] - arrive_time_station, 0)
+        else:
+            wait_time = 0
+        if wait_time < min_wait_time:
+            min_wait_time = wait_time
+            min_station = curr_station
+    return min_station
 
 
 def station_process_by_least_mission_num(port_env, buffer_flag=False):
@@ -336,7 +409,7 @@ def del_station_afterwards(port_env, buffer_flag=True, step_number=cf.MISSION_NU
         crossover_stage = 5
     else:
         crossover_stage = 4
-    if any(released_mission_ls):
+    if released_mission_ls is not None:
         ls = released_mission_ls
     else:
         ls = port_env.mission_list
@@ -572,7 +645,7 @@ def crossover_process_by_order(port_env, buffer_flag=False, step_number=cf.MISSI
     crossover_assign_dict = {}
     for crossover_idx in port_env.crossovers.keys():
         crossover_assign_dict.setdefault(crossover_idx, [])
-    if any(released_mission_ls):
+    if released_mission_ls is not None:
         ls = released_mission_ls
     else:
         ls = port_env.mission_list
@@ -606,10 +679,11 @@ def assign_mission_to_crossover(lock_stations, crossovers, mission, buffer_flag=
             break
         else:
             seq_length += 1
-    handling_time_crossover = 5 * math.exp(seq_length) + 35  # TODO 改函数
-    if handling_time_crossover > 55:
-        handling_time_crossover = 55  # 简单线性/
-    # print(mission.idx + " " + str(seq_length) + " " + str(handling_time_crossover))
+    if seq_length <= 4:
+        handling_time_crossover = 100 / (5 - seq_length)  # TODO 改函数
+    else:
+        handling_time_crossover = 100
+        # print(mission.idx + " " + str(seq_length) + " " + str(handling_time_crossover))
     if any(curr_crossover.process_time):
         start_time_crossover = max(arrive_time_crossover, curr_crossover.process_time[-1][-1])
     else:
@@ -640,7 +714,7 @@ def yard_crane_process_by_order(port_env, buffer_flag=False, step_number=cf.MISS
     yard_crane_assign_dict = {}
     for yard_crane_idx in port_env.yard_cranes.keys():
         yard_crane_assign_dict.setdefault(yard_crane_idx, [])
-    if any(released_mission_ls):
+    if released_mission_ls is not None:
         ls = released_mission_ls
     else:
         ls = port_env.mission_list
@@ -967,6 +1041,113 @@ def get_current_release_mission_info(cur_mission):
     return cur_mission_info
 
 
+# ==================== get state (graph node - release mission)  ====================
+def get_quay_release_state(qc_ls: dict, max_num: int):
+    quay_cranes_attr = []
+    seq_lengths = []
+    for ls in qc_ls.values():
+        quay_attr = []
+        index = 0
+        for i in range(len(ls)):
+            mission = ls[i]
+            if index == max_num:
+                break
+            else:
+                bloc_idx = (ord(mission.yard_block_loc[0][0]) - ord('A')) * 4 + int(mission.yard_block_loc[0][-1])
+                quay_attr.append(
+                    [mission.machine_start_time[0], mission.machine_start_time[1], mission.station_process_time,
+                     bloc_idx, int(mission.yard_block_loc[1]), int(mission.yard_block_loc[2])])  # a_t,s_t,f_t
+                index += 1
+        for i in range(max_num - index):
+            quay_attr.append([0, 0, 0, 0, 0, 0])
+        quay_cranes_attr.append(quay_attr)
+        seq_lengths.append(index)
+    return quay_cranes_attr
+
+
+def get_stations_release_state(ls_ls: dict, max_num: int):
+    stations_attr = []
+    seq_lengths = []
+    for ls in ls_ls.values():
+        getattr(sort_missions, "A_STATION_NB")(ls)
+        station_attr = []
+        index = 0
+        for i in range(len(ls) - 1, -1, -1):
+            mission = ls[i]
+            if index == max_num:
+                break
+            else:
+                bloc_idx = (ord(mission.yard_block_loc[0][0]) - ord('A')) * 4 + int(mission.yard_block_loc[0][-1])
+                station_attr.append(
+                    [mission.machine_start_time[2], mission.machine_start_time[4],
+                     mission.machine_start_time[4] + mission.machine_process_time[4],
+                     bloc_idx, int(mission.yard_block_loc[1]), int(mission.yard_block_loc[2])])  # a_t,s_t,f_t
+                index += 1
+        for i in range(max_num - index):
+            station_attr.append([0, 0, 0, 0, 0, 0])
+        stations_attr.append(station_attr)
+        seq_lengths.append(index)
+    return stations_attr
+
+
+def get_crossovers_release_state(co_ls: dict, max_num: int):
+    crossovers_attr = []
+    seq_lengths = []
+    for ls in co_ls.values():
+        getattr(sort_missions, "A_CROSSOVER_NB")(ls)
+        crossover_attr = []
+        index = 0
+        for i in range(len(ls) - 1, -1, -1):
+            mission = ls[i]
+            if index == max_num:
+                break
+            else:
+                bloc_idx = (ord(mission.yard_block_loc[0][0]) - ord('A')) * 4 + int(mission.yard_block_loc[0][-1])
+                crossover_attr.append(
+                    [mission.machine_start_time[5], mission.machine_start_time[6],
+                     mission.machine_start_time[6] + mission.machine_process_time[6],
+                     bloc_idx, int(mission.yard_block_loc[1]), int(mission.yard_block_loc[2])])
+                index += 1
+        for i in range(max_num - index):
+            crossover_attr.append([0, 0, 0, 0, 0, 0])
+        seq_lengths.append(index)
+        crossovers_attr.append(crossover_attr)
+    return crossovers_attr
+
+
+def get_yards_release_state(yc_ls: dict, max_num: int):
+    yard_blocks_set = ['A1', 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4', 'C1', 'C2', 'C3', 'C4']
+    yards_attr = []
+    seq_lengths = []
+    for yard_crane_idx in yard_blocks_set:
+        if yard_crane_idx in yc_ls:
+            yard_attr = []
+            index = 0
+            ls = yc_ls[yard_crane_idx]
+            getattr(sort_missions, "A_YARD_NB")(ls)
+            for i in range(len(ls) - 1, -1, -1):
+                mission = ls[i]
+                if index == max_num:
+                    continue
+                else:
+                    bloc_idx = (ord(mission.yard_block_loc[0][0]) - ord('A')) * 4 + int(mission.yard_block_loc[0][-1])
+                    yard_attr.append(
+                        [mission.machine_start_time[7], mission.machine_process_time[8],
+                         mission.machine_start_time[8] + mission.machine_process_time[8],
+                         bloc_idx, int(mission.yard_block_loc[1]), int(mission.yard_block_loc[2])])
+                    index += 1
+            for i in range(max_num - index):
+                yard_attr.append([0, 0, 0, 0, 0, 0])
+        else:
+            yard_attr = []
+            index = 0
+            for i in range(max_num):
+                yard_attr.append([0, 0, 0, 0, 0, 0])
+        seq_lengths.append(index)
+        yards_attr.append(yard_attr)
+    return yards_attr
+
+
 # ==================== get state (RNN)  ====================
 def get_quay_release_RNN_Sequence(iter_solution, step_number):
     quay_node_attr = [[0, 0, 0, 0, 0, 0]]
@@ -1122,7 +1303,7 @@ def get_quay_cranes_state(iter_solution: PortEnv):
     node_attr_list = []
     for quay_crane in iter_solution.quay_cranes.values():
         node_attr_list.append(
-            [quay_crane.time_to_exit, cf.MISSION_NUM_ONE_QUAY_CRANE - len(quay_crane.mission_list), 0])
+            [quay_crane.time_to_exit, 0, 0])
     return node_attr_list
 
 
@@ -1228,7 +1409,49 @@ def get_state(iter_solution: PortEnv, step_number: int = None, cur_mission: Miss
     edge_index = torch.tensor(edge_list_for_this_stage)
     edge_weight = torch.tensor(edge_weight, dtype=torch.float32) / 100
     x = torch.tensor(node_attr_list, dtype=torch.float32)
-    # norm = torch.tensor([[1 / 100, 0, 0], [0, 1 / 10, 0], [0, 0, 1 / 100]], dtype=torch.float32)
-    # x = torch.mm(x, norm)
+    norm = torch.tensor([[1 / 100, 0, 0], [0, 1 / 10, 0], [0, 0, 1 / 100]], dtype=torch.float32)
+    x = torch.mm(x, norm)
+    data = Data(x=x, edge_index=edge_index, edge_weight=edge_weight)
+    return data
+
+
+def get_state_n(iter_solution: PortEnv, step_number: int = None, cur_mission: Mission = None, max_num=5):
+    if cur_mission is None:
+        cur_mission: Mission = iter_solution.mission_list[step_number]
+    # =========== 添加点 ===========
+    cur_time = cur_mission.machine_start_time[1]
+    qc_ls, qc_ls_ls, ls_ls, ls_co_ls, co_ls, co_yc_ls, yc_ls, f_ls = get_cur_time_status_v2(iter_solution, cur_time)
+    node_attr_list = []
+    node_attr_list.extend(get_quay_release_state(qc_ls, max_num))
+    node_attr_list.extend(get_stations_release_state(ls_ls, max_num))
+    node_attr_list.extend(get_crossovers_release_state(co_ls, max_num))
+    node_attr_list.extend(get_yards_release_state(yc_ls, max_num))
+    # =========== 添加边 ===========
+    edge_in_list, edge_out_list = [], []
+    edge_list_for_this_stage = []
+    edge_weight = []
+    crossover_index, yard_crane_index = get_crossover_index_in_whole(cur_mission)
+    for station in iter_solution.lock_stations.values():
+        edge_in_list.append(int(cur_mission.quay_crane_id[-1]) - 1)
+        edge_out_list.append(int(station.idx[-1]) - 1 + 3)  # 锁站index+3
+        edge_weight.append(iter_solution.exit_to_station_matrix[int(station.idx[-1]) - 1] / cur_mission.vehicle_speed)
+    for station in iter_solution.lock_stations.values():
+        edge_in_list.append(int(station.idx[-1]) - 1 + 3)
+        edge_out_list.append(crossover_index)  # 交叉口
+        edge_weight.append(iter_solution.station_to_crossover_matrix[int(station.idx[-1]) - 1][
+                               crossover_index - 8] / cur_mission.vehicle_speed)
+    edge_in_list.append(crossover_index)
+    edge_out_list.append(yard_crane_index)
+    edge_weight.append(cur_mission.transfer_time_c2y)
+    edge_list_for_this_stage.append(edge_in_list)
+    edge_list_for_this_stage.append(edge_out_list)
+    edge_index = torch.tensor(edge_list_for_this_stage)
+    edge_weight = torch.tensor(edge_weight, dtype=torch.float32) / 100
+    x = torch.tensor(node_attr_list, dtype=torch.float32)
+    norm = []
+    for i in range(max_num):
+        norm.extend([1 / 100, 1 / 100, 1 / 100, 1, 1, 1])
+    norm = torch.tensor(norm)
+    x = x.view(22, -1) * norm
     data = Data(x=x, edge_index=edge_index, edge_weight=edge_weight)
     return data

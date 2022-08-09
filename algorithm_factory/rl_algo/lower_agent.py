@@ -6,6 +6,7 @@
 @Author  ：JacQ
 @Date    ：2022/4/21 15:24
 """
+import math
 import os
 from abc import ABC, abstractmethod
 from typing import Callable, List
@@ -18,7 +19,7 @@ from torch_geometric.loader import DataLoader
 
 import conf.configs as cf
 from algorithm_factory.algo_utils.data_buffer import LABuffer
-from algorithm_factory.algo_utils.machine_cal_methods import get_state
+from algorithm_factory.algo_utils.machine_cal_methods import get_state, get_state_n, find_min_wait_station
 from algorithm_factory.algo_utils.net_models import QNet
 from algorithm_factory.algo_utils.rl_methods import print_result
 from algorithm_factory.algo_utils.rl_methods import soft_update
@@ -109,14 +110,13 @@ class DDQN(BaseAgent):
         q_next = q_next_value.gather(1, torch.max(q_next_value, 1)[1].unsqueeze(1))
         q_target = rewards + self.gamma * q_next * (1.0 - done)  # TODO
         loss = self.loss_func(q_eval, q_target.detach())
-        # print(torch.mean(rewards)
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
-        if self.train_count % 10 == 0:
+        if self.train_count % 100 == 0:
             self.sync_weight()
-        if self.train_count % 200 == 0 and self.epsilon < 0.9:
-            self.epsilon = self.epsilon + 0.05
+        # if self.train_count % 200 == 0 and self.epsilon < 0.9:
+        #     self.epsilon = self.epsilon + 0.005  # 1600次train就加到0.9了
         self.train_count += 1
         return loss.detach().mean(), q_eval.detach().mean(), q_eval_value.detach().mean()
 
@@ -128,6 +128,7 @@ class LACollector:
                  data_buffer: LABuffer,
                  batch_size: int,
                  mission_num: int,
+                 max_num: int,
                  agent: DDQN,
                  rl_logger: SummaryWriter,
                  save_path: str):
@@ -138,6 +139,7 @@ class LACollector:
         self.batch_size = batch_size
         self.dl_train = None
         self.mission_num = mission_num
+        self.max_num = max_num
         self.agent = agent
         self.rl_logger = rl_logger
         self.best_result = [float('Inf') for _ in range(len(self.test_solus) + 2)]
@@ -148,10 +150,13 @@ class LACollector:
         for solu in self.train_solus:
             done = 0
             pre_makespan = 0
-            state = get_state(solu.iter_env, 0)
+            state = get_state_n(iter_solution=solu.iter_env, step_number=0, max_num=self.max_num)
             for step in range(self.mission_num):
                 cur_mission = solu.iter_env.mission_list[step]
-                action = self.agent.forward(state)
+                if np.random.rand() <= 0.3:
+                    action = int(find_min_wait_station(solu.iter_env, cur_mission).idx[-1]) - 1
+                else:
+                    action = self.agent.forward(state)
                 makespan = solu.step_v2(action, cur_mission, step)
                 reward = (pre_makespan - makespan)  # exp(-makespan / 10000)
                 if step == self.mission_num - 1:
@@ -159,7 +164,7 @@ class LACollector:
                     new_state = state
                     # reward = -makespan
                 else:
-                    new_state = get_state(solu.iter_env, step + 1)
+                    new_state = get_state_n(iter_solution=solu.iter_env, step_number=step + 1, max_num=self.max_num)
                     # reward = 0
                 pre_makespan = makespan
                 self.data_buffer.append(state, action, new_state, reward, done)
@@ -190,8 +195,8 @@ class LACollector:
         self.rl_logger.add_scalar(tag=f'l_train/q_all', scalar_value=total_q_eval_value, global_step=self.train_time)
         # 每20次eval一次
         if self.train_time % 20 == 0:
-            field_name = ['Epoch', 'loss']
-            value = [self.train_time, total_loss]
+            field_name = ['Epoch', 'loss', 'loss/q']
+            value = [self.train_time, total_loss, torch.sqrt(total_loss) * train_num / total_q_eval]
             makespan_forall, reward_forall = self.eval()
             for i in range(len(makespan_forall)):
                 self.rl_logger.add_scalar(tag=f'l_train/makespan' + str(i + 1),
@@ -210,8 +215,9 @@ class LACollector:
             makespan_forall = []
             reward_forall = []
             for i in range(len(self.test_solus)):
+                torch.manual_seed(42)
                 solu = self.test_solus[i]
-                state = get_state(solu.iter_env, 0)
+                state = get_state_n(iter_solution=solu.iter_env, step_number=0, max_num=self.max_num)
                 pre_makespan = 0
                 total_reward = 0
                 for step in range(self.mission_num):
@@ -222,7 +228,8 @@ class LACollector:
                     if step == self.mission_num - 1:
                         new_state = state
                     else:
-                        new_state = get_state(solu.iter_env, step + 1)
+                        new_state = get_state_n(iter_solution=solu.iter_env, step_number=step + 1,
+                                                max_num=self.max_num)
                     pre_makespan = makespan
                     state = new_state
                     step += 1
@@ -232,7 +239,7 @@ class LACollector:
                     self.best_result[i] = makespan
                 solu.reset()
             makespan_forall.append(sum(makespan_forall[0:len(self.train_solus)]))
-            makespan_forall.append(sum(makespan_forall))
+            makespan_forall.append(sum(makespan_forall[0:-1]))
             reward_forall.append(sum(reward_forall[0:len(self.train_solus)]))
             if makespan_forall[-2] < self.best_result[-2]:
                 self.best_result[-2] = makespan_forall[-2]
@@ -240,6 +247,7 @@ class LACollector:
                 self.best_result[-1] = makespan_forall[-1]
                 torch.save(self.agent.qf, self.save_path + '/eval_best_fixed.pkl')
                 torch.save(self.agent.qf_target, self.save_path + '/target_best_fixed.pkl')
+                # print("更新了")
         return makespan_forall, reward_forall
 
     def collect_heuristics(self, data_ls: List[str]) -> None:
@@ -256,7 +264,7 @@ class LACollector:
     def get_transition(self, assign_dict: dict, solu: IterSolution) -> None:
         done = 0
         pre_makespan = 0
-        state = get_state(solu.iter_env, 0)
+        state = get_state_n(iter_solution=solu.iter_env, step_number=0, max_num=self.max_num)
         makespan = 0
         for step in range(self.mission_num):
             if self.train_time == 1:
@@ -271,7 +279,7 @@ class LACollector:
                 new_state = state
                 # reward = -makespan
             else:
-                new_state = get_state(solu.iter_env, step + 1)
+                new_state = get_state_n(iter_solution=solu.iter_env, step_number=step + 1, max_num=self.max_num)
                 # reward = 0
             self.data_buffer.append(state, action, new_state, reward, done)
             if self.train_time > 1:
@@ -281,4 +289,3 @@ class LACollector:
             step += 1
         print(makespan)
         solu.reset()
-

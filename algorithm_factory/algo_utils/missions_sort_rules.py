@@ -50,3 +50,10 @@ class sort_missions(object):
     @staticmethod
     def A_EXIT(missions):
         missions.sort(key=lambda x: (x.machine_start_time[1]))  # 按照到达锁站时间排序
+
+    @staticmethod
+    def A_STATION_NB(missions):
+        missions.sort(
+            key=lambda x: (
+                x.machine_start_time[1], int(x.idx[1:])))  # 按照到达锁站时间排序
+

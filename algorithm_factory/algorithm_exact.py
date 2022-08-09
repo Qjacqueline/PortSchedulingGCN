@@ -48,7 +48,7 @@ def get_makespan(port_env, assign_list, missions_sort_rule):
 def Exact_Method(port_env):
     start = time.time()
     port_env = deepcopy(port_env)
-    missions_sort_rule = 'FCFS'
+    missions_sort_rule = 'A_EXIT'
     logger.info("开始执行算法dispatching_rules.")
     quay_crane_process_by_order(port_env)  # 阶段一：岸桥
     buffer_process_by_order(port_env)  # 阶段二：缓冲区
@@ -98,5 +98,5 @@ def Exact_Method(port_env):
 
 if __name__ == '__main__':
     instance = read_input()
-    global_mini_makespan, global_mini_instance, global_mini_assign_list = Exact_Method(instance)
+    global_mini_makespan, global_mini_instance, global_mini_assign_list = Exact_Method(instance.init_env)
     print("最小makespan为:" + str(global_mini_makespan))

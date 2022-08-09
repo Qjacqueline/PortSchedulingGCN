@@ -24,25 +24,41 @@ if __name__ == '__main__':
     # get heuristic result
     env_names = ['train_1_', 'train_2_', 'train_3_', 'train_4_', 'train_5_', 'train_6_', 'train_7_', 'train_8_',
                  'train_9_', 'train_10_', 'train_11_', 'train_12_', 'train_13_', 'train_14_', 'train_15_', 'train_16_',
-                 'train_17_', 'train_18_', 'train_19_', 'train_0_']  # 'test_0_',
+                 'train_17_', 'train_18_', 'train_19_', 'train_0_']
+    # ['train_1_', 'train_2_', 'train_3_', 'train_4_', 'train_5_', 'train_6_', 'train_7_', 'train_8_',
+    #          'train_9_', 'train_10_', 'train_11_', 'train_12_', 'train_13_', 'train_14_', 'train_15_', 'train_16_',
+    #          'train_17_', 'train_18_', 'train_19_', 'train_0_']  # 'test_0_',
     # env_names = ['train_2_']
     print(Cf.MISSION_NUM_ONE_QUAY_CRANE)
     print("Random_Choice")
+    total_makespan = 0
     for env_name in env_names:
         env = read_input(env_name)
-        Random_Choice(env.init_env)
+        makespan, _, _ = Random_Choice(env.init_env)
+        total_makespan += makespan
+    print("total_makespan:" + str(total_makespan))
+    total_makespan = 0
     print("Least_Wait_Time_Choice")
     for env_name in env_names:
         env = read_input(env_name)
-        Least_Wait_Time_Choice(env.init_env)
+        makespan, _, _ = Least_Wait_Time_Choice(env.init_env)
+        total_makespan += makespan
+    print("total_makespan:" + str(total_makespan))
+    total_makespan = 0
     print("Least_Mission_Num_Choice")
     for env_name in env_names:
         env = read_input(env_name)
-        Least_Mission_Num_Choice(env.init_env)
+        makespan, _, _ = Least_Mission_Num_Choice(env.init_env)
+        total_makespan += makespan
+    print("total_makespan:" + str(total_makespan))
+    total_makespan = 0
     print("Least_Distance_Choice")
     for env_name in env_names:
         env = read_input(env_name)
-        Least_Distance_Choice(env.init_env)
+        makespan, _, _ = Least_Distance_Choice(env.init_env)
+        total_makespan += makespan
+    print("total_makespan:" + str(total_makespan))
+    total_makespan = 0
     print("sa")
     for env_name in env_names:
         env = read_input(env_name)

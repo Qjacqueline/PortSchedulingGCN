@@ -31,7 +31,7 @@ from utils.log import Logger
 logger = Logger().get_logger()
 
 mission_count = 1
-yard_blocks_set = ['A1', 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4', 'C1', 'C2', 'C3', 'C4']
+yard_blocks_set = ['A1', 'A2', 'A3', 'A4']  # , 'B1', 'B2', 'B3', 'B4', 'C1', 'C2', 'C3', 'C4'
 
 
 def read_json_from_file(file_name):
@@ -128,18 +128,15 @@ def create_lock_station_dict(idx, location, capacity, handling_time, lock_statio
 
 
 # 生成任务
-def generate_missions_info(idx, mission_num):
+def generate_missions_info(idx, mission_num, cur_yar_blocks):
     missions_info = {}
     missions = {}
-    if mission_num * cf.CRANE_NUM <= 300:
-        cur_yar_blocks = random.sample(yard_blocks_set, 2)
-    else:
-        cur_yar_blocks = random.sample(yard_blocks_set, 4)
     global mission_count
     for i in range(mission_num):
-        yard_crane_process_time = random.uniform(cf.QUAYCRANE_PROCESS_TIME[0], cf.QUAYCRANE_PROCESS_TIME[1])
+        yard_crane_process_time = random.uniform(cf.YARDCRANE_HANDLING_TIME[0], cf.YARDCRANE_HANDLING_TIME[1])
         yard_block_loc = (
-            random.choice(cur_yar_blocks), random.randint(0, cf.SLOT_NUM_X - 1), random.randint(0, cf.SLOT_NUM_Y - 1))
+            random.choice(cur_yar_blocks), random.randint(0, cf.SLOT_NUM_X - 1),
+            random.randint(0, cf.SLOT_NUM_Y - 1))
         vehicle_speed = (cf.VEHICLE_SPEED[0] + cf.VEHICLE_SPEED[
             1]) / 2  # random.uniform(cf.VEHICLE_SPEED[0], cf.VEHICLE_SPEED[1]
         station_process_time = random.uniform(cf.LOCK_STATION_HANDLING_TIME[0], cf.LOCK_STATION_HANDLING_TIME[1])
@@ -169,8 +166,12 @@ def create_mission_dict(idx, quay_crane_id, yard_block_loc, yard_crane_process_t
 def generate_quay_cranes_info(quay_crane_to_location, mission_num):
     quay_cranes_info = {}
     quay_cranes = {}
+    if mission_num * cf.CRANE_NUM <= 300:
+        cur_yar_blocks = random.sample(yard_blocks_set, 4)
+    else:
+        cur_yar_blocks = random.sample(yard_blocks_set, 4)
     for idx, location in quay_crane_to_location.items():
-        missions_info, missions = generate_missions_info(idx, mission_num)
+        missions_info, missions = generate_missions_info(idx, mission_num, cur_yar_blocks)
         quay_cranes_info[idx] = create_quay_crane_dict(idx, missions_info, location.tolist())
         quay_cranes[idx] = QuayCrane(idx, missions, location.tolist())
     return quay_cranes_info, quay_cranes
@@ -266,7 +267,7 @@ def cal_station_to_location():
 def cal_yard_blocks_to_crossover():
     first_block = cf.A1_LOCATION
     # 交叉口位置及对应箱区
-    crossovers_to_location = {'CO1': first_block + np.array([cf.BLOCK_SPACE_X + cf.LANE_X / 4, -cf.LANE_Y]),
+    crossovers_to_location = {'CO1': first_block + np.array([cf.BLOCK_SPACE_X - 3 * cf.LANE_X / 4, -cf.LANE_Y]),
                               'CO2': first_block + np.array([2 * cf.BLOCK_SPACE_X - 3 * cf.LANE_X / 4, -cf.LANE_Y]),
                               'CO3': first_block + np.array([3 * cf.BLOCK_SPACE_X - 3 * cf.LANE_X / 4, -cf.LANE_Y])}
     yard_blocks_to_crossover = {'CO1': ['A1', 'A2', 'A3', 'A4'],
@@ -498,7 +499,7 @@ def cal_transfer_time(instance: PortEnv):
                 mission.yard_stop_loc[1] - crossover_loc[1])) / mission.vehicle_speed
 
 
-def read_input(prefix: str = 'test_0_', mission_num: int = cf.MISSION_NUM_ONE_QUAY_CRANE) -> IterSolution:
+def read_input(prefix: str = 'train_0_', mission_num: int = cf.MISSION_NUM_ONE_QUAY_CRANE) -> IterSolution:
     # logger.info("读取环境：" + prefix)
     filepath = os.path.join(cf.DATA_PATH, prefix + str(mission_num) + '.json')
     input_data = read_json_from_file(filepath)

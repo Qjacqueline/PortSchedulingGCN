@@ -15,7 +15,7 @@ import torch
 LOGGING_LEVEL = logging.INFO  # logging.WARNING/DEBUG
 
 # 布局配置
-QUAY_EXIT = np.array([240, 0])  # 岸桥操作后小车出口坐标（单位：m）
+QUAY_EXIT = np.array([280, 0])  # 岸桥操作后小车出口坐标（单位：m）
 QUAYCRANE_EXIT_SPACE = 40  # 出口距离最重起重机间距（单位：m）
 QUAYCRANE_CRANE_SPACE = 45  # 起重机与起重机间间距（单位：m）
 A1_LOCATION = np.array([20, 128])  # A1箱区位置
@@ -27,27 +27,27 @@ LANE_X = 40  # x方向车道宽度
 LANE_Y = 12  # y方向车道宽度
 BLOCK_SPACE_X = SLOT_LENGTH * SLOT_NUM_X + LANE_X  # x方向堆场间距（单位：m）
 BLOCK_SPACE_Y = SLOT_WIDTH * SLOT_NUM_Y + LANE_Y  # y方向堆场间距（单位：m）
-S1_STATION_LOCATION = np.array([200, 64])  # 第一个锁站所在位置
-LOCK_STATION_SPACE = 100  # 锁站间距
+S1_STATION_LOCATION = np.array([250, 64])  # 第一个锁站所在位置
+LOCK_STATION_SPACE = 0  # 锁站间距
 LOCK_STATION_BUFFER_SPACE = 5  # 等待区距离锁站的垂直间距
 FIRST_BUFFER_TO_FIRST_LOCK_STATION = 96  # 第一个锁站到第一个缓冲区的距离
-MISSION_NUM_ONE_QUAY_CRANE = 100  # 一个场桥对应的任务数
+MISSION_NUM_ONE_QUAY_CRANE = 10  # 一个场桥对应的任务数
 CRANE_NUM = 3  # 场桥个数
 MISSION_NUM = CRANE_NUM * MISSION_NUM_ONE_QUAY_CRANE  # 任务个数
 QUAY_BUFFER_SIZE = 5  # 岸桥缓冲区可存放个数
 STAGE_NUM = 3  # lock_station+crossover+yard
 
 # 机器运行参数
-QUAY_CRANE_RELEASE_TIME = 90  # 岸桥释放集装箱任务时间间隔
+QUAY_CRANE_RELEASE_TIME = 120  # 岸桥释放集装箱任务时间间隔
 QUAYCRANE_PROCESS_TIME = [38, 70]  # 岸桥放下并装载集装箱时间服从U(38,70)分布（单位：秒）
 BUFFER_PROCESS_TIME = 60  # 缓冲区操作所需时间（单位：秒）
-YARDCRANE_SPEED_X = 1  # 场桥x方向移动速度（单位：m/s）2.17
-YARDCRANE_SPEED_Y = 0.5  # 场桥x方向移动速度（单位：m/s）1.80
-YARDCRANE_HANDLING_TIME = [38, 70]  # 场桥放下并装载集装箱时间服从U(25, 35)分布（单位：秒）[8,12]
+YARDCRANE_SPEED_X = 2.17  # 场桥x方向移动速度（单位：m/s）2.17
+YARDCRANE_SPEED_Y = 1.8  # 场桥y方向移动速度（单位：m/s）1.80
+YARDCRANE_HANDLING_TIME = [25, 35]  # 场桥放下并装载集装箱时间服从U(25, 35)分布（单位：秒）[8,12]
 LOCK_STATION_NUM = 4  # 锁站个数（单位：辆）
 LOCK_STATION_CAPACITY = 1  # 锁站处理能力（单位：辆）
-LOCK_STATION_HANDLING_TIME = [90, 120]  # 解锁所需时间（单位：s）
-WAIT_TIME_DELAY = [30, 32, 50, 52]  # 由于停留在锁站缓冲区所增加的等待时间
+LOCK_STATION_HANDLING_TIME = [110, 110]  # 解锁所需时间（单位：s） [100, 150]
+WAIT_TIME_DELAY = [0, 0, 0, 0]  # 由于停留在锁站缓冲区所增加的等待时间[30, 32, 50, 52]
 CROSSOVER_CAPACITY = 4  # 交叉口通行能力（单位：辆）
 CROSSOVER_MAX_WAIT_TIME = 20  # 交叉口车辆最大等待时间（s）
 VEHICLE_SPEED = [0.24, 2.63]  # AGV运行速度服从U(6,9)分布（单位m/s）
@@ -61,7 +61,7 @@ RL_CONFIG = 6
 DEVICE = torch.device("cuda:1" if torch.cuda.is_available() else 'cpu')
 
 # 文件路径
-dataset = 'v4'
+dataset = 'v2'
 ROOT_FOLDER_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_PATH = os.path.join(ROOT_FOLDER_PATH, 'data/data_' + dataset)
 if not os.path.exists(DATA_PATH):

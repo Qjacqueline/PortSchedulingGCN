@@ -13,7 +13,9 @@ import matplotlib.pyplot as plt
 
 import conf.configs as Cf
 from algorithm_factory.algo_utils.missions_sort_rules import sort_missions
+from algorithm_factory.algorithm_heuristic_rules import Random_Choice
 from common import PortEnv
+from data_process.input_process import read_input
 from utils.log import Logger
 
 logger = Logger().get_logger()
@@ -38,18 +40,20 @@ def draw_gantt_graph_missions(port_env, save_label):
     yardcrane = []
     getattr(sort_missions, 'RELEASE_ORDER')(port_env.mission_list)
     for mission in port_env.mission_list:
-        add.append(mission.machine_process_time)
-        left.append(mission.machine_start_time)
+        process_time = mission.machine_process_time[0:3] + mission.machine_process_time[4:]
+        start_time = mission.machine_start_time[0:3] + mission.machine_start_time[4:]
+        add.append(process_time)
+        left.append(start_time)
         mission_name.append(mission.idx)
-        station.append(mission.machine_list[3])
-        crossover.append(mission.machine_list[5])
-        yardcrane.append(mission.machine_list[7])
+        station.append(mission.machine_list[4])
+        crossover.append(mission.machine_list[6])
+        yardcrane.append(mission.machine_list[8])
     m = range(len(add))
     n = range(len(add[0]))
     color = ['dodgerblue', 'w', 'lightgrey', 'g', 'grey', 'r', 'grey', 'gold', 'c', 'm', 'k']
 
     # 画布设置，大小与分辨率
-    plt.figure(figsize=(20, 8), dpi=200)
+    plt.figure()  #
     # barh-柱状图换向，循坏迭代-层叠效果
     for i in m:
         for j in n:
@@ -82,11 +86,11 @@ def draw_gantt_graph_missions(port_env, save_label):
 
     plt.title("流水加工甘特图" + save_label)
     labels = [''] * len(add[0])
-    labels = ['Buffer', 'a_exit', 'a_station', 'LockStation', 'travel_time', 'Crossover', 'travel_time', 'YardCrane']
+    labels = ['QC', 'a_exit', 'a_station', 'LockStation', 'travel_time', 'Crossover', 'travel_time', 'YardCrane']
     # for f in n:
     #     labels[f] = "工序%d" % (f + 1)
     # 图例绘制
-    patches = [mpatches.Patch(color=color[i], label="{:s}".format(labels[i])) for i in range(len(add[0]))]
+    patches = [mpatches.Patch(color=color[i % 10], label="{:s}".format(labels[i])) for i in range(len(add[0]))]
     plt.legend(handles=patches, loc=4)
     # XY轴标签
     plt.xlabel("加工时间/s")
@@ -147,3 +151,9 @@ def calculate_statistics(port_env: PortEnv, save_label):
         logger.info("Crossover的总等待时间为：" + str(round(wait_time_crossover_total, 2)))
         logger.info("YardCrane的总等待时间为：" + str(round(wait_time_yard_crane_total, 2)))
         # rl_logger.info("最小makespan为：" + str(min(port_env.makespan_history)) + "\n")
+
+
+if __name__ == '__main__':
+    instance = read_input('train_0_')
+    _, solution, _ = Random_Choice(instance.init_env)
+    analyse_result(solution, '1')

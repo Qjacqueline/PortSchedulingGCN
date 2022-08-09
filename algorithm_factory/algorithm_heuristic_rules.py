@@ -20,7 +20,6 @@ from algorithm_factory.algo_utils.machine_cal_methods import quay_crane_process_
 from algorithm_factory.algo_utils.missions_sort_rules import sort_missions
 from common import LockStation
 from common.iter_solution import IterSolution
-from data_process.analyse_result import calculate_statistics
 from data_process.input_process import read_input
 from utils.log import Logger
 
@@ -182,8 +181,8 @@ if __name__ == '__main__':
     # mini_makespan = Least_Distance_Choice(instance)
     # print(" Least_Distance:" + str(mini_makespan))
 
-    instance.l2a_init()
-    # Least_Mission_Num_Choice_By_Mission(solu=instance, m_max_num=100, mission_num=300)
-    Random_Choice_By_Mission(solu=instance, s_num=4, m_max_num=100, mission_num=300)
-    calculate_statistics(instance.iter_env, 'v1')
-    a = 1
+    # instance.l2a_init()
+    # # Least_Mission_Num_Choice_By_Mission(solu=instance, m_max_num=100, mission_num=300)
+    # Random_Choice_By_Mission(solu=instance, s_num=4, m_max_num=100, mission_num=300)
+    # calculate_statistics(instance.iter_env, 'v1')
+    # a = 1

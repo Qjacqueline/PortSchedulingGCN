@@ -56,21 +56,25 @@ class FlattenMlp(MLP):
 
 
 class QNet(nn.Module):
-    def __init__(self, device: torch.device, hidden=128):
+    def __init__(self, device: torch.device, hidden=256, max_num=10, machine_num=22):
         super(QNet, self).__init__()
         self.device = device
-        self.conv1 = GCNConv(3, hidden)
+        fea_dim = max_num * 6
+        self.conv1 = GCNConv(fea_dim, hidden)
         self.conv2 = GCNConv(hidden, hidden)
-        self.linear = FlattenMlp(22 * hidden, 4, (hidden, hidden))
+        self.linear = FlattenMlp(machine_num * (hidden + fea_dim), 4, (hidden, hidden, hidden))
+        # self.linear = nn.Linear(machine_num * (hidden + fea_dim), 4)
 
     def forward(self, state) -> torch.Tensor:
-        x, edge_index, edge_weight = state.x, state.edge_index, state.edge_weight
-        x = self.conv1(x, edge_index, edge_weight)  # 传入卷积层
+        xx, edge_index, edge_weight = state.x, state.edge_index, state.edge_weight
+        x = self.conv1(xx, edge_index, edge_weight)  # 传入卷积层
         x = F.leaky_relu_(x)  # 激活函数
-        x = F.dropout(x, training=self.training)  # dropout层,防止过拟合
+        x = F.dropout(x, p=0.5, training=self.training)  # dropout层,防止过拟合
         x = self.conv2(x, edge_index, edge_weight)  # 第二层卷积层
+        x = F.leaky_relu_(x)  # 激活函数
+        x = torch.cat((x, xx), dim=1)
         x = self.linear(x.reshape(int(len(x) / 22), -1))  # fixme
-        return F.log_softmax(x, dim=1)  # 将经过两层卷积得到的特征输入log_softmax函数得到概率分布
+        return x  # F.log_softmax(x, dim=1)  # 将经过两层卷积得到的特征输入log_softmax函数得到概率分布
 
 
 # class Dueling_DQN(nn.Module):

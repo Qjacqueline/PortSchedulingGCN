@@ -14,7 +14,7 @@ from input_process import read_input
 
 
 def plot_layout(port_env):
-    plt.figure(dpi=1000)
+    plt.figure()
     plt.xticks(np.arange(0, 900, 100))
     plt.yticks(np.arange(-30, 300, 100))
     # plt.axis('off')
