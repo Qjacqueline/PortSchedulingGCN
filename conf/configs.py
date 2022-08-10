@@ -14,7 +14,7 @@ import torch
 
 LOGGING_LEVEL = logging.INFO  # logging.WARNING/DEBUG
 
-dataset = 'v2'
+dataset = 'v4'
 # 布局配置
 QUAY_EXIT = np.array([280, 0])  # 岸桥操作后小车出口坐标（单位：m）
 QUAYCRANE_EXIT_SPACE = 40  # 出口距离最重起重机间距（单位：m）

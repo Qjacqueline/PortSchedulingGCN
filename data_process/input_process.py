@@ -31,7 +31,7 @@ from utils.log import Logger
 logger = Logger().get_logger()
 
 mission_count = 1
-yard_blocks_set = ['A1', 'A2', 'A3', 'A4']  # , 'B1', 'B2', 'B3', 'B4', 'C1', 'C2', 'C3', 'C4'
+yard_blocks_set = ['A1', 'B1', 'C1']  # , 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4', 'C1', 'C2', 'C3', 'C4'
 
 
 def read_json_from_file(file_name):
@@ -167,9 +167,9 @@ def generate_quay_cranes_info(quay_crane_to_location, mission_num):
     quay_cranes_info = {}
     quay_cranes = {}
     if mission_num * cf.CRANE_NUM <= 300:
-        cur_yar_blocks = random.sample(yard_blocks_set, 4)
+        cur_yar_blocks = random.sample(yard_blocks_set, 3)
     else:
-        cur_yar_blocks = random.sample(yard_blocks_set, 4)
+        cur_yar_blocks = random.sample(yard_blocks_set, 3)
     for idx, location in quay_crane_to_location.items():
         missions_info, missions = generate_missions_info(idx, mission_num, cur_yar_blocks)
         quay_cranes_info[idx] = create_quay_crane_dict(idx, missions_info, location.tolist())
