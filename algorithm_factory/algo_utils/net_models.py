@@ -63,6 +63,7 @@ class QNet(nn.Module):
         self.conv1 = GCNConv(fea_dim, hidden)
         self.conv2 = GCNConv(hidden, hidden)
         self.linear = FlattenMlp(machine_num * (hidden + fea_dim), 4, (hidden, hidden, hidden))
+        # self.resnet = models.resnet50(pretrained=False, num_classes=4)
         # self.linear = nn.Linear(machine_num * (hidden + fea_dim), 4)
 
     def forward(self, state) -> torch.Tensor:

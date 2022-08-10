@@ -45,7 +45,7 @@ def get_args(**kwargs):
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--buffer_size', type=int, default=128000)
 
-    parser.add_argument('--epoch_num', type=int, default=4000)
+    parser.add_argument('--epoch_num', type=int, default=400)
 
     parser.add_argument('-save_path', type=str, default=cf.MODEL_PATH)
     command_list = []

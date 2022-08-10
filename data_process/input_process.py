@@ -566,7 +566,7 @@ def count_yard_block_assign(port_env):
 if __name__ == '__main__':
     np.random.seed(0)
     random.seed(0)
-    for i in range(0, 21):
+    for i in range(0, 50):
         generate_data_for_test(i)
     # instance = read_input()
     # a = 1

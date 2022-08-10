@@ -25,16 +25,21 @@ def plot_layout(port_env):
         plt.text(qc_loc[0] - 7, -12, qc_id, fontsize=6)
         plt.gca().add_patch(plt.Rectangle((qc_loc[0], 0), 20, 5, facecolor='grey'))
         plt.text(qc_loc[0] - 7, 9, 'BF' + qc_id[-1], fontsize=5.5)
-        plt.text(qc_loc[0] - 15, 5, str(qc_loc), fontsize=4.7, color='r')
+        plt.text(qc_loc[0] - 15, 5, str(qc_loc), fontsize=5, color='r')
     for station_id, station in port_env.lock_stations.items():
         plt.gca().add_patch(plt.Rectangle((station.location[0], station.location[1]), 20, 2, color='blue', alpha=0.5))
-        plt.text(station.location[0], station.location[1], station_id, fontsize=3)
+        plt.text(station.location[0], station.location[1], station_id, fontsize=5)
         plt.text(station.location[0], station.location[1] - 5, str(station.location),
-                 fontsize=3, color='r')
-        for station_buffer_id, station_buffer in station.lock_station_buffers.items():
-            plt.gca().add_patch(
-                plt.Rectangle((station_buffer.location[0], station_buffer.location[1]), 20, 2, color='blue', alpha=0.1))
-            plt.text(station_buffer.location[0], station_buffer.location[1], station_buffer_id, fontsize=3)
+                 fontsize=5, color='r')
+        # for station_buffer_id, station_buffer in station.lock_station_buffers.items():
+        #     plt.gca().add_patch(
+        #         plt.Rectangle((station_buffer.location[0], station_buffer.location[1]), 20, 2, color='blue', alpha=0.1))
+        #     plt.text(station_buffer.location[0], station_buffer.location[1], station_buffer_id, fontsize=3)
+    for co_id, co in port_env.crossovers.items():
+        # plt.gca().add_patch(plt.Rectangle((co.location[0], co.location[1]), 20, 2, color='blue', alpha=0.5))
+        plt.text(co.location[0], co.location[1], co_id, fontsize=5)
+        plt.text(co.location[0], co.location[1] - 5, str(co.location),
+                 fontsize=5, color='r')
     for block_id, block in port_env.yard_blocks.items():
         plt.gca().add_patch(
             plt.Rectangle((block.block_location[0], block.block_location[1]), Cf.SLOT_NUM_X * Cf.SLOT_LENGTH,

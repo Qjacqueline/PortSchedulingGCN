@@ -9,7 +9,6 @@
 import random
 
 import numpy as np
-import torch.random
 
 import conf.configs as Cf
 from algorithm_factory.algorithm_SA import SA
@@ -20,7 +19,6 @@ from data_process.input_process import read_input
 if __name__ == '__main__':
     random.seed(Cf.RANDOM_SEED)
     np.random.seed(Cf.RANDOM_SEED)
-    torch.random.manual_seed(Cf.RANDOM_SEED)
     # get heuristic result
     env_names = ['train_1_', 'train_2_', 'train_3_', 'train_4_', 'train_5_', 'train_6_', 'train_7_', 'train_8_',
                  'train_9_', 'train_10_', 'train_11_', 'train_12_', 'train_13_', 'train_14_', 'train_15_', 'train_16_',
