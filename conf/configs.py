@@ -61,7 +61,7 @@ RL_CONFIG = 6
 DEVICE = torch.device("cuda:1" if torch.cuda.is_available() else 'cpu')
 
 # 文件路径
-dataset = 'v2'
+dataset = 'v1'
 ROOT_FOLDER_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_PATH = os.path.join(ROOT_FOLDER_PATH, 'data/data_' + dataset)
 if not os.path.exists(DATA_PATH):

@@ -13,6 +13,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Categorical
 from torch_geometric.nn import GCNConv
+from torchvision import models
 
 
 class MLP(nn.Module):
@@ -62,8 +63,9 @@ class QNet(nn.Module):
         fea_dim = max_num * 6
         self.conv1 = GCNConv(fea_dim, hidden)
         self.conv2 = GCNConv(hidden, hidden)
-        self.linear = FlattenMlp(machine_num * (hidden + fea_dim), 4, (hidden, hidden, hidden))
+        self.linear = FlattenMlp(machine_num * (hidden + fea_dim), 4, (hidden, hidden, hidden, hidden, hidden))
         # self.linear = nn.Linear(machine_num * (hidden + fea_dim), 4)
+        # self.resnet = models.resnet50(pretrained=False, num_classes=4)
 
     def forward(self, state) -> torch.Tensor:
         xx, edge_index, edge_weight = state.x, state.edge_index, state.edge_weight
