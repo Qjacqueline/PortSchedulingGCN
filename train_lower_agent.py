@@ -8,8 +8,10 @@
 """
 
 import argparse
+import datetime
 import os
 import random
+import time
 
 import numpy as np
 import torch
@@ -27,7 +29,7 @@ logger = Logger().get_logger()
 
 def get_args(**kwargs):
     parser = argparse.ArgumentParser()
-    parser.add_argument('--task', type=str, default='la_' + cf.dataset)
+    parser.add_argument('--task', type=str, default=cf.dataset + '_' + str(cf.MISSION_NUM_ONE_QUAY_CRANE))
     parser.add_argument('--seed', type=int, default=0)
 
     parser.add_argument('--mission_num', type=int, default=cf.MISSION_NUM)
@@ -61,7 +63,7 @@ if __name__ == '__main__':
     rl_logger = SummaryWriter(exp_dir)
     rl_logger.add_text(tag='parameters', text_string=str(args))
     rl_logger.add_text(tag='characteristic', text_string='New State')  # 'debug'
-
+    s_t = time.time()
     # env
     train_solus = [read_input('train_1_'), read_input('train_2_'), read_input('train_3_'), read_input('train_4_'),
                    read_input('train_5_'), read_input('train_6_'), read_input('train_7_'), read_input('train_8_'),
@@ -72,7 +74,7 @@ if __name__ == '__main__':
                   read_input('train_5_'), read_input('train_6_'), read_input('train_7_'), read_input('train_8_'),
                   read_input('train_9_'), read_input('train_10_'), read_input('train_11_'), read_input('train_12_'),
                   read_input('train_13_'), read_input('train_14_'), read_input('train_15_'), read_input('train_16_'),
-                  read_input('train_17_'), read_input('train_18_')]
+                  read_input('train_17_'), read_input('train_18_'), read_input('train_19_'), read_input('train_0_')]
     # [read_input('train_1_'), read_input('train_2_'), read_input('train_3_'), read_input('train_4_'),
     #               read_input('train_5_'), read_input('train_6_'), read_input('train_7_'), read_input('train_8_'),
     #               read_input('train_9_'), read_input('train_10_'), read_input('train_11_'), read_input('train_12_'),
@@ -119,10 +121,12 @@ if __name__ == '__main__':
     # agent.qf_target = torch.load(args.save_path + '/target_best_fixed.pkl')
     for i in range(1, args.epoch_num):
         collector.collect_rl()  # 200
+    e_t = time.time()
+    print("training time" + str(e_t - s_t))
 
     # ======================== eval =========================
-    agent.qf = torch.load(args.save_path + '/eval_best_fixed.pkl')
-    agent.qf_target = torch.load(args.save_path + '/target_best_fixed.pkl')
+    agent.qf = torch.load(args.save_path + '/eval_'+args.task+'.pkl')
+    agent.qf_target = torch.load(args.save_path + '/target_'+args.task+'.pkl')
     makespan_forall, reward_forall = collector.eval()
     for makespan in makespan_forall:
         print("初始la分配makespan为" + str(makespan))

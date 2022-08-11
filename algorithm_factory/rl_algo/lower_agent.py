@@ -145,6 +145,7 @@ class LACollector:
         self.best_result = [float('Inf') for _ in range(len(self.test_solus) + 2)]
         self.save_path = save_path
         self.train_time = 0
+        self.task = cf.dataset + '_' + str(cf.MISSION_NUM_ONE_QUAY_CRANE)
 
     def collect_rl(self):
         for solu in self.train_solus:
@@ -241,12 +242,12 @@ class LACollector:
             makespan_forall.append(sum(makespan_forall[0:len(self.train_solus)]))
             makespan_forall.append(sum(makespan_forall[0:-1]))
             reward_forall.append(sum(reward_forall[0:len(self.train_solus)]))
-            if makespan_forall[-2] < self.best_result[-2]:
-                self.best_result[-2] = makespan_forall[-2]
             if makespan_forall[-1] < self.best_result[-1]:
                 self.best_result[-1] = makespan_forall[-1]
-                torch.save(self.agent.qf, self.save_path + '/eval_best_fixed.pkl')
-                torch.save(self.agent.qf_target, self.save_path + '/target_best_fixed.pkl')
+            if makespan_forall[-2] < self.best_result[-2]:
+                self.best_result[-2] = makespan_forall[-2]
+                torch.save(self.agent.qf, self.save_path + '/eval_' + self.task + '.pkl')
+                torch.save(self.agent.qf_target, self.save_path + '/target_' + self.task + '.pkl')
                 # print("更新了")
         return makespan_forall, reward_forall
 
