@@ -22,7 +22,7 @@ def plot_dynamic_running(port_env: PortEnv):
     # 初始化画布
     fig = plt.figure()
     for i in range(20000):
-        cur_time = 10 * i
+        cur_time = 60 * i
         plt.xticks(np.arange(0, 100, 10))
         plt.yticks(np.arange(0, 380, 280))
         # plt.axis('off')

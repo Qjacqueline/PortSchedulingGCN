@@ -38,14 +38,14 @@ def get_args(**kwargs):
 
     parser.add_argument('--hidden', type=int, default=64)
     parser.add_argument('--device', type=str, default='cuda:0' if torch.cuda.is_available() else 'cpu')
-    parser.add_argument('--gamma', type=float, default=0.8)  # 0.9
+    parser.add_argument('--gamma', type=float, default=0)  # 0.9
     parser.add_argument('--epsilon', type=float, default=0.5)
     parser.add_argument('--lr', type=float, default=1e-5)
 
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--buffer_size', type=int, default=128000)
 
-    parser.add_argument('--epoch_num', type=int, default=500)
+    parser.add_argument('--epoch_num', type=int, default=400)
 
     parser.add_argument('-save_path', type=str, default=cf.MODEL_PATH)
     command_list = []
@@ -60,7 +60,7 @@ if __name__ == '__main__':
     exp_dir = exp_dir(desc=f'{args.task}')
     rl_logger = SummaryWriter(exp_dir)
     rl_logger.add_text(tag='parameters', text_string=str(args))
-    rl_logger.add_text(tag='characteristic', text_string='加深网络')  # 'debug'
+    rl_logger.add_text(tag='characteristic', text_string='New State')  # 'debug'
 
     # env
     train_solus = [read_input('train_1_'), read_input('train_2_'), read_input('train_3_'), read_input('train_4_'),

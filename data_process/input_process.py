@@ -31,7 +31,7 @@ from utils.log import Logger
 logger = Logger().get_logger()
 
 mission_count = 1
-yard_blocks_set = ['A1', 'A2', 'A3', 'A4']  # , 'B1', 'B2', 'B3', 'B4', 'C1', 'C2', 'C3', 'C4'
+yard_blocks_set = ['A1', 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4', 'C1', 'C2', 'C3', 'C4']  # , 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4', 'C1', 'C2', 'C3', 'C4'
 
 
 def read_json_from_file(file_name):
@@ -566,7 +566,7 @@ def count_yard_block_assign(port_env):
 if __name__ == '__main__':
     np.random.seed(0)
     random.seed(0)
-    for i in range(0, 21):
+    for i in range(0, 100):
         generate_data_for_test(i)
     # instance = read_input()
     # a = 1
