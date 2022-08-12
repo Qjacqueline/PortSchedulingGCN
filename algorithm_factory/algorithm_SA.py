@@ -90,16 +90,16 @@ class SA(object):
             self.iter_x.append(count)
             self.iter_y.append(self.iter_solu.last_step_makespan)
             if time.time() - T1 > 10 and tf1:
-                print("best_makespan为:" + str(best_makespan), end=" ")
+                print("best_makespan为: " + str(best_makespan), end=" ")
                 tf1 = False
             if time.time() - T1 > 30 and tf2:
-                print("best_makespan为:" + str(best_makespan), end=" ")
+                print("best_makespan为: " + str(best_makespan), end=" ")
                 tf2 = False
             if time.time() - T1 > 180 and tf3:
-                print("best_makespan为:" + str(best_makespan), end=" ")
+                print("best_makespan为: " + str(best_makespan), end=" ")
                 tf3 = False
         self.iter_solu.reset()
-        print("best_makespan为:" + str(best_makespan) + "time: " + str(time.time() - T1))
+        print("best_makespan为: " + str(best_makespan) + " time: " + str(time.time() - T1))
         return best_makespan, best_solution
 
     # 产生一个新的解：随机交换两个元素的位置

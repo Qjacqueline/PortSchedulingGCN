@@ -203,8 +203,12 @@ class LACollector:
                 self.rl_logger.add_scalar(tag=f'l_train/makespan' + str(i + 1),
                                           scalar_value=makespan_forall[i],
                                           global_step=int(self.train_time / 20))
-                field_name.append('makespan' + str(i + 1))
-                value.append(makespan_forall[i])
+                # field_name.append('makespan' + str(i + 1))
+                # value.append(makespan_forall[i])
+            field_name.append('train_makespan')
+            value.append(makespan_forall[-2])
+            field_name.append('test_makespan')
+            value.append(makespan_forall[-1])
             for i in range(len(reward_forall)):
                 self.rl_logger.add_scalar(tag=f'l_train_r/reward' + str(i + 1),
                                           scalar_value=reward_forall[i],
@@ -240,12 +244,12 @@ class LACollector:
                     self.best_result[i] = makespan
                 solu.reset()
             makespan_forall.append(sum(makespan_forall[0:len(self.train_solus)]))
-            makespan_forall.append(sum(makespan_forall[0:-1]))
+            makespan_forall.append(sum(makespan_forall[0:-1]) - sum(makespan_forall[0:len(self.train_solus)]))
             reward_forall.append(sum(reward_forall[0:len(self.train_solus)]))
-            if makespan_forall[-1] < self.best_result[-1]:
-                self.best_result[-1] = makespan_forall[-1]
             if makespan_forall[-2] < self.best_result[-2]:
                 self.best_result[-2] = makespan_forall[-2]
+            if makespan_forall[-1] < self.best_result[-1]:
+                self.best_result[-1] = makespan_forall[-1]
                 torch.save(self.agent.qf, self.save_path + '/eval_' + self.task + '.pkl')
                 torch.save(self.agent.qf_target, self.save_path + '/target_' + self.task + '.pkl')
                 # print("更新了")
