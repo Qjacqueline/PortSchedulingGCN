@@ -40,14 +40,14 @@ def get_args(**kwargs):
 
     parser.add_argument('--hidden', type=int, default=64)
     parser.add_argument('--device', type=str, default='cuda:0' if torch.cuda.is_available() else 'cpu')
-    parser.add_argument('--gamma', type=float, default=0)  # 0.9
+    parser.add_argument('--gamma', type=float, default=0.7)  # 0.9
     parser.add_argument('--epsilon', type=float, default=0.5)
     parser.add_argument('--lr', type=float, default=1e-5)
 
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--buffer_size', type=int, default=128000)
 
-    parser.add_argument('--epoch_num', type=int, default=400)
+    parser.add_argument('--epoch_num', type=int, default=200)
 
     parser.add_argument('-save_path', type=str, default=cf.MODEL_PATH)
     command_list = []
@@ -62,7 +62,7 @@ if __name__ == '__main__':
     exp_dir = exp_dir(desc=f'{args.task}')
     rl_logger = SummaryWriter(exp_dir)
     rl_logger.add_text(tag='parameters', text_string=str(args))
-    rl_logger.add_text(tag='characteristic', text_string='New State')  # 'debug'
+    rl_logger.add_text(tag='characteristic', text_string='引导动作')  # 'debug'
     s_t = time.time()
     # env
     train_solus = [read_input('train_1_'), read_input('train_2_'), read_input('train_3_'), read_input('train_4_'),
@@ -125,8 +125,8 @@ if __name__ == '__main__':
     print("training time" + str(e_t - s_t))
 
     # ======================== eval =========================
-    agent.qf = torch.load(args.save_path + '/eval_'+args.task+'.pkl')
-    agent.qf_target = torch.load(args.save_path + '/target_'+args.task+'.pkl')
+    agent.qf = torch.load(args.save_path + '/eval_' + args.task + '.pkl')
+    agent.qf_target = torch.load(args.save_path + '/target_' + args.task + '.pkl')
     makespan_forall, reward_forall = collector.eval()
     for makespan in makespan_forall:
         print("初始la分配makespan为" + str(makespan))

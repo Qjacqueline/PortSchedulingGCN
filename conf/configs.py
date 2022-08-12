@@ -14,7 +14,9 @@ import torch
 
 LOGGING_LEVEL = logging.INFO  # logging.WARNING/DEBUG
 
-dataset = 'v5'
+dataset = 'v2'
+MISSION_NUM_ONE_QUAY_CRANE = 10  # 一个场桥对应的任务数 TODO
+
 # 布局配置
 QUAY_EXIT = np.array([280, 0])  # 岸桥操作后小车出口坐标（单位：m）
 QUAYCRANE_EXIT_SPACE = 40  # 出口距离最重起重机间距（单位：m）
@@ -32,7 +34,6 @@ S1_STATION_LOCATION = np.array([180, 64])  # 第一个锁站所在位置
 LOCK_STATION_SPACE = 150  # 锁站间距 150 TODO
 LOCK_STATION_BUFFER_SPACE = 5  # 等待区距离锁站的垂直间距
 FIRST_BUFFER_TO_FIRST_LOCK_STATION = 96  # 第一个锁站到第一个缓冲区的距离
-MISSION_NUM_ONE_QUAY_CRANE = 10  # 一个场桥对应的任务数 TODO
 CRANE_NUM = 3  # 场桥个数
 MISSION_NUM = CRANE_NUM * MISSION_NUM_ONE_QUAY_CRANE  # 任务个数
 QUAY_BUFFER_SIZE = 5  # 岸桥缓冲区可存放个数
