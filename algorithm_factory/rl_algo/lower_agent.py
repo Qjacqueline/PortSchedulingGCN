@@ -178,7 +178,6 @@ class LACollector:
                 self.train_time = self.train_time + 1
 
                 state = new_state
-                step += 1
             solu.reset()
 
     def train(self, train_num: int = 1):
@@ -237,7 +236,6 @@ class LACollector:
                                                 max_num=self.max_num)
                     pre_makespan = makespan
                     state = new_state
-                    step += 1
                 makespan_forall.append(makespan)
                 reward_forall.append(total_reward)
                 if makespan < self.best_result[i]:
@@ -291,6 +289,5 @@ class LACollector:
                 self.train()
             self.train_time = self.train_time + 1
             state = new_state
-            step += 1
         print(makespan)
         solu.reset()

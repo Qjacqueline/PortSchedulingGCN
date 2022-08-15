@@ -37,6 +37,7 @@ class IterSolution:
 
     def reset(self):
         self.iter_env = deepcopy(self.init_env)
+        self.released_missions = []
 
     def l2a_init(self):
         process_init_solution_for_l2a(self.init_env)
