@@ -17,10 +17,10 @@ import torch.nn.functional as F
 from tensorboardX import SummaryWriter
 from torch import nn
 from tqdm import tqdm
-
+import conf.configs as cf
 from torch_geometric.loader import DataLoader
 from algorithm_factory.algo_utils.data_buffer import UANewBuffer
-from algorithm_factory.algo_utils.machine_cal_methods import get_state, get_next_job_at_quay_cranes
+from algorithm_factory.algo_utils.machine_cal_methods import get_state, get_next_job_at_quay_cranes, get_state_n
 from algorithm_factory.algo_utils.net_models import ActorNew, CriticNew
 from algorithm_factory.algo_utils.rl_methods import print_result
 from algorithm_factory.algo_utils.rl_methods import soft_update
@@ -80,10 +80,12 @@ class ACUpper(BaseAgent):
     def forward(self, state, eval_tag=True):
         action = self.actor.forward(state)
         if eval_tag:
+            action = action
             return action.detach().cpu()
         else:
             noise = (self.noise_std * torch.randn_like(action)).clamp(-self.noise_lim, self.noise_lim).to(self.device)
-            action = (action + noise).clamp(0.0, 1.0)
+            action = (action + noise).clamp(60, 240)
+            action = action
             return action.detach().cpu()
 
     def update(self, batch: List):
@@ -94,8 +96,8 @@ class ACUpper(BaseAgent):
         done = batch[4].unsqueeze(1).to(self.device)
         u_action = batch[5].unsqueeze(1).to(self.device)
 
-        u_a = self.actor(s)
-        n_u_a = self.actor(s_)
+        u_a = self.actor.forward(s)
+        n_u_a = self.actor.forward(s_)
 
         # Compute the target Q value
         target_Q = self.critic(s_, n_u_a, l_action)
@@ -140,40 +142,41 @@ class UANewCollector:
         self.save_path = save_path
         self.pre_makespan = 0
         self.curr_time = [0, 0, 0]
+        self.init_release_time_gap = cf.QUAY_CRANE_RELEASE_TIME
         self.train_time = 0
+        self.task = cf.dataset + '_' + str(cf.MISSION_NUM_ONE_QUAY_CRANE)
 
     def collect_rl(self):
         for solu in self.train_solus:
             self.curr_time = [0, 0, 0]
             pre_makespan = 0
-            state = get_state(solu.iter_env, 0)
+            state = get_state_n(iter_solution=solu.iter_env, step_number=0, max_num=self.m_max_num)
             for step in range(self.mission_num):
                 cur_mission = get_next_job_at_quay_cranes(solu.iter_env, self.curr_time)
-                # cur_mission = solu.iter_env.mission_list[step]
                 solu.released_missions.append(cur_mission)
                 u_action = self.u_agent.forward(state)
-                # u_action = torch.tensor(300, dtype=torch.float)
-                l_action = self.l_agent.forward(state, False)  # fixme 需要探索么？
+                l_action = self.l_agent.forward(state, True)  # Todo: False/True
                 makespan = self.process(solu, cur_mission, u_action, l_action, step)
                 reward = (pre_makespan - makespan)
                 if step != self.mission_num - 1:
-                    new_state = get_state(iter_solution=solu.iter_env, cur_mission=cur_mission)
+                    new_state = get_state_n(iter_solution=solu.iter_env, step_number=step + 1,
+                                            max_num=self.m_max_num)
                     done = 0
                 else:
                     new_state = state
                     done = 1
-                # update
-                state = new_state
-                pre_makespan = makespan
-
+                # record & train & eval
                 if step >= 3:
                     self.data_buffer.append(state=state, u_ac=float(u_action), l_ac=l_action,
                                             new_state=new_state, r=reward, done=done)
-                # train & eval
                 if self.train_time == 3:
                     self.u_dl_train = DataLoader(dataset=self.data_buffer, batch_size=self.batch_size, shuffle=True)
-                if self.train_time > 3 and self.train_time % 10 == 0:
+                if self.train_time > 3 and self.train_time % 2 == 0:
                     self.train()
+
+                # update
+                state = new_state
+                pre_makespan = makespan
                 self.train_time = self.train_time + 1
             solu.reset()
 
@@ -182,26 +185,28 @@ class UANewCollector:
             makespan_forall = []
             reward_forall = []
             for i in range(len(self.test_solus)):
+                torch.manual_seed(42)
                 solu = self.test_solus[i]
-                state = get_state(solu.iter_env, 0)
+                state = get_state_n(iter_solution=solu.iter_env, step_number=0, max_num=self.m_max_num)
                 pre_makespan = 0
                 total_reward = 0
                 self.curr_time = [0, 0, 0]
+                # print(i)
                 for step in range(self.mission_num):
                     cur_mission = get_next_job_at_quay_cranes(solu.iter_env, self.curr_time)
-                    # cur_mission = solu.iter_env.mission_list[step]
                     solu.released_missions.append(cur_mission)
                     if l_eval_flag:
-                        u_action = torch.tensor(90)
+                        u_action = torch.tensor(self.init_release_time_gap)
                     else:
                         u_action = self.u_agent.forward(state, False)
                     l_action = self.l_agent.forward(state, False)
                     makespan = self.process(solu, cur_mission, u_action, l_action, step)
                     total_reward += (pre_makespan - makespan)
                     if step != self.mission_num - 1:
-                        new_state = get_state(iter_solution=solu.iter_env, cur_mission=cur_mission)
+                        new_state = get_state_n(iter_solution=solu.iter_env, step_number=step + 1,
+                                                max_num=self.m_max_num)
                     else:
-                        new_state = None
+                        new_state = state
                     pre_makespan = makespan
                     state = new_state
                 solu.reset()
@@ -210,19 +215,19 @@ class UANewCollector:
                 if makespan < self.best_result[i]:
                     self.best_result[i] = solu.last_step_makespan
             makespan_forall.append(sum(makespan_forall[0:len(self.train_solus)]))
-            makespan_forall.append(sum(makespan_forall))
+            makespan_forall.append(sum(makespan_forall[0:-1]) - sum(makespan_forall[0:len(self.train_solus)]))
             reward_forall.append(sum(reward_forall[0:len(self.train_solus)]))
             if makespan_forall[-2] < self.best_result[-2]:
                 self.best_result[-2] = makespan_forall[-2]
-                torch.save(self.l_agent.qf, self.save_path + '/eval_best_la.pkl')
-                torch.save(self.l_agent.qf_target, self.save_path + '/target_best_la.pkl')
-                torch.save(self.u_agent.actor, self.save_path + '/actor_best_fixed.pkl')
-                torch.save(self.u_agent.critic, self.save_path + '/critic_best_fixed.pkl')
             if makespan_forall[-1] < self.best_result[-1]:
                 self.best_result[-1] = makespan_forall[-1]
+                torch.save(self.l_agent.qf, self.save_path + '/eval_' + self.task + 'l.pkl')
+                torch.save(self.l_agent.qf_target, self.save_path + '/target_' + self.task + 'l.pkl')
+                torch.save(self.u_agent.actor, self.save_path + '/actor_' + self.task + 'l.pkl')
+                torch.save(self.u_agent.critic, self.save_path + '/critic_' + self.task + 'l.pkl')
             return makespan_forall, reward_forall
 
-    def train(self):
+    def train(self, train_num=3):
         total_policy_loss = 0
         total_vf_loss = 0
         total_loss = 0
@@ -237,13 +242,13 @@ class UANewCollector:
         total_vf_loss += vf_loss.data
 
         # train lower
-        # for i in range(3):
-        #     batch = next(iter(self.u_dl_train))
-        #     loss, q_eval, q_eval_value = self.l_agent.update(batch)
-        #     total_loss += loss.data
-        #     total_q_eval += q_eval.data
-        #     total_q_eval_value += q_eval_value.data
-        #     train_batch_num += 1
+        for i in range(train_num):
+            batch = next(iter(self.u_dl_train))
+            loss, q_eval, q_eval_value = self.l_agent.update(batch)
+            total_loss += loss.data
+            total_q_eval += q_eval.data
+            total_q_eval_value += q_eval_value.data
+            train_batch_num += 1
 
         # 画图&制表
         self.rl_logger.add_scalar(tag=f'u_train/policy_loss', scalar_value=total_policy_loss,
@@ -265,9 +270,9 @@ class UANewCollector:
             # field_name = ['Epoch', 'policy_loss', 'vf_loss', 'q_loss']
             # value = [self.train_time, total_policy_loss, total_vf_loss, total_loss]
             field_name = ['Epoch', 'policy_loss', 'vf_loss', 'u_action_mean', 'makespan_train', 'makespan_test',
-                          'reward']
+                          'q_loss']
             value = [self.train_time, total_policy_loss, total_vf_loss, u_action_mean, makespan[-2], makespan[-1],
-                     reward[-1]]
+                     torch.sqrt(total_loss) * train_num / total_q_eval]
             self.rl_logger.add_scalar(tag=f'l_train/makespan_train', scalar_value=makespan[-2],
                                       global_step=self.train_time)
             self.rl_logger.add_scalar(tag=f'l_train/makespan_test', scalar_value=makespan[-1],
@@ -289,16 +294,17 @@ class UANewCollector:
         if int(mission.idx[1:]) % each_quay_m_num == 1:
             mission.release_time = 0
             adjust_release_time = 0  # 调整后的释放时间
-            self.curr_time[int(int(mission.idx[1:]) / each_quay_m_num)] = 120.0  # 下一个最早出发前往exit时间 min(60)+process(60)
+            # 下一个最早出发前往exit时间 min(60)+process(60)
+            self.curr_time[int(int(mission.idx[1:]) / each_quay_m_num)] = self.init_release_time_gap
         elif int(mission.idx[1:]) <= each_quay_m_num:
-            adjust_release_time = self.curr_time[0] + u_action.item() - 120.0
-            self.curr_time[0] = adjust_release_time + 120.0
-        elif 100 < int(mission.idx[1:]) <= each_quay_m_num * 2:
-            adjust_release_time = self.curr_time[1] + u_action.item() - 120.0
-            self.curr_time[1] = adjust_release_time + 120.0
-        elif 200 < int(mission.idx[1:]) <= each_quay_m_num * 3:
-            adjust_release_time = self.curr_time[2] + u_action.item() - 120.0
-            self.curr_time[2] = adjust_release_time + 120.0
+            adjust_release_time = self.curr_time[0] + u_action.item() - self.init_release_time_gap
+            self.curr_time[0] = adjust_release_time + self.init_release_time_gap
+        elif each_quay_m_num < int(mission.idx[1:]) <= each_quay_m_num * 2:
+            adjust_release_time = self.curr_time[1] + u_action.item() - self.init_release_time_gap
+            self.curr_time[1] = adjust_release_time + self.init_release_time_gap
+        elif each_quay_m_num * 2 < int(mission.idx[1:]) <= each_quay_m_num * 3:
+            adjust_release_time = self.curr_time[2] + u_action.item() - self.init_release_time_gap
+            self.curr_time[2] = adjust_release_time + self.init_release_time_gap
         transfer_time = mission.machine_start_time[1] - mission.release_time
         mission.machine_start_time[0] = adjust_release_time
         mission.machine_start_time[1] = adjust_release_time + transfer_time

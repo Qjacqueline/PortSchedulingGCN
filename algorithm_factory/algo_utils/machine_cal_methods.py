@@ -176,7 +176,7 @@ def get_next_job_at_quay_cranes(port_env: PortEnv, curr_time: list):
     min_time = float('INF')
     min_idx = None
     for i in range(len(port_env.quay_cranes)):
-        tmp_time = port_env.quay_cranes['QC' + str(i + 1)].time_to_exit + curr_time[i]  # 下一个的最早到达exit时间
+        tmp_time = port_env.quay_cranes['QC' + str(i + 1)].time_to_exit + curr_time[i] + 60  # 下一个的最早到达exit时间
         if tmp_time < min_time and len(port_env.quay_cranes['QC' + str(i + 1)].mission_list) < len(
                 port_env.quay_cranes['QC' + str(i + 1)].missions):
             min_time = tmp_time
@@ -234,7 +234,7 @@ def get_cur_time_status_v2(port_env: PortEnv, cur_time: float):
     f_ls = []
 
     for mission in port_env.mission_list:
-        if mission.machine_start_time[1] >= cur_time:
+        if mission.machine_start_time[1] >= cur_time or len(mission.machine_start_time) == 2:
             qc_ls[mission.quay_crane_id].append(mission)
         elif mission.machine_start_time[2] > cur_time:
             ls_ls[mission.machine_list[4]].append(mission)

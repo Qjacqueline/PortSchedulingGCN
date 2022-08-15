@@ -185,48 +185,52 @@ class Critic(nn.Module):
 
 
 class ActorNew(nn.Module):
-    def __init__(self, device: torch.device, hidden=128):
+    def __init__(self, device: torch.device, hidden=256, max_num=10, machine_num=22):
         super(ActorNew, self).__init__()
         self.device = device
         model = nn.ModuleDict()
-        model['conv1'] = GCNConv(3, hidden)
+        fea_dim = max_num * 6
+        model['conv1'] = GCNConv(fea_dim, hidden)
         model['conv2'] = GCNConv(hidden, hidden)
-        model['linear'] = FlattenMlp(22 * hidden, 1, (hidden, hidden))
+        model['linear'] = FlattenMlp(machine_num * (hidden + fea_dim), 1, (hidden, hidden, hidden))
         self.model = model.to(self.device)
 
     def forward(self, state) -> torch.Tensor:
-        x, edge_index, edge_weight = state.x, state.edge_index, state.edge_weight
-        x = self.model['conv1'](x, edge_index, edge_weight)  # 传入卷积层
+        xx, edge_index, edge_weight = state.x, state.edge_index, state.edge_weight
+        x = self.model['conv1'](xx, edge_index, edge_weight)  # 传入卷积层
         x = F.leaky_relu_(x)  # 激活函数
-        x = F.dropout(x, training=self.training)  # dropout层,防止过拟合
+        x = F.dropout(x, p=0.5, training=self.training)  # dropout层,防止过拟合
         x = self.model['conv2'](x, edge_index, edge_weight)  # 第二层卷积层
+        x = F.leaky_relu_(x)  # 激活函数
+        x = torch.cat((x, xx), dim=1)
         x = self.model['linear'](x.reshape(int(len(x) / 22), -1))
-        y = torch.tanh(x) * 90.0 + torch.tensor(150.0)  # fixme
+        y = torch.tanh(x) * 90.0 + torch.tensor(150.0)
         return y
 
 
 class CriticNew(nn.Module):
-    def __init__(self, device: torch.device, hidden=128):
+    def __init__(self, device: torch.device, hidden=256, max_num=10, machine_num=22):
         super(CriticNew, self).__init__()
         self.device = device
         model = nn.ModuleDict()
-        model['conv1'] = GCNConv(3, hidden)
+        fea_dim = max_num * 6
+        model['conv1'] = GCNConv(fea_dim, hidden)
         model['conv2'] = GCNConv(hidden, hidden)
-        model['linear1'] = FlattenMlp(22 * hidden, 4, (hidden, hidden))
-        model['linear2'] = FlattenMlp(4 + 2, 1, (hidden, hidden))
-        self.model = model.to(self.device)
-
+        model['linear1'] = FlattenMlp(machine_num * (hidden + fea_dim) + 2, 1, (hidden, hidden, hidden))
+        # model['linear2'] = FlattenMlp(1 + 2, 1, (hidden, hidden))
         self.model = model.to(self.device)
 
     def forward(self, state, u_act, l_act) -> torch.Tensor:
-        x, edge_index, edge_weight = state.x, state.edge_index, state.edge_weight
-        x = self.model['conv1'](x, edge_index, edge_weight)  # 传入卷积层
+        xx, edge_index, edge_weight = state.x, state.edge_index, state.edge_weight
+        x = self.model['conv1'](xx, edge_index, edge_weight)  # 传入卷积层
         x = F.leaky_relu_(x)  # 激活函数
-        x = F.dropout(x, training=self.training)  # dropout层,防止过拟合
+        x = F.dropout(x, p=0.5, training=self.training)  # dropout层,防止过拟合
         x = self.model['conv2'](x, edge_index, edge_weight)  # 第二层卷积层
-        x = self.model['linear1'](x.reshape(int(len(x) / 22), -1))  # fixme
         x = F.leaky_relu_(x)  # 激活函数
-        x = self.model['linear2'](torch.cat((x, u_act, l_act), dim=1))  # fixme
+        x = torch.cat((x.reshape(int(len(x) / 22), -1), xx.reshape(int(len(x) / 22), -1), u_act, l_act), dim=1)
+        x = self.model['linear1'](x)
+        # x = F.leaky_relu_(x)  # 激活函数
+        # x = self.model['linear2'](torch.cat((x, u_act, l_act), dim=1))
         return x
 
 

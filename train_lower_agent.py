@@ -47,7 +47,7 @@ def get_args(**kwargs):
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--buffer_size', type=int, default=128000)
 
-    parser.add_argument('--epoch_num', type=int, default=200)
+    parser.add_argument('--epoch_num', type=int, default=30)
 
     parser.add_argument('-save_path', type=str, default=cf.MODEL_PATH)
     command_list = []
@@ -101,10 +101,11 @@ if __name__ == '__main__':
     collector = LACollector(train_solus=train_solus, test_solus=test_solus, data_buffer=data_buffer,
                             batch_size=args.batch_size, mission_num=args.mission_num, agent=agent, rl_logger=rl_logger,
                             save_path=args.save_path, max_num=args.max_num)
-    # agent.qf = torch.load(args.save_path + '/eval_best_fixed.pkl')
-    # agent.qf_target = torch.load(args.save_path + '/target_best_fixed.pkl')
-    # makespan_forall, reward_forall = collector.eval()
-
+    agent.qf = torch.load(args.save_path + '/eval_' + args.task + '.pkl')
+    agent.qf_target = torch.load(args.save_path + '/target_' + args.task + '.pkl')
+    makespan_forall, reward_forall = collector.eval()
+    for makespan in makespan_forall:
+        print("初始la分配makespan为" + str(makespan))
     # =================== heuristic l_train ==================
     # collector.get_transition(
     #     read_json_from_file(cf.OUTPUT_SOLUTION_PATH + 'train_1_SA_10_1868.875721615327.json'), test_solus[0])
