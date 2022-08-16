@@ -89,8 +89,9 @@ def process_init_solution_for_l2i(port_env: PortEnv, buffer_flag: bool = True):
     quay_crane_process_by_order(port_env)  # 阶段一：岸桥
     buffer_process_by_order(port_env)  # 阶段二：缓冲区
     exit_process_by_order(port_env)  # 阶段三：抵达岸桥exit
-    # getattr(sort_missions, missions_sort_rule)(instance.mission_list)
-    station_process_by_random_no_sort(port_env, buffer_flag)  # 阶段四：锁站
+    getattr(sort_missions, 'FCFS')(port_env.mission_list)
+    # station_process_by_random_no_sort(port_env, buffer_flag)  # 阶段四：锁站
+    station_process_by_least_wait(port_env, buffer_flag)
     crossover_process_by_order(port_env, buffer_flag)  # 阶段五：交叉口
     yard_crane_process_by_order(port_env, buffer_flag)  # 阶段六：场桥
     # 更新任务attributes

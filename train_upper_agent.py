@@ -111,22 +111,28 @@ if __name__ == '__main__':
                                  m_max_num=args.m_max_num, each_quay_m_num=args.each_quay_m_num,
                                  data_buffer=data_buffer, batch_size=args.batch_size, u_agent=u_agent,
                                  l_agent=l_agent, rl_logger=rl_logger, save_path=args.save_path)
-    l_agent.qf = torch.load(args.save_path + '/eval_' + args.task + '_f.pkl')
-    l_agent.qf_target = torch.load(args.save_path + '/target_' + args.task + '_f.pkl')
-    init_makespans, reward = u_collector.eval(l_eval_flag=True)
-    for makespan in init_makespans:
-        print("初始la分配makespan为" + str(makespan))
 
-    # ======================== collect and train (only upper) =========================
-    # for i in range(100):
-    #     u_collector.collect_rl()
-    #     logger.info("开始第" + str(i) + "训练")
-    #     u_train(epoch_num=1, dl_train=u_dl_train, agent=u_agent, collector=u_collector, rl_logger=rl_logger)
-    #     u_data_buffer.clear()
+    # ======================== pre评估 ==========================
+    # l_agent.qf = torch.load(args.save_path + '/eval_' + args.task + 'l.pkl')
+    # l_agent.qf_target = torch.load(args.save_path + '/target_' + args.task + 'l.pkl')
+    # u_agent.actor = torch.load(args.save_path + '/actor_' + args.task + 'l.pkl')
+    # u_agent.critic = torch.load(args.save_path + '/critic_' + args.task + 'l.pkl')
+    # makespan_forall, reward = u_collector.eval()
+    # for makespan in makespan_forall:
+    #     print("初始la分配makespan为" + str(makespan))
+
+    # l_agent.qf = torch.load(args.save_path + '/eval_' + args.task + '_f.pkl')
+    # l_agent.qf_target = torch.load(args.save_path + '/target_' + args.task + '_f.pkl')
+    # for i in range(15):
+    #     u_collector.init_release_time_gap = i * 10
+    #
+    #     init_makespans, reward = u_collector.eval(l_eval_flag=True)
+    #     print(str(i * 10) + " : " + str(init_makespans[-2]))
 
     # ======================== collect and train (upper lower combine) =========================
     s_t = time.time()
-
+    l_agent.qf = torch.load(args.save_path + '/eval_' + args.task + '_f.pkl')
+    l_agent.qf_target = torch.load(args.save_path + '/target_' + args.task + '_f.pkl')
     for i in range(args.epoch_num):
         u_collector.collect_rl()
 

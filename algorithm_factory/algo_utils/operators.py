@@ -20,6 +20,8 @@ def inter_relocate_random_station_random_mission_to_random_machine(iter_env: Por
     if not s_a.mission_list:
         return 'end'
     s_b = machine_cal_methods.find_random_machine(iter_env.lock_stations, s_a)
+    if s_a == s_b:
+        return 'not end'
     m_a = mission_cal_methods.find_random_one_mission_one_machine(s_a)
     pos = mission_cal_methods.find_least_wait_delta_position_for_mission(m_a, s_b)
     logger.debug("执行relocate_operator3算子:" + s_a.idx + "-" + m_a.idx + '->' + s_b.idx)
@@ -40,6 +42,8 @@ def inter_relocate_random_machine_longest_mission_to_random_machine(iter_env: Po
     if not s_a.mission_list:
         return 'end'
     s_b = machine_cal_methods.find_random_machine(iter_env.lock_stations, s_a)
+    if s_a == s_b:
+        return 'not end'
     m_a = mission_cal_methods.find_longest_mission_for_machine(s_a)
     pos = mission_cal_methods.find_least_wait_delta_position_for_mission(m_a, s_b)
     logger.debug("执行relocate_operator2算子:" + s_a.idx + "-" + m_a.idx + '->' + s_b.idx)
@@ -58,6 +62,8 @@ def inter_relocate_random_machine_longest_mission_to_random_machine(iter_env: Po
 def inter_relocate_latest_station_random_mission_to_random_machine(iter_env: PortEnv, buffer_flag: bool = True):
     s_a = machine_cal_methods.find_latest_machine(iter_env.lock_stations)
     s_b = machine_cal_methods.find_random_machine(iter_env.lock_stations, s_a)
+    if s_a == s_b:
+        return 'not end'
     m_a = mission_cal_methods.find_random_one_mission_one_machine(s_a)
     pos = mission_cal_methods.find_least_wait_delta_position_for_mission(m_a, s_b)
     logger.debug("执行station inter relocate算子:" + s_a.idx + "-" + m_a.idx + '->' + s_b.idx)
@@ -73,6 +79,8 @@ def inter_relocate_latest_station_random_mission_to_random_machine(iter_env: Por
 def inter_relocate_latest_station_random_mission_to_earliest_station(iter_env: PortEnv, buffer_flag: bool = True):
     s_a = machine_cal_methods.find_latest_machine(iter_env.lock_stations)
     s_b = machine_cal_methods.find_earliest_machine(iter_env.lock_stations)
+    if s_a == s_b:
+        return 'not end'
     m_a = mission_cal_methods.find_random_one_mission_one_machine(s_a)
     pos = mission_cal_methods.find_least_wait_delta_position_for_mission(m_a, s_b)
     logger.debug("执行relocate_operator4算子:" + s_a.idx + "-" + m_a.idx + '->' + s_b.idx)
@@ -88,6 +96,8 @@ def inter_relocate_latest_station_random_mission_to_earliest_station(iter_env: P
 def inter_relocate_latest_station_longest_mission_to_earliest_machine(iter_env: PortEnv, buffer_flag: bool = True):
     s_a = machine_cal_methods.find_latest_machine(iter_env.lock_stations)
     s_b = machine_cal_methods.find_earliest_machine(iter_env.lock_stations)
+    if s_a == s_b:
+        return 'not end'
     m_a = mission_cal_methods.find_longest_mission_for_machine(s_a)
     pos = mission_cal_methods.find_least_wait_delta_position_for_mission(m_a, s_b)
     logger.debug("执行relocate_operator1算子:" + s_a.idx + "-" + m_a.idx + '->' + s_b.idx)
@@ -105,6 +115,8 @@ def inter_relocate_latest_yard_crane_random_mission(iter_env: PortEnv, buffer_fl
     m_a = mission_cal_methods.find_random_one_mission_one_machine(y_a)
     s_a = iter_env.lock_stations[m_a.machine_list[4]]
     s_b = machine_cal_methods.find_random_machine(iter_env.lock_stations, s_a)
+    if s_a == s_b:
+        return 'not end'
     pos = mission_cal_methods.find_least_wait_delta_position_for_mission(m_a, s_b)
     logger.debug("执行yard inter relocate算子:" + "station: " + s_a.idx + " " + m_a.idx)
     machine_cal_methods.del_station_afterwards(iter_env, buffer_flag)  # 删除station之后的工序
@@ -196,6 +208,8 @@ def inner_relocate_latest_yard_crane_random_mission(iter_env: PortEnv, buffer_fl
 def inter_swap_latest_station_longest_mission_earliest_machine(iter_env: PortEnv, buffer_flag: bool = True) -> str:
     s_a = machine_cal_methods.find_latest_machine(iter_env.lock_stations)
     s_b = machine_cal_methods.find_earliest_machine(iter_env.lock_stations)
+    if s_a == s_b:
+        return 'not end'
     m_a = mission_cal_methods.find_longest_mission_for_machine(s_a)
     m_b = mission_cal_methods.find_nearest_mission_for_mission_in_other_machine(m_a, s_a, s_b)
     logger.debug("执行inter swap算子:" + s_a.idx + "-" + m_a.idx + "<->" + s_b.idx + "-" + m_b.idx)
@@ -213,6 +227,8 @@ def inter_swap_latest_station_longest_mission_all_machines(iter_env: PortEnv, bu
     s_a = machine_cal_methods.find_latest_machine(iter_env.lock_stations)
     m_a = mission_cal_methods.find_longest_mission_for_machine(s_a)
     m_b, s_b = mission_cal_methods.find_nearest_mission_for_mission_in_other_machines(m_a, s_a, iter_env.lock_stations)
+    if s_a == s_b:
+        return 'not end'
     logger.debug("执行inter swap算子:" + s_a.idx + "-" + m_a.idx + "<->" + s_b.idx + "-" + m_b.idx)
     machine_cal_methods.del_station_afterwards(iter_env, buffer_flag)  # 删除station之后的工序
     machine_cal_methods.del_machine(s_a, buffer_flag)
@@ -227,6 +243,8 @@ def inter_swap_latest_station_longest_mission_all_machines(iter_env: PortEnv, bu
 def inter_swap_latest_station_random_mission_earliest_machine(iter_env: PortEnv, buffer_flag: bool = True) -> str:
     s_a = machine_cal_methods.find_latest_machine(iter_env.lock_stations)
     s_b = machine_cal_methods.find_earliest_machine(iter_env.lock_stations)
+    if s_a == s_b:
+        return 'not end'
     m_a = mission_cal_methods.find_longest_mission_for_machine(s_a)
     m_b = mission_cal_methods.find_nearest_mission_for_mission_in_other_machine(m_a, s_a, s_b)
     logger.debug("执行inter swap算子:" + s_a.idx + "-" + m_a.idx + "<->" + s_b.idx + "-" + m_b.idx)

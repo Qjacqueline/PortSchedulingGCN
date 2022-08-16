@@ -54,8 +54,8 @@ class BaseAgent(ABC, nn.Module):
 
 class DDQN(BaseAgent):
     def __init__(self,
-                 eval_net: QNet,
-                 target_net: QNet,
+                 eval_net,
+                 target_net,
                  dim_action: int,
                  device: torch.device,
                  gamma: float,
@@ -154,7 +154,7 @@ class LACollector:
             state = get_state_n(iter_solution=solu.iter_env, step_number=0, max_num=self.max_num)
             for step in range(self.mission_num):
                 cur_mission = solu.iter_env.mission_list[step]
-                if np.random.rand() <= 0.3:
+                if np.random.rand() <= 0:
                     action = int(find_min_wait_station(solu.iter_env, cur_mission).idx[-1]) - 1
                 else:
                     action = self.agent.forward(state)

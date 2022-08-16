@@ -78,6 +78,35 @@ class QNet(nn.Module):
         return x  # F.log_softmax(x, dim=1)  # 将经过两层卷积得到的特征输入log_softmax函数得到概率分布
 
 
+class PQNet(nn.Module):
+    def __init__(self, device: torch.device, hidden=256, max_num=10, machine_num=22):
+        super(PQNet, self).__init__()
+        self.device = device
+        self.fea_dim = max_num * 6
+        # self.conv1 = nn.Conv1d(1, 10, kernel_size=5)  # 定义第一类卷积层，输入通道为1，输出通道为10，卷积核大小为5
+        # self.conv2 = nn.Conv1d(10, 20, kernel_size=3)  # 定义第二类卷积层，输入通道为10，输出通道为20，卷积核大小为3
+        # self.conv3 = nn.Conv1d(20, 50, kernel_size=2)  # 定义第三类卷积层，输入通道为20，输出通道为50，卷积核大小为3
+        # self.conv2_drop = nn.Dropout2d()  # 二维dropout
+        # self.conv3_drop = nn.Dropout2d()
+        self.fc1 = FlattenMlp(self.fea_dim * 22, 4, (hidden, hidden, hidden))
+
+    def forward(self, state) -> torch.Tensor:
+        xx, edge_index, edge_weight = state.x, state.edge_index, state.edge_weight
+        x = xx.view(-1, self.fea_dim * 22)
+        # # 第一个卷积，池化，激活   #输入batch 1 28 28，卷积输出batch 10 24 24 池化输出batch 10 12 12
+        # x = F.relu(F.max_pool1d(self.conv1(x), 2))
+        # # 第二个卷积，池化，激活#输入batch 10 12 12，卷积输出 输出batch 20 10 10，池化输出batch 20 5 5
+        # x = F.relu(F.max_pool1d(self.conv2_drop(self.conv2(x)), 2))
+        # # drop不改变维度随机删去一些数据
+        # # 第三个卷积，池化，激活 #输入 batch 20 5 5 卷积输出 batch 50 4 4  池化 batch 50 2 2
+        # x = F.relu(F.max_pool1d(self.conv3_drop(self.conv3(x)), 2))
+        # x = x.view(-1, 50 * 31)  # view将数据变为200维的数据   batch 50 2 2变为batch 200
+        # x = F.relu(self.fc1(x))  # 第一层全连接层 输入维度 batch 200 输出batch 50
+        # x = F.dropout(x, training=self.training)  # dropout层，防止过拟合
+        x = self.fc1(x)  # 第二层全连接层 输入维度 batch 50 输出batch 10
+        return x  # 输出
+
+
 # class Dueling_DQN(nn.Module):
 #     def __init__(self, m_max_num: int, dim_mission_fea: int, dim_mach_fea: int, dim_yard_fea: int, hidden_size: int,
 #                  n_layers: int, device: torch.device):
@@ -204,7 +233,7 @@ class ActorNew(nn.Module):
         x = F.leaky_relu_(x)  # 激活函数
         x = torch.cat((x, xx), dim=1)
         x = self.model['linear'](x.reshape(int(len(x) / 22), -1))
-        y = torch.tanh(x) * 90.0 + torch.tensor(150.0)
+        y = torch.tanh(x) * 40.0 + torch.tensor(50.0)
         return y
 
 

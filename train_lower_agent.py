@@ -19,7 +19,7 @@ from tensorboardX import SummaryWriter
 
 import conf.configs as cf
 from algorithm_factory.algo_utils.data_buffer import LABuffer
-from algorithm_factory.algo_utils.net_models import QNet
+from algorithm_factory.algo_utils.net_models import QNet, PQNet
 from algorithm_factory.rl_algo.lower_agent import DDQN, LACollector
 from data_process.input_process import read_input, read_json_from_file
 from utils.log import exp_dir, Logger
@@ -47,7 +47,7 @@ def get_args(**kwargs):
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--buffer_size', type=int, default=128000)
 
-    parser.add_argument('--epoch_num', type=int, default=30)
+    parser.add_argument('--epoch_num', type=int, default=60)
 
     parser.add_argument('-save_path', type=str, default=cf.MODEL_PATH)
     command_list = []
@@ -88,8 +88,8 @@ if __name__ == '__main__':
 
     # ========================= Policy ======================
     agent = DDQN(
-        eval_net=QNet(device=args.device, hidden=args.hidden, max_num=args.max_num, machine_num=args.machine_num),
-        target_net=QNet(device=args.device, hidden=args.hidden, max_num=args.max_num, machine_num=args.machine_num),
+        eval_net=PQNet(device=args.device, hidden=args.hidden, max_num=args.max_num, machine_num=args.machine_num),
+        target_net=PQNet(device=args.device, hidden=args.hidden, max_num=args.max_num, machine_num=args.machine_num),
         dim_action=args.dim_action,
         device=args.device,
         gamma=args.gamma,
@@ -101,11 +101,11 @@ if __name__ == '__main__':
     collector = LACollector(train_solus=train_solus, test_solus=test_solus, data_buffer=data_buffer,
                             batch_size=args.batch_size, mission_num=args.mission_num, agent=agent, rl_logger=rl_logger,
                             save_path=args.save_path, max_num=args.max_num)
-    agent.qf = torch.load(args.save_path + '/eval_' + args.task + '.pkl')
-    agent.qf_target = torch.load(args.save_path + '/target_' + args.task + '.pkl')
-    makespan_forall, reward_forall = collector.eval()
-    for makespan in makespan_forall:
-        print("初始la分配makespan为" + str(makespan))
+    # agent.qf = torch.load(args.save_path + '/eval_' + args.task + '.pkl')
+    # agent.qf_target = torch.load(args.save_path + '/target_' + args.task + '.pkl')
+    # makespan_forall, reward_forall = collector.eval()
+    # for makespan in makespan_forall:
+    #     print("初始la分配makespan为" + str(makespan))
     # =================== heuristic l_train ==================
     # collector.get_transition(
     #     read_json_from_file(cf.OUTPUT_SOLUTION_PATH + 'train_1_SA_10_1868.875721615327.json'), test_solus[0])

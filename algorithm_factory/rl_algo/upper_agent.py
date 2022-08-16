@@ -84,7 +84,7 @@ class ACUpper(BaseAgent):
             return action.detach().cpu()
         else:
             noise = (self.noise_std * torch.randn_like(action)).clamp(-self.noise_lim, self.noise_lim).to(self.device)
-            action = (action + noise).clamp(60, 240)
+            action = (action + noise).clamp(10, 90)
             action = action
             return action.detach().cpu()
 
@@ -125,7 +125,7 @@ class ACUpper(BaseAgent):
 class UANewCollector:
     def __init__(self, train_solus: List[IterSolution], test_solus: List[IterSolution], mission_num: int,
                  m_max_num: int, each_quay_m_num: int, data_buffer: UANewBuffer, batch_size: int, u_agent: ACUpper,
-                 l_agent: DDQN, rl_logger: SummaryWriter, save_path: str):
+                 l_agent: DDQN, rl_logger: SummaryWriter, save_path: str, init_gap=cf.QUAY_CRANE_RELEASE_TIME):
         logger.info("创建data Collector")
         self.train_solus = train_solus
         self.test_solus = test_solus
@@ -142,7 +142,7 @@ class UANewCollector:
         self.save_path = save_path
         self.pre_makespan = 0
         self.curr_time = [0, 0, 0]
-        self.init_release_time_gap = cf.QUAY_CRANE_RELEASE_TIME
+        self.init_release_time_gap = init_gap
         self.train_time = 0
         self.task = cf.dataset + '_' + str(cf.MISSION_NUM_ONE_QUAY_CRANE)
 
@@ -155,7 +155,7 @@ class UANewCollector:
                 cur_mission = get_next_job_at_quay_cranes(solu.iter_env, self.curr_time)
                 solu.released_missions.append(cur_mission)
                 u_action = self.u_agent.forward(state)
-                l_action = self.l_agent.forward(state, True)  # Todo: False/True
+                l_action = self.l_agent.forward(state, False)  # Todo: False/True
                 makespan = self.process(solu, cur_mission, u_action, l_action, step)
                 reward = (pre_makespan - makespan)
                 if step != self.mission_num - 1:
@@ -310,44 +310,3 @@ class UANewCollector:
         mission.machine_start_time[1] = adjust_release_time + transfer_time
         mission.release_time = adjust_release_time
 
-
-def h_new_train(train_time: int, epoch_num: int, u_dl_train: DataLoader, u_agent: ACUpper, l_agent: DDQN,
-                u_collector: UANewCollector, rl_logger: SummaryWriter) -> None:
-    i = 0
-    for epoch in range(epoch_num):
-        with tqdm(u_dl_train, desc=f'epoch{epoch}', ncols=100) as pbar:
-            total_policy_loss = 0
-            total_vf_loss = 0
-            total_loss = 0
-            total_q_eval = 0
-            total_q_eval_value = 0
-            for batch in pbar:
-                if i % 2 == 0:  # FixMe
-                    policy_loss, vf_loss, u_action_mean = u_agent.update(batch)  # TODO upper
-                    total_policy_loss += policy_loss.data
-                    total_vf_loss += vf_loss.data
-                loss, q_eval, q_eval_value = l_agent.update(batch)
-                total_loss += loss.data
-                total_q_eval += q_eval.data
-                total_q_eval_value += q_eval_value.data
-                i = i + 1
-            makespan, reward = u_collector.eval()
-            rl_logger.add_scalar(tag=f'u_train/policy_loss', scalar_value=total_policy_loss / len(pbar),
-                                 global_step=epoch + train_time * epoch_num)
-            rl_logger.add_scalar(tag=f'u_train/vf_loss', scalar_value=total_vf_loss / len(pbar),
-                                 global_step=epoch + train_time * epoch_num)
-            rl_logger.add_scalar(tag=f'u_train/q_loss', scalar_value=total_loss / len(pbar),
-                                 global_step=epoch + train_time * epoch_num)
-            rl_logger.add_scalar(tag=f'u_train/q', scalar_value=total_q_eval / len(pbar),
-                                 global_step=epoch + train_time * epoch_num)
-            rl_logger.add_scalar(tag=f'u_train/q_all', scalar_value=total_q_eval_value / len(pbar),
-                                 global_step=epoch + train_time * epoch_num)
-            field_name = ['Epoch', 'policy_loss', 'vf_loss', 'q_loss']
-            value = [epoch, total_policy_loss / len(pbar), total_vf_loss / len(pbar), total_loss / len(pbar)]
-            for i in range(len(makespan)):
-                rl_logger.add_scalar(tag=f'l_train/makespan' + str(i + 1), scalar_value=makespan[i],
-                                     global_step=epoch + train_time * epoch_num)
-                field_name.append('makespan' + str(i + 1))
-                value.append(makespan[i])
-
-            print_result(field_name=field_name, value=value)
