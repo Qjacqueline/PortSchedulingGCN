@@ -56,13 +56,13 @@ class FlattenMlp(MLP):
 
 
 class QNet(nn.Module):
-    def __init__(self, device: torch.device, hidden=256, max_num=10, machine_num=22):
+    def __init__(self, device: torch.device, hidden=256, max_num=10):
         super(QNet, self).__init__()
         self.device = device
         fea_dim = max_num * 6
         self.conv1 = GCNConv(fea_dim, hidden)
         self.conv2 = GCNConv(hidden, hidden)
-        self.linear = FlattenMlp(machine_num * (hidden + fea_dim), 4, (hidden, hidden, hidden))
+        self.linear = FlattenMlp(22 * (hidden + fea_dim), 4, (hidden, hidden, hidden))
         # self.resnet = models.resnet50(pretrained=False, num_classes=4)
         # self.linear = nn.Linear(machine_num * (hidden + fea_dim), 4)
 
@@ -70,7 +70,7 @@ class QNet(nn.Module):
         xx, edge_index, edge_weight = state.x, state.edge_index, state.edge_weight
         x = self.conv1(xx, edge_index, edge_weight)  # 传入卷积层
         x = F.leaky_relu_(x)  # 激活函数
-        x = F.dropout(x, p=0.5, training=self.training)  # dropout层,防止过拟合
+        # x = F.dropout(x, p=0.5, training=self.training)  # dropout层,防止过拟合
         x = self.conv2(x, edge_index, edge_weight)  # 第二层卷积层
         x = F.leaky_relu_(x)  # 激活函数
         x = torch.cat((x, xx), dim=1)
@@ -83,16 +83,17 @@ class PQNet(nn.Module):
         super(PQNet, self).__init__()
         self.device = device
         self.fea_dim = max_num * 6
+        self.machine_num = machine_num
         # self.conv1 = nn.Conv1d(1, 10, kernel_size=5)  # 定义第一类卷积层，输入通道为1，输出通道为10，卷积核大小为5
         # self.conv2 = nn.Conv1d(10, 20, kernel_size=3)  # 定义第二类卷积层，输入通道为10，输出通道为20，卷积核大小为3
         # self.conv3 = nn.Conv1d(20, 50, kernel_size=2)  # 定义第三类卷积层，输入通道为20，输出通道为50，卷积核大小为3
         # self.conv2_drop = nn.Dropout2d()  # 二维dropout
         # self.conv3_drop = nn.Dropout2d()
-        self.fc1 = FlattenMlp(self.fea_dim * 22, 4, (hidden, hidden, hidden))
+        self.fc1 = FlattenMlp(self.fea_dim * machine_num, 4, (hidden, hidden, hidden))
 
     def forward(self, state) -> torch.Tensor:
         xx, edge_index, edge_weight = state.x, state.edge_index, state.edge_weight
-        x = xx.view(-1, self.fea_dim * 22)
+        x = xx.view(-1, self.fea_dim * self.machine_num)
         # # 第一个卷积，池化，激活   #输入batch 1 28 28，卷积输出batch 10 24 24 池化输出batch 10 12 12
         # x = F.relu(F.max_pool1d(self.conv1(x), 2))
         # # 第二个卷积，池化，激活#输入batch 10 12 12，卷积输出 输出batch 20 10 10，池化输出batch 20 5 5
@@ -257,6 +258,7 @@ class CriticNew(nn.Module):
         x = self.model['conv2'](x, edge_index, edge_weight)  # 第二层卷积层
         x = F.leaky_relu_(x)  # 激活函数
         x = torch.cat((x.reshape(int(len(x) / 22), -1), xx.reshape(int(len(x) / 22), -1), u_act, l_act), dim=1)
+        # TODO l_a gaicheng onehot
         x = self.model['linear1'](x)
         # x = F.leaky_relu_(x)  # 激活函数
         # x = self.model['linear2'](torch.cat((x, u_act, l_act), dim=1))

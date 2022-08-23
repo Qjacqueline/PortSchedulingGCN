@@ -1416,7 +1416,8 @@ def get_state(iter_solution: PortEnv, step_number: int = None, cur_mission: Miss
     return data
 
 
-def get_state_n(iter_solution: PortEnv, step_number: int = None, cur_mission: Mission = None, max_num=5):
+def get_state_n(iter_solution: PortEnv, step_number: int = None, cur_mission: Mission = None, max_num=5,
+                machine_num=22):
     if cur_mission is None:
         cur_mission: Mission = iter_solution.mission_list[step_number]
     # =========== 添加点 ===========
@@ -1453,6 +1454,6 @@ def get_state_n(iter_solution: PortEnv, step_number: int = None, cur_mission: Mi
     for i in range(max_num):
         norm.extend([1 / 100, 1 / 100, 1 / 100, 1, 1, 1])
     norm = torch.tensor(norm)
-    x = x.view(22, -1) * norm
+    x = x.view(machine_num, -1) * norm
     data = Data(x=x, edge_index=edge_index, edge_weight=edge_weight)
     return data

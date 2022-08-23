@@ -9,6 +9,7 @@
 import math
 import os
 from abc import ABC, abstractmethod
+from copy import deepcopy
 from typing import Callable, List
 
 import numpy as np
@@ -140,6 +141,7 @@ class LACollector:
         self.dl_train = None
         self.mission_num = mission_num
         self.max_num = max_num
+        self.machine_num = 22
         self.agent = agent
         self.rl_logger = rl_logger
         self.best_result = [float('Inf') for _ in range(len(self.test_solus) + 2)]
@@ -151,7 +153,8 @@ class LACollector:
         for solu in self.train_solus:
             done = 0
             pre_makespan = 0
-            state = get_state_n(iter_solution=solu.iter_env, step_number=0, max_num=self.max_num)
+            state = get_state_n(iter_solution=solu.iter_env, step_number=0, max_num=self.max_num,
+                                machine_num=self.machine_num)
             for step in range(self.mission_num):
                 cur_mission = solu.iter_env.mission_list[step]
                 if np.random.rand() <= 0:
@@ -165,7 +168,8 @@ class LACollector:
                     new_state = state
                     # reward = -makespan
                 else:
-                    new_state = get_state_n(iter_solution=solu.iter_env, step_number=step + 1, max_num=self.max_num)
+                    new_state = get_state_n(iter_solution=solu.iter_env, step_number=step + 1, max_num=self.max_num,
+                                            machine_num=self.machine_num)
                     # reward = 0
                 pre_makespan = makespan
                 self.data_buffer.append(state, action, new_state, reward, done)
@@ -221,7 +225,8 @@ class LACollector:
             for i in range(len(self.test_solus)):
                 torch.manual_seed(42)
                 solu = self.test_solus[i]
-                state = get_state_n(iter_solution=solu.iter_env, step_number=0, max_num=self.max_num)
+                state = get_state_n(iter_solution=solu.iter_env, step_number=0, max_num=self.max_num,
+                                    machine_num=self.machine_num)
                 pre_makespan = 0
                 total_reward = 0
                 for step in range(self.mission_num):
@@ -233,7 +238,7 @@ class LACollector:
                         new_state = state
                     else:
                         new_state = get_state_n(iter_solution=solu.iter_env, step_number=step + 1,
-                                                max_num=self.max_num)
+                                                max_num=self.max_num, machine_num=self.machine_num)
                     pre_makespan = makespan
                     state = new_state
                 makespan_forall.append(makespan)
@@ -248,10 +253,41 @@ class LACollector:
                 self.best_result[-2] = makespan_forall[-2]
             if makespan_forall[-1] < self.best_result[-1]:
                 self.best_result[-1] = makespan_forall[-1]
-                torch.save(self.agent.qf, self.save_path + '/eval_' + self.task + '.pkl')
-                torch.save(self.agent.qf_target, self.save_path + '/target_' + self.task + '.pkl')
+                # torch.save(self.agent.qf, self.save_path + '/eval_' + self.task + '.pkl')
+                # torch.save(self.agent.qf_target, self.save_path + '/target_' + self.task + '.pkl')
                 # print("更新了")
         return makespan_forall, reward_forall
+
+    def rollout(self):
+        with torch.no_grad():
+            makespan_forall = []
+            for i in range(len(self.test_solus)):
+                torch.manual_seed(42)
+                solu = self.test_solus[i]
+                for step in range(self.mission_num):
+                    cur_mission = solu.iter_env.mission_list[step]
+                    min_makespan = float('Inf')
+                    min_pos = -1
+                    for j in range(0, 4):
+                        temp_solu = deepcopy(solu)
+                        temp_cur_mission = temp_solu.iter_env.mission_list[step]
+                        temp_makespan = temp_solu.step_v2(j, temp_cur_mission, step)
+                        for v_step in range(step + 1, self.mission_num):
+                            temp_cur_mission = temp_solu.iter_env.mission_list[v_step]
+                            state = get_state_n(iter_solution=temp_solu.iter_env, step_number=v_step,
+                                                max_num=self.max_num, machine_num=self.machine_num)
+                            action = self.agent.forward(state, False)
+                            temp_makespan = temp_solu.step_v2(action, temp_cur_mission, v_step)
+                        if temp_makespan < min_makespan:
+                            min_makespan = temp_makespan
+                            min_pos = j
+                    makespan = solu.step_v2(min_pos, cur_mission, step)
+                    # print(min_makespan)
+                makespan_forall.append(makespan)
+                solu.reset()
+            makespan_forall.append(sum(makespan_forall[0:len(self.train_solus)]))
+            makespan_forall.append(sum(makespan_forall[0:-1]) - sum(makespan_forall[0:len(self.train_solus)]))
+            return makespan_forall
 
     def collect_heuristics(self, data_ls: List[str]) -> None:
         logger.info("收集启发式方法数据")

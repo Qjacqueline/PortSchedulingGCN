@@ -131,8 +131,8 @@ if __name__ == '__main__':
 
     # ======================== collect and train (upper lower combine) =========================
     s_t = time.time()
-    l_agent.qf = torch.load(args.save_path + '/eval_' + args.task + '_f.pkl')
-    l_agent.qf_target = torch.load(args.save_path + '/target_' + args.task + '_f.pkl')
+    # l_agent.qf = torch.load(args.save_path + '/eval_' + args.task + '_f.pkl')
+    # l_agent.qf_target = torch.load(args.save_path + '/target_' + args.task + '_f.pkl')
     for i in range(args.epoch_num):
         u_collector.collect_rl()
 
