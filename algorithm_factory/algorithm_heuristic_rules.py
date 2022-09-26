@@ -16,7 +16,7 @@ import torch
 from algorithm_factory.algo_utils.machine_cal_methods import quay_crane_process_by_order, buffer_process_by_order, \
     exit_process_by_order, crossover_process_by_order, yard_crane_process_by_order, \
     station_process_by_random, station_process_by_least_mission_num, station_process_by_least_distance, \
-    station_process_by_least_wait, output_solution, get_rnn_state_v2
+    station_process_by_least_wait, output_solution, get_rnn_state_v2, station_process_by_fixed_order
 from algorithm_factory.algo_utils.missions_sort_rules import sort_missions
 from common import LockStation
 from common.iter_solution import IterSolution
@@ -37,6 +37,27 @@ def Random_Choice(port_env, buffer_flag=True):
     buffer_process_by_order(solution)  # 阶段二：缓冲区
     exit_process_by_order(solution)  # 阶段三：抵达岸桥exit
     station_process_by_random(solution, buffer_flag)  # 阶段四：锁站
+    crossover_process_by_order(solution, buffer_flag)  # 阶段五：交叉口
+    yard_crane_process_by_order(solution, buffer_flag)  # 阶段六：场桥
+    # 更新任务attributes
+    for mission in solution.mission_list:
+        mission.cal_mission_attributes(buffer_flag)
+    solution.last_step_makespan = solution.cal_finish_time()
+    print("makespan为:" + str(solution.last_step_makespan) + " time:" + str(time.time() - T1))
+    return solution.last_step_makespan, solution, output_solution(solution)
+
+
+def Fixed_order(port_env, order, buffer_flag=True):
+    T1 = time.time()
+    solution = deepcopy(port_env)
+    """
+         阶段四：锁站策略     按照去往箱区进行划分，随机选
+         """
+    # logger.info("开始执行算法 Random_Choice.")
+    quay_crane_process_by_order(solution)  # 阶段一：岸桥
+    buffer_process_by_order(solution)  # 阶段二：缓冲区
+    exit_process_by_order(solution)  # 阶段三：抵达岸桥exit
+    station_process_by_fixed_order(solution, order, buffer_flag)  # 阶段四：锁站
     crossover_process_by_order(solution, buffer_flag)  # 阶段五：交叉口
     yard_crane_process_by_order(solution, buffer_flag)  # 阶段六：场桥
     # 更新任务attributes

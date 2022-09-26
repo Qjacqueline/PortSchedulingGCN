@@ -335,6 +335,24 @@ def station_process_by_random(port_env, buffer_flag=False):
             assign_mission_to_station(mission, port_env.lock_stations[station_idx], buffer_flag)
 
 
+def station_process_by_fixed_order(port_env, order, buffer_flag=False):
+    station_assign_dict = {}
+    # 阶段四：锁站
+    for station_idx in port_env.lock_stations.keys():
+        station_assign_dict.setdefault(station_idx, [])
+    j = 0
+    for mission in port_env.mission_list:
+        r = order[j]
+        curr_station = list(port_env.lock_stations.items())[r][1]
+        station_assign_dict[curr_station.idx].append(mission)
+        j = j + 1
+    for station_idx in station_assign_dict.keys():
+        getattr(sort_missions, "A_STATION")(station_assign_dict[station_idx],
+                                            port_env.lock_stations[station_idx])
+        for mission in station_assign_dict[station_idx]:
+            assign_mission_to_station(mission, port_env.lock_stations[station_idx], buffer_flag)
+
+
 def station_process_by_least_wait(port_env, buffer_flag=True):
     # 阶段四：锁站
     station_assign_dict = {}
@@ -402,6 +420,18 @@ def match_mission_crossover(crossovers, mission):
     if block_column == 'C':
         curr_crossover = crossovers['CO3']
     return curr_crossover
+
+
+def match_mission_yard_crane_num(mission):
+    yard_crane_num = 20
+    block_column = mission.yard_block_loc[0][0]
+    if block_column == 'A':  # YC 10-13
+        yard_crane_num = 9 + int(mission.yard_block_loc[0][-1])
+    if block_column == 'B':  # YC 14-17
+        yard_crane_num = 13 + int(mission.yard_block_loc[0][-1])
+    if block_column == 'C':  # YC 18-21
+        yard_crane_num = 17 + int(mission.yard_block_loc[0][-1])
+    return yard_crane_num
 
 
 def del_station_afterwards(port_env, buffer_flag=True, step_number=cf.MISSION_NUM, released_mission_ls=None):
@@ -680,8 +710,14 @@ def assign_mission_to_crossover(lock_stations, crossovers, mission, buffer_flag=
             break
         else:
             seq_length += 1
-    if seq_length <= 4:
-        handling_time_crossover = 100 / (5 - seq_length)  # TODO 改函数
+    if seq_length == 0:
+        handling_time_crossover = 0
+    elif seq_length == 1:
+        handling_time_crossover = 20
+    elif seq_length == 2:
+        handling_time_crossover = 33.3
+    elif seq_length == 3:
+        handling_time_crossover = 50
     else:
         handling_time_crossover = 100
         # print(mission.idx + " " + str(seq_length) + " " + str(handling_time_crossover))
@@ -726,7 +762,7 @@ def yard_crane_process_by_order(port_env, buffer_flag=False, step_number=cf.MISS
         if any(yard_crane_assign_dict[yard_crane_idx]):
             temp_crossover_loc = port_env.crossovers[yard_crane_assign_dict[yard_crane_idx][0].machine_list[6]].location
             getattr(sort_missions, "A_YARD_UA")(yard_crane_assign_dict[yard_crane_idx], temp_crossover_loc)
-            port_env.yard_cranes[yard_crane_idx].location = [0, 0]
+            port_env.yard_cranes[yard_crane_idx].location = [0, cf.SLOT_NUM_Y]
             for mission in yard_crane_assign_dict[yard_crane_idx]:
                 assign_mission_to_yard(port_env.yard_cranes, mission, buffer_flag)
 
@@ -741,10 +777,8 @@ def assign_mission_to_yard(yard_cranes, mission, buffer_flag=False):
     transfer_time_yard = mission.transfer_time_c2y
     moving_time_yard_crane = abs(
         curr_yard_crane.location[0] - curr_yard_loc[1]) * cf.SLOT_LENGTH / cf.YARDCRANE_SPEED_X + abs(
-        curr_yard_crane.location[1] - curr_yard_loc[2]) * cf.SLOT_WIDTH / cf.YARDCRANE_SPEED_Y
-    handling_time_yard_crane = abs(
-        cf.SLOT_NUM_Y - curr_yard_loc[2]) * cf.SLOT_WIDTH / cf.YARDCRANE_SPEED_Y + curr_yard_crane.handling_time
-
+        cf.SLOT_NUM_Y - curr_yard_loc[2]) * cf.SLOT_WIDTH / cf.YARDCRANE_SPEED_Y*2
+    handling_time_yard_crane = curr_yard_crane.handling_time
     arrive_time_yard = mission.total_process_time + mission.release_time + transfer_time_yard
     if any(curr_yard_crane.process_time):
         start_time_yard_crane = max(arrive_time_yard, curr_yard_crane.process_time[-1][-1])

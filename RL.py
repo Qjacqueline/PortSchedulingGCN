@@ -1,8 +1,4 @@
-# -*- coding: utf-8 -*-
-# @Time    : 2022/8/17 10:16 AM
-# @Author  : JacQ
-# @File    : rollout.py
-# !/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 """
 @Project ：Port_Scheduling_New
@@ -16,7 +12,6 @@ import datetime
 import os
 import random
 import time
-from copy import deepcopy
 
 import numpy as np
 import torch
@@ -24,11 +19,8 @@ from tensorboardX import SummaryWriter
 
 import conf.configs as cf
 from algorithm_factory.algo_utils.data_buffer import LABuffer
-from algorithm_factory.algo_utils.machine_cal_methods import get_state_n
 from algorithm_factory.algo_utils.net_models import QNet, PQNet
 from algorithm_factory.rl_algo.lower_agent import DDQN, LACollector
-from common import PortEnv
-from common.iter_solution import IterSolution
 from data_process.input_process import read_input, read_json_from_file
 from utils.log import exp_dir, Logger
 
@@ -38,7 +30,6 @@ logger = Logger().get_logger()
 def get_args(**kwargs):
     parser = argparse.ArgumentParser()
     parser.add_argument('--task', type=str, default=cf.dataset + '_' + str(cf.MISSION_NUM_ONE_QUAY_CRANE))
-    # parser.add_argument('--task', type=str, default=cf.dataset + '_' + str(10))
     parser.add_argument('--seed', type=int, default=0)
 
     parser.add_argument('--mission_num', type=int, default=cf.MISSION_NUM)
@@ -49,14 +40,14 @@ def get_args(**kwargs):
 
     parser.add_argument('--hidden', type=int, default=64)
     parser.add_argument('--device', type=str, default='cuda:0' if torch.cuda.is_available() else 'cpu')
-    parser.add_argument('--gamma', type=float, default=0.9)  # 0.9
+    parser.add_argument('--gamma', type=float, default=0.99)  # 0.9
     parser.add_argument('--epsilon', type=float, default=0.5)
-    parser.add_argument('--lr', type=float, default=1e-5)
+    parser.add_argument('--lr', type=float, default=1e-4)
 
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--buffer_size', type=int, default=128000)
 
-    parser.add_argument('--epoch_num', type=int, default=60)
+    parser.add_argument('--epoch_num', type=int, default=20)
 
     parser.add_argument('-save_path', type=str, default=cf.MODEL_PATH)
     command_list = []
@@ -72,7 +63,7 @@ if __name__ == '__main__':
     rl_logger = SummaryWriter(exp_dir)
     rl_logger.add_text(tag='parameters', text_string=str(args))
     rl_logger.add_text(tag='characteristic', text_string='New State')  # 'debug'
-
+    s_t = time.time()
     # env
     train_solus = []
     test_solus = []
@@ -80,6 +71,11 @@ if __name__ == '__main__':
         train_solus.append(read_input('train_' + str(i) + '_'))
     for i in range(0, 50):
         test_solus.append(read_input('train_' + str(i) + '_'))
+    # [read_input('train_1_'), read_input('train_2_'), read_input('train_3_'), read_input('train_4_'),
+    #               read_input('train_5_'), read_input('train_6_'), read_input('train_7_'), read_input('train_8_'),
+    #               read_input('train_9_'), read_input('train_10_'), read_input('train_11_'), read_input('train_12_'),
+    #               read_input('train_13_'), read_input('train_14_'), read_input('train_15_'), read_input('train_16_'),
+    #               read_input('train_17_'), read_input('train_18_'), read_input('train_19_'), read_input('train_0_')]
     for solu in train_solus:
         solu.l2a_init()
     for solu in test_solus:
@@ -90,7 +86,7 @@ if __name__ == '__main__':
     torch.manual_seed(args.seed)
     random.seed(args.seed)
 
-    # ========================= load RL =========================
+    # ========================= Policy ======================
     agent = DDQN(
         eval_net=QNet(device=args.device, hidden=args.hidden, max_num=args.max_num),
         target_net=QNet(device=args.device, hidden=args.hidden, max_num=args.max_num),
@@ -100,11 +96,32 @@ if __name__ == '__main__':
         epsilon=args.epsilon,
         lr=args.lr)
 
+    # ======================== Data ==========================
     data_buffer = LABuffer(buffer_size=args.buffer_size)
     collector = LACollector(train_solus=train_solus, test_solus=test_solus, data_buffer=data_buffer,
                             batch_size=args.batch_size, mission_num=args.mission_num, agent=agent, rl_logger=rl_logger,
                             save_path=args.save_path, max_num=args.max_num)
-    # init eval
+    # agent.qf = torch.load(args.save_path + '/eval_' + args.task + '.pkl')
+    # agent.qf_target = torch.load(args.save_path + '/target_' + args.task + '.pkl')
+    # makespan_forall, reward_forall = collector.eval()
+    # for makespan in makespan_forall:
+    #     print("初始la分配makespan为" + str(makespan))
+    # =================== heuristic l_train ==================
+    # collector.get_transition(
+    #     read_json_from_file(cf.OUTPUT_SOLUTION_PATH + 'train_1_SA_10_1868.875721615327.json'), test_solus[0])
+    # data_name = ['train_1_', 'train_2_', 'train_3_', 'train_4_', 'train_5_', 'train_6_', 'train_7_', 'train_8_']
+    # data_name = ['train_2_']
+    # collector.collect_heuristics(data_name)
+
+    # ======================= train =======================
+    # agent.qf = torch.load(args.save_path + '/eval_best_fixed.pkl')
+    # agent.qf_target = torch.load(args.save_path + '/target_best_fixed.pkl')
+    for i in range(1, args.epoch_num):
+        collector.collect_rl()  # 200
+    e_t = time.time()
+    print("training time" + str(e_t - s_t))
+
+    # ======================== eval =========================
     agent.qf = torch.load(args.save_path + '/eval_' + args.task + '.pkl')
     agent.qf_target = torch.load(args.save_path + '/target_' + args.task + '.pkl')
     makespan_forall, reward_forall = collector.eval()
@@ -115,10 +132,11 @@ if __name__ == '__main__':
     # ========================= Rollout =========================
     s_t = time.time()
     makespan_forall = collector.rollout()
-    for makespan in makespan_forall:
-        print("rollout后makespan为" + str(makespan))
+    # for makespan in makespan_forall:
+    #     print("rollout后makespan为" + str(makespan))
     e_t = time.time()
     print("算法时间" + str(e_t - s_t))
 
-    # os.rename(exp_dir, f'{exp_dir}_done')
+    # ===================== heuristic l_train ====================
+    os.rename(exp_dir, f'{exp_dir}_done')
     rl_logger.close()

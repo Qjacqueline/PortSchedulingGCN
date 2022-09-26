@@ -148,6 +148,7 @@ class LACollector:
         self.save_path = save_path
         self.train_time = 0
         self.task = cf.dataset + '_' + str(cf.MISSION_NUM_ONE_QUAY_CRANE)
+        self.sol_var = [[5 for _ in range(self.mission_num)] for _ in range(len(self.test_solus))]
 
     def collect_rl(self):
         for solu in self.train_solus:
@@ -253,8 +254,8 @@ class LACollector:
                 self.best_result[-2] = makespan_forall[-2]
             if makespan_forall[-1] < self.best_result[-1]:
                 self.best_result[-1] = makespan_forall[-1]
-                # torch.save(self.agent.qf, self.save_path + '/eval_' + self.task + '.pkl')
-                # torch.save(self.agent.qf_target, self.save_path + '/target_' + self.task + '.pkl')
+                torch.save(self.agent.qf, self.save_path + '/eval_' + self.task + '.pkl')
+                torch.save(self.agent.qf_target, self.save_path + '/target_' + self.task + '.pkl')
                 # print("更新了")
         return makespan_forall, reward_forall
 
@@ -264,10 +265,10 @@ class LACollector:
             for i in range(len(self.test_solus)):
                 torch.manual_seed(42)
                 solu = self.test_solus[i]
+                min_makespan = float('Inf')
                 for step in range(self.mission_num):
                     cur_mission = solu.iter_env.mission_list[step]
-                    min_makespan = float('Inf')
-                    min_pos = -1
+                    min_pos = 5
                     for j in range(0, 4):
                         temp_solu = deepcopy(solu)
                         temp_cur_mission = temp_solu.iter_env.mission_list[step]
@@ -278,12 +279,16 @@ class LACollector:
                                                 max_num=self.max_num, machine_num=self.machine_num)
                             action = self.agent.forward(state, False)
                             temp_makespan = temp_solu.step_v2(action, temp_cur_mission, v_step)
-                        if temp_makespan < min_makespan:
+                            # if temp_makespan > min_makespan:
+                            #     break 不能 原因是不是consistent improve的 因为有可能后来的会改进
+                        if temp_makespan <= min_makespan:
                             min_makespan = temp_makespan
+                            # print(min_makespan)
                             min_pos = j
                     makespan = solu.step_v2(min_pos, cur_mission, step)
-                    # print(min_makespan)
+                    self.sol_var[i][step] = min_pos
                 makespan_forall.append(makespan)
+                print("rollout后makespan为" + str(makespan))
                 solu.reset()
             makespan_forall.append(sum(makespan_forall[0:len(self.train_solus)]))
             makespan_forall.append(sum(makespan_forall[0:-1]) - sum(makespan_forall[0:len(self.train_solus)]))

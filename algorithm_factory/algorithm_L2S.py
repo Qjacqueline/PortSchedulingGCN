@@ -123,11 +123,11 @@ class L2S(object):
             if lower_agent.iter_solution.last_step_makespan < self.best_makespan_lower:
                 self.best_makespan_lower = lower_agent.iter_solution.last_step_makespan
                 self.best_solution_lower = lower_agent.iter_solution
-                torch.save(lower_agent.model, Cf.MODEL_PATH + '/LAV3_best.pkl')
+                torch.save(lower_agent.construct_model, Cf.MODEL_PATH + '/LAV3_best.pkl')
             lower_agent.iter_solution = deepcopy(deepcopy(self.train_envs))
         logger.info("训练最优makespan:" + str(self.best_makespan_lower))
         # 测试算法
-        lower_agent.model = torch.load(Cf.MODEL_PATH + '/LAV3_best.pkl')
+        lower_agent.construct_model = torch.load(Cf.MODEL_PATH + '/LAV3_best.pkl')
         lower_agent.iter_solution = deepcopy(self.test_envs)
         lower_agent.eval()
 

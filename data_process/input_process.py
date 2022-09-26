@@ -68,7 +68,7 @@ def generate_yard_cranes_info(block_to_location):
         idx = 'YC' + idx
         handling_time = random.uniform(cf.YARDCRANE_HANDLING_TIME[0],
                                        cf.YARDCRANE_HANDLING_TIME[1])
-        yard_cranes_info[idx] = create_yard_crane_dict(idx, idx, [0, 0],
+        yard_cranes_info[idx] = create_yard_crane_dict(idx, idx, [0, cf.SLOT_NUM_Y],
                                                        cf.YARDCRANE_SPEED_X, cf.YARDCRANE_SPEED_Y,
                                                        handling_time
                                                        )
@@ -566,7 +566,7 @@ def count_yard_block_assign(port_env):
 if __name__ == '__main__':
     np.random.seed(0)
     random.seed(0)
-    for i in range(0, 100):
+    for i in range(0, 1):
         generate_data_for_test(i)
     # instance = read_input()
     # a = 1

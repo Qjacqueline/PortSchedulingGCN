@@ -13,7 +13,7 @@ import numpy as np
 import conf.configs as Cf
 from algorithm_factory.algorithm_SA import SA
 from algorithm_factory.algorithm_heuristic_rules import Random_Choice, Least_Wait_Time_Choice, Least_Mission_Num_Choice, \
-    Least_Distance_Choice
+    Least_Distance_Choice, Fixed_order
 from data_process.input_process import read_input
 
 if __name__ == '__main__':
@@ -25,15 +25,20 @@ if __name__ == '__main__':
     # 'train_17_', 'train_18_', 'train_19_', 'train_0_']
     # for i in range(0, 1):
     #     env_names.append('train_' + str(i) + '_')
-    env_names = ['train_8_', 'train_17_']
+    env_names = ['train_0_']
     print(Cf.dataset + " " + str(Cf.MISSION_NUM_ONE_QUAY_CRANE))
-    # print("Random_Choice")
-    # total_makespan = 0
-    # for env_name in env_names:
-    #     env = read_input(env_name)
-    #     makespan, _, _ = Random_Choice(env.init_env)
-    #     total_makespan += makespan
-    # print("total_makespan:" + str(total_makespan))
+    print("Fixed order")
+    env = read_input('train_0_')
+    makespan, _, _ = Fixed_order(env.init_env, [1, 0, 1, 3, 1, 2])  # [1, 1, 0, 3, 1, 2]
+    #
+    print("Random_Choice")
+    total_makespan = 0
+    for env_name in env_names:
+        env = read_input(env_name)
+        makespan, _, _ = Random_Choice(env.init_env)
+        total_makespan += makespan
+    print("total_makespan:" + str(total_makespan))
+
     total_makespan = 0
     print("Least_Wait_Time_Choice")
     for env_name in env_names:
@@ -41,20 +46,20 @@ if __name__ == '__main__':
         makespan, _, _ = Least_Wait_Time_Choice(env.init_env)
         total_makespan += makespan
     print("total_makespan:" + str(total_makespan))
-    # total_makespan = 0
-    # print("Least_Mission_Num_Choice")
-    # for env_name in env_names:
-    #     env = read_input(env_name)
-    #     makespan, _, _ = Least_Mission_Num_Choice(env.init_env)
-    #     total_makespan += makespan
-    # print("total_makespan:" + str(total_makespan))
-    # total_makespan = 0
-    # print("Least_Distance_Choice")
-    # for env_name in env_names:
-    #     env = read_input(env_name)
-    #     makespan, _, _ = Least_Distance_Choice(env.init_env)
-    #     total_makespan += makespan
-    # print("total_makespan:" + str(total_makespan))
+    total_makespan = 0
+    print("Least_Mission_Num_Choice")
+    for env_name in env_names:
+        env = read_input(env_name)
+        makespan, _, _ = Least_Mission_Num_Choice(env.init_env)
+        total_makespan += makespan
+    print("total_makespan:" + str(total_makespan))
+    total_makespan = 0
+    print("Least_Distance_Choice")
+    for env_name in env_names:
+        env = read_input(env_name)
+        makespan, _, _ = Least_Distance_Choice(env.init_env)
+        total_makespan += makespan
+    print("total_makespan:" + str(total_makespan))
     total_makespan = 0
     print("sa")
     for env_name in env_names:

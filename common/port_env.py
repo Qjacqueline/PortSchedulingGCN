@@ -29,7 +29,6 @@ class PortEnv:
         self.station_to_crossover_min = [0 for i in range(len(self.crossovers))]
         self.exit_to_station_average = 0
 
-
     def cal_finish_time(self):
         max_makespan = 0
         for yard_crane in self.yard_cranes.values():
