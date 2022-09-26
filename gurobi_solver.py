@@ -43,8 +43,7 @@ class Data:
         tmp_mission_ls = deepcopy(self.instance.init_env.mission_list)
         getattr(sort_missions, 'CHAR_ORDER')(tmp_mission_ls)
         # J
-        for j in range(self.J_num * 3):
-            self.J.append(j)
+        self.J = [j for j in range(self.J_num * 3)]
         self.J.append(self.J[-1] + 1)  # dummy job N+1
         self.J.append(self.J[-1] + 1)  # dummy job N+2
         # J_M
@@ -123,11 +122,163 @@ class Data:
                     for yc in range(12):
                         self.tt[j][co + 7][yc + 10] = 0
 
-# def cal():
-#     MLP_COM = construct_model()
-#     for i in range(0, 50):
-#
-# def  construct_model_com():
+
+class PortModel:
+    def __init__(self,
+                 inst_idx: int,
+                 J_num: int,
+                 data: Data = None):
+        self.S_num = 4  # 阶段数
+        self.J_num = J_num  # 任务数
+        self.M_num = 22  # 机器数
+        self.big_M = 10000  # 无穷大数
+        self.S = [0, 1, 2, 3]  # 阶段编号集合
+        self.M_S = [[0, 1, 2], [3, 4, 5, 6], [7, 8, 9],
+                    [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]]  # 每个阶段包括的机器编号集合
+        self.M = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]  # 机器编号集合
+        self.J = [j for j in range(self.J_num * 3)]  # 任务编号集合
+        self.J.append(self.J[-1] + 1)  # dummy job N+1
+        self.J.append(self.J[-1] + 1)  # dummy job N+2
+        self.alpha = [20, 25, 33.3, 50, 100]  # CO拥堵对应时间
+
+        self.MLP = None
+        self.X = None  # X_jm
+        self.Y = None  # Y_jj'm
+        self.Z = None  # Z_jj'm
+        self.FT = None  # FTsj
+        self.OT = None  # OTsj
+        self.RT = None  # RTj
+        self.TT = None  # TTsj
+        self.ZZ = None  # ZZ[i][j]
+
+        self.inst_idx = inst_idx
+        self.data = data
+
+    def construct_common(self):
+        # ============== 构造模型 ================
+        self.MLP = Model("port operation")
+
+        # ============== 定义变量 ================
+        self.X = [[[] for _ in self.M] for _ in self.J]
+        for j in self.J:
+            for m in self.M:
+                name = 'X_' + str(j) + "_" + str(m)
+                self.X[j][m] = self.MLP.addVar(0, 1, vtype=GRB.BINARY, name=name)
+        # Y_jj'm
+        self.Y = [[[[] for _ in self.M] for _ in self.J] for _ in self.J]
+        for j in self.J:
+            for jj in self.J:
+                for m in self.M:
+                    name = 'Y_' + str(j) + "_" + str(jj) + "_" + str(m)
+                    self.Y[j][jj][m] = self.MLP.addVar(0, 1, vtype=GRB.BINARY, name=name)
+        # Z_jj'm
+        self.Z = [[[[] for _ in self.M] for _ in self.J] for _ in self.J]
+        for j in self.J:
+            for jj in self.J:
+                for m in self.M:
+                    name = 'Z_' + str(j) + "_" + str(jj) + "_" + str(m)
+                    self.Z[j][jj][m] = self.MLP.addVar(0, 1, vtype=GRB.BINARY, name=name)
+        # FTsj
+        self.FT = [[[] for _ in self.J] for _ in self.S]
+        for s in self.S:
+            for j in self.J:
+                name = 'FT_' + str(s) + "_" + str(j)
+                self.FT[s][j] = self.MLP.addVar(lb=0, ub=GRB.INFINITY, vtype=GRB.CONTINUOUS, name=name)
+        # OTsj
+        self.OT = [[[] for _ in self.J] for _ in self.S]
+        for s in self.S:
+            for j in self.J:
+                name = 'OT_' + str(s) + "_" + str(j)
+                self.OT[s][j] = self.MLP.addVar(lb=0, ub=GRB.INFINITY, vtype=GRB.CONTINUOUS, name=name)
+        # RTj
+        self.RT = []
+        for j in self.J:
+            name = 'RT_' + str(j)
+            self.RT.append(self.MLP.addVar(lb=0, ub=GRB.INFINITY, vtype=GRB.CONTINUOUS, name=name))
+        # TTsj
+        self.TT = [[[] for _ in self.J] for _ in self.S]
+        for s in self.S:
+            for j in self.J:
+                name = 'TT_' + str(s) + "_" + str(j)
+                self.TT[s][j] = self.MLP.addVar(lb=0, ub=GRB.INFINITY, vtype=GRB.CONTINUOUS, name=name)
+        # ZZ[i][j]
+        self.ZZ = [[0 for _ in self.J] for _ in range(5)]
+        for i in range(5):
+            for j in self.J:
+                name = 'ZZ_' + str(i) + "_" + str(j)
+                self.ZZ[i][j] = self.MLP.addVar(0, 1, vtype=GRB.BINARY, name=name)
+
+        # ============== 定义公共约束 ================
+        self.MLP.addConstrs((sum(self.X[j][m] for m in self.M_S[s]) == 1 for j in self.J[0:-2] for s in self.S), "con3")
+        self.MLP.addConstrs(
+            (self.FT[s + 1][j] >= self.OT[s + 1][j] + (self.FT[s][j] + self.TT[s][j]) for s in range(3) for j in
+             self.J), "con6")
+        self.MLP.addConstrs((self.FT[0][j] == self.RT[j] + self.OT[0][j] for j in self.J), "con7")  # fixme >=
+        self.MLP.addConstrs(
+            (self.FT[s][jj] + self.TT[s][jj] + self.big_M - self.big_M * self.Y[j][jj][m] >= self.FT[s][j] + self.TT[s][
+                j] for j in self.J for jj in self.J for s in range(3) for m in self.M_S[s + 1]), "con8")
+        self.MLP.addConstrs(
+            (self.X[j][m] + self.X[jj][m] + self.big_M - self.big_M * self.Y[j][jj][m] >= 2 for j in self.J for jj in
+             self.J for m in self.M), "con9")
+        self.MLP.addConstrs((self.Y[j][j][m] == 0 for m in self.M for j in self.J), "con1")
+        self.MLP.addConstrs(
+            (sum(self.Y[j][jj][m] for jj in self.J) == self.X[j][m] for j in self.J[0:-1] for m in self.M), "con10")
+        tmp_J = data.J[0:-2].copy()
+        tmp_J.append(data.J[-1])
+        self.MLP.addConstrs(
+            (sum(self.Y[j][jj][m] for j in self.J) == self.X[jj][m] for jj in tmp_J for m in self.M), "con10")
+        self.MLP.addConstrs(
+            (self.FT[s][jj] - self.OT[s][jj] - self.FT[s][j] + self.big_M - self.big_M * self.Y[j][jj][m] >= 0 for s in
+             range(1, 4) for m in
+             self.M_S[s] for j in self.J for jj in self.J), "con11")
+        self.MLP.addConstrs(
+            (self.FT[s + 1][j] - (self.FT[s][jj] + self.TT[s][jj]) + self.data.big_M - self.data.big_M * self.Z[j][jj][
+                m] >= 0 for j in self.J for jj in self.J for s in range(3) for m in self.M_S[s + 1]), "con12")
+        self.MLP.addConstrs(
+            (self.FT[s][jj] + self.TT[s][jj] - self.FT[s][j] - self.TT[s][j] + self.big_M - self.big_M * self.Z[j][jj][
+                m] >= 0 for j in self.J for jj in self.J for s in range(3) for m in self.M_S[s + 1]), "con13")
+        self.MLP.addConstrs(
+            (self.X[j][m] + self.X[jj][m] + self.big_M - self.big_M * self.Z[j][jj][m] >= 2 for j in self.J for jj in
+             self.J for s in range(3) for m in self.M_S[s + 1]), "con14")
+        self.MLP.addConstrs((self.Z[j][j][m] == 0 for m in self.M for j in self.J), "con1")
+
+        self.MLP.addConstrs(
+            (self.OT[2][j] == 0.0001 + self.alpha[0] * self.ZZ[0][j] + self.alpha[1] * self.ZZ[1][j] + self.alpha[2] *
+             self.ZZ[2][j] + self.alpha[3] * self.ZZ[3][j] + self.alpha[4] * self.ZZ[4][j] for j in self.J), "con152")
+        self.MLP.addConstrs(
+            (sum(self.Z[jj][j][m] for jj in self.J for m in self.M_S[2]) <= self.ZZ[0][j] + 2 * self.ZZ[1][j] + 3 *
+             self.ZZ[2][j] + 4 * self.ZZ[3][j] + self.big_M * self.ZZ[4][j] for j in self.J), "con152")
+        self.MLP.addConstrs(
+            (sum(self.Z[jj][j][m] for jj in self.J for m in self.M_S[2]) >= 2 * self.ZZ[1][j] + 3 * self.ZZ[2][j] + 4 *
+             self.ZZ[3][j] for j in self.J), "con162")
+        self.MLP.addConstr(self.OT[3][-1] == 0, "con163")
+
+        # ============== 构造目标 ================
+        q = self.MLP.addVar(lb=0, ub=GRB.INFINITY, vtype=GRB.CONTINUOUS, name='q')  # 线性化模型变量
+        self.MLP.addConstrs((q >= self.FT[3][j] for j in self.J), "obj1")
+        self.MLP.setObjective(q, GRB.MINIMIZE)
+
+    def construct_diff(self):
+        # ============== 定义差异约束 ================
+        tmp_mission_ls = deepcopy(self.data.instance.init_env.mission_list)
+        getattr(sort_missions, 'CHAR_ORDER')(tmp_mission_ls)
+        self.MLP.addConstrs((self.X[j][m] == 1 for m in self.M for j in self.data.J_M[m]), "con2")
+        for pair in self.data.A:
+            j, jj = pair[0], pair[1]
+            self.MLP.addConstr(self.RT[jj] - self.FT[0][j] >= 0, "con4" + str(j) + str(jj))
+            m = int(tmp_mission_ls[j].quay_crane_id[-1]) - 1
+            self.MLP.addConstr(self.Y[j][jj][m] == 1, "con5" + str(j) + str(jj))
+        self.MLP.addConstrs((self.OT[s][j] == self.data.pt[s][j] for s in range(0, 2) for j in self.J), "con151")
+        self.MLP.addConstrs(
+            (self.OT[3][j] == self.data.pt[3][j] + sum(
+                self.Y[jj][j][self.data.J_m[j]] * self.data.st[jj][j] for jj in self.J) for j in self.J[0:-2]),
+            "con163")
+        self.MLP.addConstrs(
+            (self.TT[s][j] - self.data.tt[j][m][mm] + self.big_M * 2 - self.big_M * self.X[j][m] - self.big_M *
+             self.X[j][mm] >= 0 for j in
+             self.J[0:-2] for s in range(0, 3) for m in self.M_S[s] for mm in self.M_S[s + 1]), "con17")
+        self.MLP.addConstrs((self.TT[s][self.J[-1]] == 0 for s in range(0, 3)), "con18")
+
 
 def construct_model(data: Data):
     # ============== 构造模型 ================
@@ -136,7 +287,6 @@ def construct_model(data: Data):
     getattr(sort_missions, 'CHAR_ORDER')(tmp_mission_ls)
 
     # ============== 定义变量 ================
-    # X_jm
     X = [[[] for _ in data.M] for _ in data.J]
     for j in data.J:
         for m in data.M:
@@ -207,8 +357,7 @@ def construct_model(data: Data):
     tmp_J = data.J[0:-2].copy()
     tmp_J.append(data.J[-1])
     MLP.addConstrs(
-        (sum(Y[j][jj][m] for j in data.J) == X[jj][m] for jj in tmp_J for m in data.M),
-        "con10")
+        (sum(Y[j][jj][m] for j in data.J) == X[jj][m] for jj in tmp_J for m in data.M), "con10")
     MLP.addConstrs((sum(Y[j][-1][m] for j in data.J[0:-1]) == X[-1][m] for m in data.M), "con10")
     MLP.addConstrs(
         (FT[s][jj] - OT[s][jj] - FT[s][j] + data.big_M - data.big_M * Y[j][jj][m] >= 0 for s in range(1, 4) for m in
@@ -283,11 +432,19 @@ def solve_model(MLP, inst_idx, J_num, fix_X=None):
     return MLP
 
 
+#
 if __name__ == '__main__':
     inst_idx = 0
     J_num = 1
     print("current instance on run is:" + str(inst_idx) + "_" + str(J_num))
-    data = Data(inst_idx=0, J_num=J_num)
+    data = Data(inst_idx=inst_idx, J_num=J_num)
     data.init_process()
-    MLP = construct_model(data)
-    solve_model(MLP=MLP, inst_idx=0, J_num=J_num)
+    model = PortModel(inst_idx=inst_idx, J_num=J_num)
+    model.data = data
+    model.construct_common()
+    model.construct_diff()
+    solve_model(MLP=model.MLP, inst_idx=0, J_num=J_num)
+
+
+# MLP = construct_model(data)
+# solve_model(MLP=MLP, inst_idx=0, J_num=J_num)

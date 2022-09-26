@@ -115,7 +115,7 @@ if __name__ == '__main__':
 
     # ========================= Gurobi =========================
     s_t = time.time()
-    makespan_forall =
+    # makespan_forall =
     for makespan in makespan_forall:
         print("rollout后makespan为" + str(makespan))
     e_t = time.time()
