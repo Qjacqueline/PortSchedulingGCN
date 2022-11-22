@@ -8,8 +8,9 @@
 """
 import math
 import os
+import time
 from abc import ABC, abstractmethod
-from copy import deepcopy
+from copy import deepcopy, copy
 from typing import Callable, List
 
 import numpy as np
@@ -24,8 +25,11 @@ from algorithm_factory.algo_utils.machine_cal_methods import get_state, get_stat
 from algorithm_factory.algo_utils.net_models import QNet
 from algorithm_factory.algo_utils.rl_methods import print_result
 from algorithm_factory.algo_utils.rl_methods import soft_update
+from branch_and_bound import BB_depth_binary, BB_priority_wide
 from common.iter_solution import IterSolution
 from data_process.input_process import read_json_from_file
+from gurobi_solver import PortModel, solve_model, PortModelRLP
+from gurobi_solver import Data
 from utils.log import Logger
 
 logger = Logger().get_logger()
@@ -92,7 +96,7 @@ class DDQN(BaseAgent):
     def forward(self, state, eval_tag=True):
         if eval_tag:
             if np.random.rand() <= self.epsilon:  # greedy policy
-                action = torch.max(self.qf(state), 1)[1].item()
+                action = torch.max(self.qf.forward(state), 1)[1].item()
             else:  # random policy
                 action = np.random.randint(0, self.dim_action)
         else:
@@ -286,13 +290,76 @@ class LACollector:
                             # print(min_makespan)
                             min_pos = j
                     makespan = solu.step_v2(min_pos, cur_mission, step)
-                    self.sol_var[i][step] = min_pos
+                    # self.sol_var[i][step] = min_pos
                 makespan_forall.append(makespan)
-                print("rollout后makespan为" + str(makespan))
-                solu.reset()
+                # print("rollout后makespan为" + str(makespan))
+                # print(self.sol_var[i])
+                # solu.reset()
             makespan_forall.append(sum(makespan_forall[0:len(self.train_solus)]))
             makespan_forall.append(sum(makespan_forall[0:-1]) - sum(makespan_forall[0:len(self.train_solus)]))
-            return makespan_forall
+            return makespan_forall, solu
+
+    def exact(self, solu, inst_idx=0):
+        with torch.no_grad():
+            makespan_forall = []
+            model = PortModel(J_num=int(self.mission_num / 3),
+                              data=Data(inst_idx=inst_idx, J_num=int(self.mission_num / 3)))
+            model.construct()
+            s_t_g = time.time()
+            solve_model(MLP=model.MLP, inst_idx=inst_idx, J_num=int(self.mission_num / 3), solu=solu, tag='rollout',
+                        Z_flag=False, X_flag=False)
+            e_t_g = time.time()
+            makespan_forall.append(model.MLP.ObjVal)
+            return makespan_forall, e_t_g - s_t_g
+
+    def exact_fix_x(self, solu, inst_idx=0):
+        with torch.no_grad():
+            makespan_forall = []
+            model = PortModel(J_num=int(self.mission_num / 3),
+                              data=Data(inst_idx=inst_idx, J_num=int(self.mission_num / 3)))
+            model.construct()
+            s_t_g = time.time()
+            solve_model(MLP=model.MLP, inst_idx=inst_idx, J_num=int(self.mission_num / 3), solu=solu, tag='rollout',
+                        Z_flag=False)
+            e_t_g = time.time()
+            makespan_forall.append(model.MLP.ObjVal)
+        return makespan_forall, e_t_g - s_t_g
+
+    def exact_fix_all(self, solu, inst_idx=0):
+        with torch.no_grad():
+            makespan_forall = []
+            model = PortModel(J_num=int(self.mission_num / 3),
+                              data=Data(inst_idx=inst_idx, J_num=int(self.mission_num / 3)))
+            model.construct()
+            s_t_g = time.time()
+            solve_model(MLP=model.MLP, inst_idx=inst_idx, J_num=int(self.mission_num / 3), solu=solu, tag='rollout')
+            e_t_g = time.time()
+            makespan_forall.append(model.MLP.ObjVal)
+            return makespan_forall, e_t_g - s_t_g
+
+    def bb_depth_binary(self, solu, global_UB, inst_idx=0):
+        with torch.no_grad():
+            makespan_forall = []
+            model = PortModelRLP(J_num=int(self.mission_num / 3),
+                                 data=Data(inst_idx=inst_idx, J_num=int(self.mission_num / 3)))
+            model.construct()
+            s_t_g = time.time()
+            global_LB = BB_depth_binary(model.MLP, solu, J_num=self.mission_num, global_UB=global_UB)
+            e_t_g = time.time()
+            makespan_forall.append(global_LB)
+        return makespan_forall, e_t_g - s_t_g
+
+    def bb_depth_wide(self, solu, global_UB, inst_idx=0):
+        with torch.no_grad():
+            makespan_forall = []
+            model = PortModelRLP(J_num=int(self.mission_num / 3),
+                                 data=Data(inst_idx=inst_idx, J_num=int(self.mission_num / 3)))
+            model.construct()
+            s_t_g = time.time()
+            global_LB = BB_priority_wide(model.MLP, solu, J_num=self.mission_num, global_UB=global_UB)
+            e_t_g = time.time()
+            makespan_forall.append(global_LB)
+        return makespan_forall, e_t_g - s_t_g
 
     def collect_heuristics(self, data_ls: List[str]) -> None:
         logger.info("收集启发式方法数据")

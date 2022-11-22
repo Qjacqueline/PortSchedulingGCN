@@ -31,7 +31,8 @@ from utils.log import Logger
 logger = Logger().get_logger()
 
 mission_count = 1
-yard_blocks_set = ['A1', 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4', 'C1', 'C2', 'C3', 'C4']  # , 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4', 'C1', 'C2', 'C3', 'C4'
+yard_blocks_set = ['A1', 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4', 'C1', 'C2', 'C3',
+                   'C4']  # , 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4', 'C1', 'C2', 'C3', 'C4'
 
 
 def read_json_from_file(file_name):
@@ -333,6 +334,39 @@ def generate_data_for_test(train_num, mission_num_one_crane=cf.MISSION_NUM_ONE_Q
 
     instance = PortEnv(quay_cranes, buffers, lock_stations, crossovers, yard_blocks, yard_cranes)
     return instance
+
+
+def write_env_to_file(env: PortEnv, train_num, mission_num_one_crane):
+    lock_station_dict = {}
+    for lock_station in env.lock_stations.values():
+        l_dict = {'idx': lock_station.idx, 'mission_list': list(lock_station.mission_list)}
+        lock_station_dict.setdefault(str(lock_station.idx), list(l_dict))
+
+    input_data = {'mission_list': env.mission_list, 'quay_cranes': list(env.quay_cranes.values()),
+                  'buffers': list(env.buffers.values()),
+                  'lock_stations': list(env.lock_stations.values()), 'crossovers': list(env.crossovers.values()),
+                  'yard_blocks': list(env.yard_blocks.values()), 'yard_cranes': list(env.yard_cranes.values())}
+    # 写入文件
+    write_json_to_file(
+        os.path.join(cf.DATA_PATH, 'solu_' + str(train_num) + '_' + str(mission_num_one_crane) + '.json'), input_data)
+
+
+def read_env_to_file(train_num, mission_num_one_crane):
+    filepath = os.path.join(cf.DATA_PATH, 'train_' + str(train_num) + '_' + str(mission_num_one_crane) + '.json')
+    input_data = read_json_from_file(filepath)
+    quay_cranes = read_quay_cranes_info(input_data.get('quay_cranes'))
+    buffers = read_buffers_info(input_data.get('buffers'))
+    lock_stations = read_lock_stations_info(input_data.get('lock_stations'))
+    crossovers = read_crossovers_info(input_data.get('crossovers'))
+    yard_blocks = read_yard_blocks_info(input_data.get('yard_blocks'))
+    yard_cranes = read_yard_cranes_info(input_data.get('yard_cranes'))
+    port_env = PortEnv(quay_cranes, buffers, lock_stations, crossovers, yard_blocks, yard_cranes)
+    mission_list = read_yard_cranes_info(input_data.get('mission_list'))
+    port_env.mission_list = mission_list
+    cal_transfer_time(port_env)
+    # plot_layout(instance) # 绘制堆场布局
+    iter_solution = IterSolution(port_env)
+    return iter_solution
 
 
 def read_yard_blocks_info(yard_blocks_info):

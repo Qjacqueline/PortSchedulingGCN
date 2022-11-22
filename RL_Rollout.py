@@ -114,7 +114,7 @@ if __name__ == '__main__':
 
     # ========================= Rollout =========================
     s_t = time.time()
-    makespan_forall = collector.rollout()
+    makespan_forall, solu = collector.rollout()
     for makespan in makespan_forall:
         print("rollout后makespan为" + str(makespan))
     e_t = time.time()

@@ -22,7 +22,7 @@ from algorithm_factory.algo_utils.net_models import QNet, PQNet
 from algorithm_factory.rl_algo.lower_agent import DDQN, LACollector
 from common import PortEnv
 from common.iter_solution import IterSolution
-from data_process.input_process import read_input, read_json_from_file
+from data_process.input_process import read_input, read_json_from_file, write_env_to_file
 from utils.log import exp_dir, Logger
 
 logger = Logger().get_logger()
@@ -69,9 +69,9 @@ if __name__ == '__main__':
     # env
     train_solus = []
     test_solus = []
-    for i in range(0, 40):
+    for i in range(0, 1):  # 40
         train_solus.append(read_input('train_' + str(i) + '_'))
-    for i in range(0, 50):
+    for i in range(0, 1):  # 50
         test_solus.append(read_input('train_' + str(i) + '_'))
     for solu in train_solus:
         solu.l2a_init()
@@ -100,26 +100,52 @@ if __name__ == '__main__':
     # init eval
     agent.qf = torch.load(args.save_path + '/eval_' + 'v0_100' + '.pkl')
     agent.qf_target = torch.load(args.save_path + '/target_' + 'v0_100' + '.pkl')
-    # makespan_forall, reward_forall = collector.eval()
+
     # for makespan in makespan_forall:
     #     print("初始la分配makespan为" + str(makespan))
     # print("*********************************************")
 
+    # ========================= RL =========================
+    s_t_rl = time.time()
+    makespan_forall_RL, reward_forall = collector.eval()
+    e_t_rl = time.time()
+
     # ========================= Rollout =========================
-    s_t = time.time()
-    makespan_forall = collector.rollout()
-    for makespan in makespan_forall:
-        print("rollout后makespan为" + str(makespan))
-    e_t = time.time()
-    print("算法时间" + str(e_t - s_t))
-
+    s_t_r = time.time()
+    makespan_forall_rollout, solu = collector.rollout()
+    e_t_r = time.time()
+    # write_env_to_file(solu.iter_env, 0, cf.MISSION_NUM_ONE_QUAY_CRANE)
     # ========================= Gurobi =========================
-    s_t = time.time()
-    # makespan_forall =
-    for makespan in makespan_forall:
-        print("rollout后makespan为" + str(makespan))
-    e_t = time.time()
-    print("算法时间" + str(e_t - s_t))
+    # mode 1
+    # makespan_forall_gurobi, time_g = collector.exact(solu)
 
+    # mode 2 fix Xjm加solver
+    # makespan_forall_gurobi2, time_g2 = collector.exact_fix_x(solu)
+
+    # mode 3 fix all加solver
+    makespan_forall_gurobi3, time_g3 = collector.exact_fix_all(solu)
+
+    # branch_and_bound
+    makespan_forall_gurobi4, time_g4 = collector.bb_depth_wide(solu, global_UB=makespan_forall_gurobi3[0] + 1e-5)
+
+    # ========================= Print Result =========================
+    print("算例为" + str(cf.MISSION_NUM_ONE_QUAY_CRANE))
+    for makespan in makespan_forall_RL:
+        print("RL后makespan为" + str(makespan))
+    for makespan in makespan_forall_rollout:
+        print("rollout后makespan为" + str(makespan))
+    print("rollout算法时间" + str(e_t_r - s_t_r))
+    # for makespan in makespan_forall_gurobi:
+    #     print("gurobi后makespan为" + str(makespan))
+    # print("gurobi算法时间" + str(time_g))
+    # for makespan in makespan_forall_gurobi2:
+    #     print("fix Xjm makespan为" + str(makespan))
+    # print("fix Xjm 算法时间" + str(time_g2))
+    for makespan in makespan_forall_gurobi3:
+        print("fix all makespan为" + str(makespan))
+    print("fix all 算法时间" + str(time_g3))
+    for makespan in makespan_forall_gurobi4:
+        print("branch_and_bound makespan为" + str(makespan))
+    print("branch_and_bound 算法时间" + str(time_g4))
     # os.rename(exp_dir, f'{exp_dir}_done')
     rl_logger.close()

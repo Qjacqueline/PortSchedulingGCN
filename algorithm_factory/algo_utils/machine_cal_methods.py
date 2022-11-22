@@ -340,12 +340,12 @@ def station_process_by_fixed_order(port_env, order, buffer_flag=False):
     # 阶段四：锁站
     for station_idx in port_env.lock_stations.keys():
         station_assign_dict.setdefault(station_idx, [])
-    j = 0
+
     for mission in port_env.mission_list:
-        r = order[j]
+        r = order[int(mission.idx[1:]) - 1]
         curr_station = list(port_env.lock_stations.items())[r][1]
         station_assign_dict[curr_station.idx].append(mission)
-        j = j + 1
+
     for station_idx in station_assign_dict.keys():
         getattr(sort_missions, "A_STATION")(station_assign_dict[station_idx],
                                             port_env.lock_stations[station_idx])
@@ -711,7 +711,7 @@ def assign_mission_to_crossover(lock_stations, crossovers, mission, buffer_flag=
         else:
             seq_length += 1
     if seq_length == 0:
-        handling_time_crossover = 0
+        handling_time_crossover = 5
     elif seq_length == 1:
         handling_time_crossover = 20
     elif seq_length == 2:
@@ -777,7 +777,7 @@ def assign_mission_to_yard(yard_cranes, mission, buffer_flag=False):
     transfer_time_yard = mission.transfer_time_c2y
     moving_time_yard_crane = abs(
         curr_yard_crane.location[0] - curr_yard_loc[1]) * cf.SLOT_LENGTH / cf.YARDCRANE_SPEED_X + abs(
-        cf.SLOT_NUM_Y - curr_yard_loc[2]) * cf.SLOT_WIDTH / cf.YARDCRANE_SPEED_Y*2
+        cf.SLOT_NUM_Y - curr_yard_loc[2]) * cf.SLOT_WIDTH / cf.YARDCRANE_SPEED_Y * 2
     handling_time_yard_crane = curr_yard_crane.handling_time
     arrive_time_yard = mission.total_process_time + mission.release_time + transfer_time_yard
     if any(curr_yard_crane.process_time):
