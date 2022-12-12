@@ -257,8 +257,8 @@ class PortModel:
                 for j in self.J:
                     for jj in self.J:
                         self.MLP.addConstr(
-                            self.FT[s][jj] - self.OT[s][jj] - self.FT[s][j] + 3 * self.big_M - self.big_M *
-                            self.Y[j][jj][m] - self.big_M * self.X[j][m] - self.big_M * self.X[jj][m] >= 0, "add13")
+                            self.FT[s][jj] - self.OT[s][jj] - self.FT[s][j] + self.big_M - self.big_M *
+                            self.Y[j][jj][m] >= 0, "add13")
 
         self.MLP.addConstrs(
             (self.FT[s + 1][j] - self.OT[s + 1][j] <= self.FT[s][j] + self.TT[s][j] + self.big_M - self.big_M *
@@ -269,6 +269,10 @@ class PortModel:
              for jj in self.J), "con142")
         self.MLP.addConstrs((self.alpha[s][j] + self.beta[s][j] >= 1 for s in range(1, 4) for j in self.J[0:-2]),
                             "con143")
+        # self.MLP.addConstrs(
+        #     (self.FT[s][j] - self.OT[s][j] <= self.FT[s][jj] + 1 * self.big_M + self.big_M * self.alpha[s][
+        #         j] - self.big_M * self.Y[jj][j][m] for s in range(1, 4) for m in self.M_S[s] for j in self.J[0:-2]
+        #      for jj in self.J), "con142")
         self.MLP.addConstrs(
             (self.FT[s + 1][j] + 3 * self.big_M >= (self.FT[s][jj] + self.TT[s][jj]) + self.big_M * self.Z[j][jj][
                 m] + self.big_M * self.X[j][m] + self.big_M * self.X[jj][m] for j in self.J for jj in self.J for
@@ -310,7 +314,7 @@ class PortModel:
             self.MLP.addConstr(self.RT[jj] - self.FT[0][j] >= 0, "con4" + str(j) + str(jj))
             m = int(tmp_mission_ls[j].quay_crane_id[-1]) - 1
             self.MLP.addConstr(self.Y[j][jj][m] == 1, "con5" + str(j) + str(jj))
-            # self.MLP.addConstr(self.RT[jj] - self.RT[j] == 120, "con00" + str(j) + str(jj))  # FIXME: match RL
+            # self.MLP.addConstr(self.RT[jj] - self.RT[j] == 60, "con00" + str(j) + str(jj))  # FIXME: match RL
         self.MLP.addConstr(self.RT[-2] == 0, "con00")
         # for i in range(3):
         #     self.MLP.addConstr(self.RT[i * self.J_num] == 0, "con00")  # FIXME: match RL
@@ -459,8 +463,8 @@ class PortModelRLP:
                 for j in self.J:
                     for jj in self.J:
                         self.MLP.addConstr(
-                            self.FT[s][jj] - self.OT[s][jj] - self.FT[s][j] + 3 * self.big_M - self.big_M *
-                            self.Y[j][jj][m] - self.big_M * self.X[j][m] - self.big_M * self.X[jj][m] >= 0, "add13")
+                            self.FT[s][jj] - self.OT[s][jj] - self.FT[s][j] + self.big_M - self.big_M *
+                            self.Y[j][jj][m] >= 0, "add13")
 
         self.MLP.addConstrs(
             (self.FT[s + 1][j] - self.OT[s + 1][j] <= self.FT[s][j] + self.TT[s][j] + self.big_M - self.big_M *
@@ -530,13 +534,164 @@ class PortModelRLP:
         self.MLP.update()
 
 
-def solve_model(MLP, inst_idx, J_num, solu: IterSolution = None, tag='', X_flag=True, Z_flag=True):
+class CongestionPortModel:
+    def __init__(self, J_num: int, data: Data = None):
+        self.S_num = 4  # 阶段数
+        self.J_num = J_num  # 任务数
+        self.K_num = 22  # 机器数
+        self.big_M = 10000  # 无穷大数
+        self.S = [0, 1, 2, 3]  # 阶段编号集合
+        self.K_S = [[0, 1, 2], [3, 4, 5, 6], [7, 8, 9],
+                    [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]]  # 每个阶段包括的机器编号集合
+        self.K = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]  # 机器编号集合
+        self.J = [j for j in range(self.J_num * 3)]  # 任务编号集合
+        self.J.append(self.J[-1] + 1)  # dummy job N+1
+        self.J.append(self.J[-1] + 1)  # dummy job N+2
+
+        self.MLP = None
+        self.v = None  # v_jk
+        self.x = None  # x_ijk
+        self.C = None  # C^s_j
+        self.o = None  # o^s_j
+        self.r = None  # r_j
+        self.u = None  # u^s_j
+        self.alpha = None
+        self.beta = None
+
+        self.data = data
+
+    def construct(self):
+        # ============== 构造模型 ================
+        self.MLP = Model("port operation")
+
+        # ============== 定义变量 ================
+        # v_jk
+        self.v = [[[] for _ in self.K] for _ in self.J]
+        for j in self.J:
+            for k in self.K:
+                name = 'v_' + str(j) + "_" + str(k)
+                self.v[j][k] = self.MLP.addVar(0, 1, vtype=GRB.BINARY, name=name)
+        # x_ijk
+        self.x = [[[[] for _ in self.K] for _ in self.J] for _ in self.J]
+        for j in self.J:
+            for jj in self.J:
+                for k in self.K:
+                    name = 'x_' + str(j) + "_" + str(jj) + "_" + str(k)
+                    self.x[j][jj][k] = self.MLP.addVar(0, 1, vtype=GRB.BINARY, name=name)
+        # C^s_j
+        self.C = [[[] for _ in self.J] for _ in self.S]
+        for s in self.S:
+            for j in self.J:
+                name = 'C_' + str(s) + "_" + str(j)
+                self.C[s][j] = self.MLP.addVar(lb=0, ub=GRB.INFINITY, vtype=GRB.CONTINUOUS, name=name)
+        # o^s_j
+        self.o = [[[] for _ in self.J] for _ in self.S]
+        for s in self.S:
+            for j in self.J:
+                name = 'o_' + str(s) + "_" + str(j)
+                self.o[s][j] = self.MLP.addVar(lb=0, ub=GRB.INFINITY, vtype=GRB.CONTINUOUS, name=name)
+        # r_j
+        self.r = []
+        for j in self.J:
+            name = 'r_' + str(j)
+            self.r.append(self.MLP.addVar(lb=0, ub=GRB.INFINITY, vtype=GRB.CONTINUOUS, name=name))
+        # u^s_j
+        self.u = [[[] for _ in self.J] for _ in self.S]
+        for s in self.S:
+            for j in self.J:
+                name = 'u_' + str(s) + "_" + str(j)
+                self.u[s][j] = self.MLP.addVar(lb=0, ub=GRB.INFINITY, vtype=GRB.CONTINUOUS, name=name)
+        # alpha
+        self.alpha = [[0 for _ in self.J] for _ in range(4)]
+        for i in range(4):
+            for j in self.J:
+                name = 'alpha_' + str(i) + "_" + str(j)
+                self.alpha[i][j] = self.MLP.addVar(0, 1, vtype=GRB.BINARY, name=name)
+        # beta
+        self.beta = [[0 for _ in self.J] for _ in range(4)]
+        for i in range(4):
+            for j in self.J:
+                name = 'beta_' + str(i) + "_" + str(j)
+                self.beta[i][j] = self.MLP.addVar(0, 1, vtype=GRB.BINARY, name=name)
+
+        # ============== 定义公共约束 ================
+        self.MLP.addConstrs((self.x[j][j][k] == 0 for k in self.K for j in self.J), "con0")
+        self.MLP.addConstrs((sum(self.v[j][k] for k in self.K_S[s]) == 1 for j in self.J[0:-2] for s in self.S), "con3")
+        self.MLP.addConstrs(
+            (self.C[s + 1][j] >= self.o[s + 1][j] + self.C[s][j] + self.u[s][j] for s in range(3) for j in
+             self.J), "con4")
+        for s in range(1, 4):
+            for k in self.K_S[s]:
+                for j in self.J:
+                    for jj in self.J:
+                        self.MLP.addConstr(
+                            self.C[s][jj] - self.o[s][jj] - self.C[s][j] + self.big_M - self.big_M *
+                            self.x[j][jj][k] >= 0, "con5")
+        self.MLP.addConstrs((self.C[0][j] == self.r[j] + self.o[0][j] for j in self.J), "con9")
+        tmp_J = self.J[0:-2].copy()
+        tmp_J.append(self.J[-1])
+        self.MLP.addConstrs(
+            (sum(self.x[jj][j][k] for jj in self.J) == self.v[j][k] for j in tmp_J for k in self.K), "con10")
+        self.MLP.addConstrs(
+            (sum(self.x[j][jj][k] for jj in self.J) == self.v[j][k] for j in self.J[0:-1] for k in self.K), "con11")
+        self.MLP.addConstrs(
+            (self.C[s][jj] + self.u[s][jj] + self.big_M - self.big_M * self.x[j][jj][k] >= self.C[s][j] + self.u[s][
+                j] for j in self.J for jj in self.J for s in range(3) for k in self.K_S[s + 1]), "con12")
+        self.MLP.addConstrs(
+            (self.C[s + 1][j] - self.o[s + 1][j] <= self.C[s][j] + self.u[s][j] + self.big_M - self.big_M *
+             self.alpha[s + 1][j] for s in range(0, 3) for j in self.J[0:-2]), "con14")
+        self.MLP.addConstrs(
+            (self.C[s][j] - self.o[s][j] <= self.C[s][jj] + 2 * self.big_M - self.big_M * self.beta[s][
+                j] - self.big_M * self.x[jj][j][k] for s in range(1, 4) for k in self.K_S[s] for j in self.J[0:-2]
+             for jj in self.J), "con15")
+        self.MLP.addConstrs((self.alpha[s][j] + self.beta[s][j] >= 1 for s in range(1, 4) for j in self.J[0:-2]),
+                            "con16")
+        self.MLP.addConstrs((self.o[s][-1] == 0 for s in self.S), "con200")
+        self.MLP.addConstrs((self.o[s][-2] == 0 for s in self.S), "con201")
+        self.MLP.addConstrs((self.u[s][self.J[-1]] == 0 for s in range(0, 3)), "con190")
+        self.MLP.addConstrs((self.u[s][self.J[-2]] == 0 for s in range(0, 3)), "con191")
+
+        # ============== 构造目标 ================
+        q_1 = self.MLP.addVar(lb=0, ub=GRB.INFINITY, vtype=GRB.CONTINUOUS, name='q_1')  # 线性化模型变量
+        q_2 = self.MLP.addVar(lb=0, ub=GRB.INFINITY, vtype=GRB.CONTINUOUS, name='q_2')  # 线性化模型变量
+        self.MLP.addConstrs((q_1 >= self.C[3][j] for j in self.J), "obj1")
+        self.MLP.addConstr((q_2 == sum(
+            self.C[s + 1][j] - self.o[s + 1][j] - self.C[s][j] - self.u[s][j] for j in tmp_J for s in range(0, 3))),
+                           "obj2")
+        self.MLP.setObjective(q_1, GRB.MINIMIZE)  # fixme+ 0.000001 * sum(self.FT[s][j] for s in self.S for j in self.J)
+
+        # ============== 定义差异约束 ================
+        tmp_mission_ls = deepcopy(self.data.instance.init_env.mission_list)
+        getattr(sort_missions, 'CHAR_ORDER')(tmp_mission_ls)
+        self.MLP.addConstrs((self.v[j][k] == 1 for k in self.K for j in self.data.J_M[k]), "con8")
+        for pair in self.data.A:
+            j, jj = pair[0], pair[1]
+            self.MLP.addConstr(self.r[jj] - self.C[0][j] >= 0, "con10" + str(j) + str(jj))
+            k = int(tmp_mission_ls[j].quay_crane_id[-1]) - 1
+            self.MLP.addConstr(self.x[j][jj][k] == 1, "con11" + str(j) + str(jj))
+            # self.MLP.addConstr(self.r[jj] - self.r[j] == 60, "con00" + str(j) + str(jj))  # FIXME: match RL
+        self.MLP.addConstr(self.r[-2] == 0, "con00")
+        # for i in range(3):
+        #     self.MLP.addConstr(self.r[i * self.J_num] == 0, "con00")  # FIXME: match RL
+        self.MLP.addConstrs((self.o[s][j] == self.data.pt[s][j] for s in range(0, 3) for j in self.J[0:-2]), "con200")
+        self.MLP.addConstrs(
+            (self.u[s][j] - self.data.tt[j][k][kk] + self.big_M * 2 - self.big_M * self.v[j][k] - self.big_M *
+             self.v[j][kk] >= 0 for j in self.J[0:-2] for s in range(0, 3) for k in self.K_S[s] for kk in
+             self.K_S[s + 1]), "con17")
+        self.MLP.addConstrs(
+            (self.u[s][j] - self.data.tt[j][k][kk] <= self.big_M * 2 - self.big_M * self.v[j][k] - self.big_M *
+             self.v[j][kk] for j in self.J[0:-2] for s in range(0, 3) for k in self.K_S[s] for kk in self.K_S[s + 1]),
+            "con18")
+        self.MLP.update()
+
+
+def solve_model(MLP, inst_idx, J_num, solu: IterSolution = None, tag='', X_flag=True, Y_flag=True, epsilon=0.9):
     vars = MLP.getVars()
     # ============== 输入解 ================
     if solu is not None:
         # mode
         X_flag = X_flag
-        Z_flag = Z_flag
+        Y_flag = Y_flag
         # add valid equality
         # MLP.addConstr(vars[-1] <= solu.last_step_makespan, "ub")
 
@@ -547,7 +702,7 @@ def solve_model(MLP, inst_idx, J_num, solu: IterSolution = None, tag='', X_flag=
                 var_idx = (int(ls[i].idx[1:]) - 1) * 22 + int(ls[i].machine_list[4][-1]) + 2
                 MLP.addConstr((vars[var_idx] == 1), "fixed_x" + str(i))
         # fix Z_jj'm
-        if Z_flag:
+        if Y_flag:
             for i in range(len(solu.iter_env.lock_stations)):
                 for j in range(len(solu.iter_env.lock_stations['S' + str(i + 1)].mission_list)):
                     p_mission_idx = int(solu.iter_env.lock_stations['S' + str(i + 1)].mission_list[j].idx[1:]) - 1
@@ -631,7 +786,9 @@ def solve_model(MLP, inst_idx, J_num, solu: IterSolution = None, tag='', X_flag=
                                 J_num * 3 + 2) * 22 * p_mission_idx + 22 * l_mission_idx + 10 + i
                         # Y[p_mission_idx][l_mission_idx][7 + i]
                         MLP.addConstr(vars[var_idx] == 1, "fixed_qc" + str(i))
-
+    max_q_2 = 53348.4599303192
+    min_q_2 = 2401.81184668972
+    MLP.addConstr((vars[-1] <= epsilon * (max_q_2 - min_q_2) + min_q_2), "multi-objectives")
     MLP.update()
     MLP.setParam('OutputFlag', 0)
     # ============== 求解模型 ================
@@ -652,37 +809,37 @@ def solve_model(MLP, inst_idx, J_num, solu: IterSolution = None, tag='', X_flag=
     # 非0变量及LS选择
     ls_ls = []
     m_ls = {}
+    f_2 = 0
     for var in MLP.getVars():
-        if int(var.X) is not 0:
+        if int(var.x) is not 0:
             tmp_str = var.VarName.split('_')
             # print(var.VarName + ": " + str(var.X))
-            if tmp_str[0] == 'X' and 6 >= int(tmp_str[2]) >= 3 and int(tmp_str[1]) < J_num * 3:
+            if tmp_str[0] == 'v' and 6 >= int(tmp_str[2]) >= 3 and int(tmp_str[1]) < J_num * 3:
                 ls_ls.append(int(tmp_str[2]) - 3)
-            if tmp_str[0] == 'Y':
+            if tmp_str[0] == 'x':
                 if m_ls.get(int(tmp_str[-1])) is None:
                     m_ls.setdefault(int(tmp_str[-1]), [int(tmp_str[1]), int(tmp_str[2]), -1])
                 else:
                     tmp: list = m_ls.get(int(tmp_str[-1]))
-                    # if tmp.count(int(tmp_str[1])) is not 0 and tmp.count(int(tmp_str[2])) is not 0:
-
                     if tmp.count(int(tmp_str[1])) is not 0:
                         tmp.insert(tmp.index(int(tmp_str[1])) + 1, int(tmp_str[2]))
                     elif tmp.count(int(tmp_str[2])) is not 0:
                         tmp.insert(tmp.index(int(tmp_str[2])), int(tmp_str[1]))
                     else:
                         tmp.extend([int(tmp_str[1]), int(tmp_str[2])])
-                    # m_ls.update(var.VarName[-1], m_ls.get(var.VarName[-1]))
-                    # m_ls.get(var.VarName[-1])
+
     # print(ls_ls)
     m_ls = sorted(m_ls.items(), key=lambda d: d[0], reverse=False)
-    # for m in m_ls:
-    # print(m)
+    for m in m_ls:
+        print(m)
     var_ls = [3 + i * 22 + (J_num * 3 + 2) * 22 for i in range(0, (J_num * 3 + 2) * (J_num * 3 + 2))]
     var_ls.extend([4 + i * 22 + (J_num * 3 + 2) * 22 for i in range(0, (J_num * 3 + 2) * (J_num * 3 + 2))])
     var_ls.extend([5 + i * 22 + (J_num * 3 + 2) * 22 for i in range(0, (J_num * 3 + 2) * (J_num * 3 + 2))])
     var_ls.extend([6 + i * 22 + (J_num * 3 + 2) * 22 for i in range(0, (J_num * 3 + 2) * (J_num * 3 + 2))])
     print('Solution:', [MLP.getVars()[i].VarName for i in var_ls if
-                        MLP.getVars()[i].X != 0])
+                        MLP.getVars()[i].x != 0])
+    print('Makespan: ', MLP.getVars()[-2].x)
+    print('Congestion time: ', MLP.getVars()[-1].x)
     return MLP
 
 
@@ -699,5 +856,5 @@ if __name__ == '__main__':
     s_t_g = time.time()
     MLP = solve_model(MLP=model.MLP, inst_idx=0, J_num=J_num, tag='origin')
     e_t_g = time.time()
-    print("gurobi后makespan为" + str(MLP.getVars()[-1].X))
+    print("gurobi后makespan为" + str(MLP.getVars()[-1].v))
     print("gurobi算法时间" + str(e_t_g - s_t_g))

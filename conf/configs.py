@@ -15,7 +15,7 @@ import torch
 LOGGING_LEVEL = logging.INFO  # logging.WARNING/DEBUG
 
 dataset = 'v0'
-MISSION_NUM_ONE_QUAY_CRANE = 3  # 一个场桥对应的任务数 TODO
+MISSION_NUM_ONE_QUAY_CRANE = 30  # 一个场桥对应的任务数 TODO
 
 # 布局配置
 QUAY_EXIT = np.array([280, 0])  # 岸桥操作后小车出口坐标（单位：m）

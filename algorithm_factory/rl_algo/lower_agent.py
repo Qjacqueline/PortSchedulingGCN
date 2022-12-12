@@ -28,7 +28,7 @@ from algorithm_factory.algo_utils.rl_methods import soft_update
 from branch_and_bound import BB_depth_binary, BB_priority_wide
 from common.iter_solution import IterSolution
 from data_process.input_process import read_json_from_file
-from gurobi_solver import PortModel, solve_model, PortModelRLP
+from gurobi_solver import PortModel, solve_model, PortModelRLP, CongestionPortModel
 from gurobi_solver import Data
 from utils.log import Logger
 
@@ -302,12 +302,12 @@ class LACollector:
     def exact(self, solu, inst_idx=0):
         with torch.no_grad():
             makespan_forall = []
-            model = PortModel(J_num=int(self.mission_num / 3),
-                              data=Data(inst_idx=inst_idx, J_num=int(self.mission_num / 3)))
+            model = CongestionPortModel(J_num=int(self.mission_num / 3),
+                                        data=Data(inst_idx=inst_idx, J_num=int(self.mission_num / 3)))
             model.construct()
             s_t_g = time.time()
-            solve_model(MLP=model.MLP, inst_idx=inst_idx, J_num=int(self.mission_num / 3), solu=solu, tag='rollout',
-                        Z_flag=False, X_flag=False)
+            solve_model(MLP=model.MLP, inst_idx=inst_idx, J_num=int(self.mission_num / 3), solu=solu, tag='_exact',
+                        Y_flag=False, X_flag=False)
             e_t_g = time.time()
             makespan_forall.append(model.MLP.ObjVal)
             return makespan_forall, e_t_g - s_t_g
@@ -315,12 +315,12 @@ class LACollector:
     def exact_fix_x(self, solu, inst_idx=0):
         with torch.no_grad():
             makespan_forall = []
-            model = PortModel(J_num=int(self.mission_num / 3),
-                              data=Data(inst_idx=inst_idx, J_num=int(self.mission_num / 3)))
+            model = CongestionPortModel(J_num=int(self.mission_num / 3),
+                                        data=Data(inst_idx=inst_idx, J_num=int(self.mission_num / 3)))
             model.construct()
             s_t_g = time.time()
-            solve_model(MLP=model.MLP, inst_idx=inst_idx, J_num=int(self.mission_num / 3), solu=solu, tag='rollout',
-                        Z_flag=False)
+            solve_model(MLP=model.MLP, inst_idx=inst_idx, J_num=int(self.mission_num / 3), solu=solu, tag='_fix_x',
+                        Y_flag=False)
             e_t_g = time.time()
             makespan_forall.append(model.MLP.ObjVal)
         return makespan_forall, e_t_g - s_t_g
@@ -328,11 +328,11 @@ class LACollector:
     def exact_fix_all(self, solu, inst_idx=0):
         with torch.no_grad():
             makespan_forall = []
-            model = PortModel(J_num=int(self.mission_num / 3),
-                              data=Data(inst_idx=inst_idx, J_num=int(self.mission_num / 3)))
+            model = CongestionPortModel(J_num=int(self.mission_num / 3),
+                                        data=Data(inst_idx=inst_idx, J_num=int(self.mission_num / 3)))
             model.construct()
             s_t_g = time.time()
-            solve_model(MLP=model.MLP, inst_idx=inst_idx, J_num=int(self.mission_num / 3), solu=solu, tag='rollout')
+            solve_model(MLP=model.MLP, inst_idx=inst_idx, J_num=int(self.mission_num / 3), solu=solu, tag='_fix_all')
             e_t_g = time.time()
             makespan_forall.append(model.MLP.ObjVal)
             return makespan_forall, e_t_g - s_t_g
