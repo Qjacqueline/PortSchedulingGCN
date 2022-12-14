@@ -56,13 +56,14 @@ class FlattenMlp(MLP):
 
 
 class QNet(nn.Module):
-    def __init__(self, device: torch.device, hidden=256, max_num=10):
+    def __init__(self, device: torch.device, in_dim_max=10, attr_dim=6, hidden=256, out_dim=4, ma_num=22):
         super(QNet, self).__init__()
         self.device = device
-        fea_dim = max_num * 6
+        self.ma_num = ma_num
+        fea_dim = in_dim_max * attr_dim
         self.conv1 = GCNConv(fea_dim, hidden)
         self.conv2 = GCNConv(hidden, hidden)
-        self.linear = FlattenMlp(22 * (hidden + fea_dim), 4, (hidden, hidden, hidden))
+        self.linear = FlattenMlp(ma_num * (hidden + fea_dim), out_dim, (hidden, hidden, hidden))
         # self.resnet = models.resnet50(pretrained=False, num_classes=4)
         # self.linear = nn.Linear(machine_num * (hidden + fea_dim), 4)
 
@@ -74,7 +75,7 @@ class QNet(nn.Module):
         x = self.conv2(x, edge_index, edge_weight)  # 第二层卷积层
         x = F.leaky_relu_(x)  # 激活函数
         x = torch.cat((x, xx), dim=1)
-        x = self.linear(x.reshape(int(len(x) / 22), -1))  # fixme
+        x = self.linear(x.reshape(int(len(x) / self.ma_num), -1))  # fixme
         return x  # F.log_softmax(x, dim=1)  # 将经过两层卷积得到的特征输入log_softmax函数得到概率分布
 
 

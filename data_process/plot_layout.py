@@ -56,7 +56,7 @@ def plot_layout(port_env):
 
 
 if __name__ == '__main__':
-    instance = read_input()
+    instance = read_input('train', 0, 'A')
     plot_layout(instance.init_env)
     #     input_data = input_process.read_json_from_file(Cf.OUTPUT_PATH)
     #     stations = input_process.read_lock_stations_info(input_data.get('lock_stations'))

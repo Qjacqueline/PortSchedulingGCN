@@ -10,7 +10,6 @@ from common.machine import Machine
 
 
 class Crossover(Machine):
-    def __init__(self, crossover_id, location, yard_block_list, max_wait_time):
+    def __init__(self, crossover_id, location, yard_block_list):
         super(Crossover, self).__init__(crossover_id, location)
         self.yard_crane_list = yard_block_list
-        self.max_wait_time = max_wait_time

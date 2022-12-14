@@ -70,9 +70,9 @@ if __name__ == '__main__':
     train_solus = []
     test_solus = []
     for i in range(0, 1):  # 40
-        train_solus.append(read_input('train_' + str(i) + '_'))
+        train_solus.append(read_input('train', 0, 'A'))
     for i in range(0, 1):  # 50
-        test_solus.append(read_input('train_' + str(i) + '_'))
+        test_solus.append(read_input('train', 0, 'A'))
     for solu in train_solus:
         solu.l2a_init()
     for solu in test_solus:
@@ -85,8 +85,8 @@ if __name__ == '__main__':
 
     # ========================= load RL =========================
     agent = DDQN(
-        eval_net=QNet(device=args.device, hidden=args.hidden, max_num=args.max_num),
-        target_net=QNet(device=args.device, hidden=args.hidden, max_num=args.max_num),
+        eval_net=QNet(device=args.device, in_dim_max=args.max_num, hidden=args.hidden),
+        target_net=QNet(device=args.device, in_dim_max=args.max_num, hidden=args.hidden),
         dim_action=args.dim_action,
         device=args.device,
         gamma=args.gamma,

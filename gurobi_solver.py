@@ -41,7 +41,7 @@ class Data:
         self.init_process()
 
     def init_process(self):
-        instance = read_input('train_' + str(self.inst_idx) + '_', self.J_num)
+        instance = read_input('train', 0, 'A')
         instance.l2a_init()
         self.instance = instance
         tmp_mission_ls = deepcopy(self.instance.init_env.mission_list)
@@ -114,9 +114,9 @@ class Data:
                 for ls in range(4):
                     self.tt[j][int(mission.quay_crane_id[-1]) - 1][ls + 3] = \
                         self.instance.init_env.quay_cranes[mission.quay_crane_id].time_to_exit + \
-                        self.instance.init_env.exit_to_station_matrix[ls] / mission.vehicle_speed
+                        self.instance.init_env.exit_to_ls_matrix[ls] / mission.vehicle_speed
                     self.tt[j][ls + 3][int(mission.crossover_id[-1]) + 6] = \
-                        self.instance.init_env.station_to_crossover_matrix[ls][int(mission.crossover_id[-1]) - 1] \
+                        self.instance.init_env.ls_to_co_matrix[ls][int(mission.crossover_id[-1]) - 1] \
                         / mission.vehicle_speed
                 self.tt[j][int(mission.crossover_id[-1]) + 6][match_mission_yard_crane_num(mission)] = \
                     tmp_mission_ls[j].transfer_time_c2y

@@ -9,8 +9,7 @@ from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
 
 from algorithm_factory.algo_utils import sort_missions
-from algorithm_factory.algo_utils.machine_cal_methods import get_yard_cranes_set, process_init_solution_for_l2a, \
-    get_cur_time_status
+from algorithm_factory.algo_utils.machine_cal_methods import get_cur_time_status
 from algorithm_factory.algorithm_heuristic_rules import Random_Choice
 from common import PortEnv
 from data_process.input_process import read_input
@@ -45,11 +44,10 @@ def plot_dynamic_running(port_env: PortEnv):
         for j in range(len(port_env.crossovers)):
             plt.text(x=-5, y=co_base + 10 * j, s="CO" + str(j + 1))
         plt.text(x=-8, y=155, s="CO2YC")
-        yard_cranes_set = get_yard_cranes_set(port_env)
 
-        for j in range(len(yard_cranes_set)):
-            plt.text(x=-5, y=yc_base + 10 * j, s=yard_cranes_set[j])
-        f_base = len(yard_cranes_set) * 10 + 5 + yc_base
+        for j in range(len(port_env.yard_cranes_set)):
+            plt.text(x=-5, y=yc_base + 10 * j, s=port_env.yard_cranes_set[j])
+        f_base = len(port_env.yard_cranes_set) * 10 + 5 + yc_base
         plt.text(x=-8, y=f_base, s="finish")
         # fig.canvas.mpl_connect('button_press_event', onClick)
         update(port_env, cur_time)
@@ -59,12 +57,11 @@ def plot_dynamic_running(port_env: PortEnv):
 
 def update(port_env: PortEnv, cur_time=1000):
     qc_ls, qc_ls_ls, ls_ls, ls_co_ls, co_ls, co_yc_ls, yc_ls, f_ls = get_cur_time_status(port_env, cur_time)
-    yard_cranes_set = get_yard_cranes_set(port_env)
     qc_base = 10
     ls_base = 60
     co_base = 120
     yc_base = 170
-    f_base = len(yard_cranes_set) * 10 + 5 + yc_base
+    f_base = len(port_env.yard_cranes_set) * 10 + 5 + yc_base
     plt.text(x=60, y=220, s="当前时刻为：" + str(cur_time), fontsize=9, color='red')
     # 画当前的图
     # qc
@@ -152,6 +149,6 @@ def update(port_env: PortEnv, cur_time=1000):
 
 if __name__ == '__main__':
     random.seed(2)
-    instance = read_input('train_0_')
+    instance = read_input('train', 0, 'A')
     _, solution, _ = Random_Choice(instance.init_env)
     plot_dynamic_running(solution)

@@ -154,6 +154,6 @@ def calculate_statistics(port_env: PortEnv, save_label):
 
 
 if __name__ == '__main__':
-    instance = read_input('train_0_')
+    instance = read_input('train', 0, 'A')
     _, solution, _ = Random_Choice(instance.init_env)
     analyse_result(solution, '1')

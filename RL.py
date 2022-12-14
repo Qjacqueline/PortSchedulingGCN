@@ -29,14 +29,11 @@ logger = Logger().get_logger()
 
 def get_args(**kwargs):
     parser = argparse.ArgumentParser()
-    parser.add_argument('--task', type=str, default=cf.dataset + '_' + str(cf.MISSION_NUM_ONE_QUAY_CRANE))
+
+    parser.add_argument('--inst_type', type=str, default='A')
     parser.add_argument('--seed', type=int, default=0)
 
-    parser.add_argument('--mission_num', type=int, default=cf.MISSION_NUM)
-    parser.add_argument('--mission_num_each', type=int, default=cf.MISSION_NUM_ONE_QUAY_CRANE)
-    parser.add_argument('--dim_action', type=int, default=cf.LOCK_STATION_NUM)
     parser.add_argument('--max_num', type=int, default=5)
-    parser.add_argument('--machine_num', type=int, default=22)
 
     parser.add_argument('--hidden', type=int, default=64)
     parser.add_argument('--device', type=str, default='cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -47,7 +44,7 @@ def get_args(**kwargs):
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--buffer_size', type=int, default=128000)
 
-    parser.add_argument('--epoch_num', type=int, default=20)
+    parser.add_argument('--epoch_num', type=int, default=40)
 
     parser.add_argument('-save_path', type=str, default=cf.MODEL_PATH)
     command_list = []
@@ -59,23 +56,19 @@ def get_args(**kwargs):
 if __name__ == '__main__':
     # ==============  Create environment & buffer  =============
     args = get_args()
-    exp_dir = exp_dir(desc=f'{args.task}')
+    exp_dir = exp_dir(desc=f'{args.inst_type}')
     rl_logger = SummaryWriter(exp_dir)
     rl_logger.add_text(tag='parameters', text_string=str(args))
-    rl_logger.add_text(tag='characteristic', text_string='New State')  # 'debug'
+    rl_logger.add_text(tag='characteristic', text_string='init')  # 'debug'
     s_t = time.time()
+
     # env
     train_solus = []
     test_solus = []
-    for i in range(0, 40):
-        train_solus.append(read_input('train_' + str(i) + '_'))
-    for i in range(0, 50):
-        test_solus.append(read_input('train_' + str(i) + '_'))
-    # [read_input('train_1_'), read_input('train_2_'), read_input('train_3_'), read_input('train_4_'),
-    #               read_input('train_5_'), read_input('train_6_'), read_input('train_7_'), read_input('train_8_'),
-    #               read_input('train_9_'), read_input('train_10_'), read_input('train_11_'), read_input('train_12_'),
-    #               read_input('train_13_'), read_input('train_14_'), read_input('train_15_'), read_input('train_16_'),
-    #               read_input('train_17_'), read_input('train_18_'), read_input('train_19_'), read_input('train_0_')]
+    for i in range(0, 1):
+        train_solus.append(read_input('train', str(i), args.inst_type))
+    for i in range(0, 2):
+        test_solus.append(read_input('train', str(i), args.inst_type))
     for solu in train_solus:
         solu.l2a_init()
     for solu in test_solus:
@@ -88,9 +81,11 @@ if __name__ == '__main__':
 
     # ========================= Policy ======================
     agent = DDQN(
-        eval_net=QNet(device=args.device, hidden=args.hidden, max_num=args.max_num),
-        target_net=QNet(device=args.device, hidden=args.hidden, max_num=args.max_num),
-        dim_action=args.dim_action,
+        eval_net=QNet(device=args.device, in_dim_max=args.max_num, hidden=args.hidden,
+                      out_dim=train_solus[0].init_env.ls_num, ma_num=train_solus[0].init_env.machine_num),
+        target_net=QNet(device=args.device, in_dim_max=args.max_num, hidden=args.hidden,
+                        out_dim=train_solus[0].init_env.ls_num, ma_num=train_solus[0].init_env.machine_num),
+        dim_action=train_solus[0].init_env.ls_num,
         device=args.device,
         gamma=args.gamma,
         epsilon=args.epsilon,
@@ -98,9 +93,10 @@ if __name__ == '__main__':
 
     # ======================== Data ==========================
     data_buffer = LABuffer(buffer_size=args.buffer_size)
-    collector = LACollector(train_solus=train_solus, test_solus=test_solus, data_buffer=data_buffer,
-                            batch_size=args.batch_size, mission_num=args.mission_num, agent=agent, rl_logger=rl_logger,
-                            save_path=args.save_path, max_num=args.max_num)
+    collector = LACollector(inst_type=args.inst_type, train_solus=train_solus, test_solus=test_solus,
+                            data_buffer=data_buffer, batch_size=args.batch_size,
+                            mission_num=train_solus[0].init_env.m_num * train_solus[0].init_env.qc_num, agent=agent,
+                            rl_logger=rl_logger, save_path=args.save_path, max_num=args.max_num)
     # agent.qf = torch.load(args.save_path + '/eval_' + args.task + '.pkl')
     # agent.qf_target = torch.load(args.save_path + '/target_' + args.task + '.pkl')
     # makespan_forall, reward_forall = collector.eval()
@@ -117,13 +113,13 @@ if __name__ == '__main__':
     # agent.qf = torch.load(args.save_path + '/eval_best_fixed.pkl')
     # agent.qf_target = torch.load(args.save_path + '/target_best_fixed.pkl')
     for i in range(1, args.epoch_num):
-        collector.collect_rl()  # 200
+        collector.collect_rl()
     e_t = time.time()
     print("training time" + str(e_t - s_t))
 
     # ======================== eval =========================
-    agent.qf = torch.load(args.save_path + '/eval_' + args.task + '.pkl')
-    agent.qf_target = torch.load(args.save_path + '/target_' + args.task + '.pkl')
+    agent.qf = torch.load(args.save_path + '/eval_' + args.inst_type + '.pkl')
+    agent.qf_target = torch.load(args.save_path + '/target_' + args.inst_type + '.pkl')
     makespan_forall, reward_forall = collector.eval()
     for makespan in makespan_forall:
         print("初始la分配makespan为" + str(makespan))
@@ -131,9 +127,9 @@ if __name__ == '__main__':
 
     # ========================= Rollout =========================
     s_t = time.time()
-    makespan_forall = collector.rollout()
-    # for makespan in makespan_forall:
-    #     print("rollout后makespan为" + str(makespan))
+    makespan_forall, _ = collector.rollout()
+    for makespan in makespan_forall:
+        print("rollout后makespan为" + str(makespan))
     e_t = time.time()
     print("算法时间" + str(e_t - s_t))
 

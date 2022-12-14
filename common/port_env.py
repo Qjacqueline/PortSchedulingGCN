@@ -6,14 +6,13 @@
 @Author  ：JacQ
 @Date    ：2022/1/4 16:17
 """
-
 from utils.log import Logger
 
 logger = Logger(name='root').get_logger()
 
 
 class PortEnv:
-    def __init__(self, quay_cranes, buffers, lock_stations, crossovers, yard_blocks, yard_cranes):
+    def __init__(self, quay_cranes, buffers, lock_stations, crossovers, yard_blocks, yard_cranes, inst_type):
         # 注意machines是dict的形式储存
         self.quay_cranes = quay_cranes
         self.buffers = buffers
@@ -21,13 +20,14 @@ class PortEnv:
         self.crossovers = crossovers
         self.yard_blocks = yard_blocks
         self.yard_cranes = yard_cranes
+        self.yard_cranes_set = self.get_yard_cranes_set()
         self.mission_list = []
-
-        self.station_to_crossover_matrix = [[0 for i in range(len(self.crossovers))] for j in
-                                            range(len(self.lock_stations))]
-        self.exit_to_station_matrix = [0 for i in range(len(self.lock_stations))]
-        self.station_to_crossover_min = [0 for i in range(len(self.crossovers))]
-        self.exit_to_station_average = 0
+        self.ls_to_co_matrix = [[0 for _ in range(len(self.crossovers))] for _ in range(len(self.lock_stations))]
+        self.exit_to_ls_matrix = [0 for _ in range(len(self.lock_stations))]
+        self.ls_to_co_min = [0 for _ in range(len(self.crossovers))]
+        self.qc_num, self.ls_num, self.is_num, self.yc_num, self.m_num = inst_type
+        self.machine_num = self.qc_num + self.ls_num + self.is_num + self.yc_num
+        self.machine_name_to_idx = self.match_machine_name_to_idx()
 
     def cal_finish_time(self):
         max_makespan = 0
@@ -54,6 +54,33 @@ class PortEnv:
                 print(mission.idx[1:], end='\t')
             assign_list.append(assign_list)
             print()
+
+    def get_yard_cranes_set(self):
+        yard_cranes_set = []
+        for quay_crane in self.quay_cranes.values():
+            for mission in quay_crane.missions.values():
+                if mission.yard_block_loc[0] not in yard_cranes_set:
+                    yard_cranes_set.append(mission.yard_block_loc[0])
+        sorted(yard_cranes_set)
+        return yard_cranes_set
+
+    def match_machine_name_to_idx(self):
+
+        machine_name_to_idx = {}
+        cnt = 0
+        for i in range(self.qc_num):
+            machine_name_to_idx['QC' + str(i + 1)] = cnt
+            cnt = cnt + 1
+        for i in range(self.ls_num):
+            machine_name_to_idx['S' + str(i + 1)] = cnt
+            cnt = cnt + 1
+        for i in range(self.is_num):
+            machine_name_to_idx['CO' + str(i + 1)] = cnt
+            cnt = cnt + 1
+        for yard_crane in self.yard_cranes_set:
+            machine_name_to_idx['YC' + yard_crane] = cnt
+            cnt = cnt + 1
+        return machine_name_to_idx
 
 
 if __name__ == "main":

@@ -4,14 +4,11 @@
 # @File    : plot.py
 import numpy as np
 from matplotlib import pyplot as plt, animation
-from matplotlib.animation import FuncAnimation
-
-from algorithm_factory.algo_utils.machine_cal_methods import get_yard_cranes_set, process_init_solution_for_l2a
 from algorithm_factory.algorithm_heuristic_rules import Random_Choice
 from common import PortEnv
 from data_process.input_process import read_input
 
-instance = read_input('train_0_')
+instance = read_input('train', 0, 'A')
 _, port_env, _ = Random_Choice(instance.init_env)
 
 
@@ -42,11 +39,10 @@ def plot_running():
     for i in range(len(port_env.crossovers)):
         plt.text(x=-5, y=co_base + 10 * i, s="CO" + str(i + 1))
     plt.text(x=-8, y=155, s="CO2YC")
-    yard_cranes_set = get_yard_cranes_set(port_env)
 
-    for i in range(len(yard_cranes_set)):
-        plt.text(x=-5, y=yc_base + 10 * i, s=yard_cranes_set[i])
-    f_base = len(yard_cranes_set) * 10 + 5 + yc_base
+    for i in range(len(port_env.yard_cranes_set)):
+        plt.text(x=-5, y=yc_base + 10 * i, s=port_env.yard_cranes_set[i])
+    f_base = len(port_env.yard_cranes_set) * 10 + 5 + yc_base
     plt.text(x=-8, y=f_base, s="finish")
     ani = animation.FuncAnimation(
         fig=fig, func=func, interval=0.1, blit=False)
@@ -55,13 +51,12 @@ def plot_running():
 
 def func(cur_time):
     qc_ls, qc_ls_ls, ls_ls, ls_co_ls, co_ls, co_yc_ls, yc_ls, f_ls = cal(cur_time)
-    yard_cranes_set = get_yard_cranes_set(port_env)
     # 画当前的图
     qc_base = 10
     ls_base = 60
     co_base = 120
     yc_base = 170
-    f_base = len(yard_cranes_set) * 10 + 5 + yc_base
+    f_base = len(port_env.yard_cranes_set) * 10 + 5 + yc_base
     re_tuple = []
     # qc
     i = 0
@@ -144,7 +139,6 @@ def func(cur_time):
 
 
 def cal(cur_time):
-    yard_cranes_set = get_yard_cranes_set(port_env)
     qc_ls = {'QC1': [], 'QC2': [], 'QC3': []}
     qc_ls_ls = []
     ls_ls = {'S1': [], 'S2': [], 'S3': [], 'S4': []}
@@ -152,7 +146,7 @@ def cal(cur_time):
     co_ls = {'CO1': [], 'CO2': [], 'CO3': []}
     co_yc_ls = []
     yc_ls = {}
-    for key in yard_cranes_set:
+    for key in port_env.yard_cranes_set:
         yc_ls.setdefault(key, [])
     f_ls = []
     for mission in port_env.mission_list:

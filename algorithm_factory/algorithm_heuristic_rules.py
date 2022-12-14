@@ -194,7 +194,7 @@ if __name__ == '__main__':
 
     # env = read_input()
     # _, solution, _ = Least_Mission_Num_Choice(env.init_env)
-    instance = read_input()
+    instance = read_input('train', 0, 'A')
     # mini_makespan = Least_Wait_Time_Choice(instance)
     # print("Least_Wait_Time:"+str(mini_makespan))
     # mini_makespan = Least_Mission_Num_Choice(instance)

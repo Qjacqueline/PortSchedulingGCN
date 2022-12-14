@@ -128,6 +128,7 @@ class DDQN(BaseAgent):
 
 class LACollector:
     def __init__(self,
+                 inst_type: str,
                  train_solus: List[IterSolution],
                  test_solus: List[IterSolution],
                  data_buffer: LABuffer,
@@ -151,15 +152,14 @@ class LACollector:
         self.best_result = [float('Inf') for _ in range(len(self.test_solus) + 2)]
         self.save_path = save_path
         self.train_time = 0
-        self.task = cf.dataset + '_' + str(cf.MISSION_NUM_ONE_QUAY_CRANE)
+        self.task = inst_type
         self.sol_var = [[5 for _ in range(self.mission_num)] for _ in range(len(self.test_solus))]
 
     def collect_rl(self):
         for solu in self.train_solus:
             done = 0
             pre_makespan = 0
-            state = get_state_n(iter_solution=solu.iter_env, step_number=0, max_num=self.max_num,
-                                machine_num=self.machine_num)
+            state = get_state_n(env=solu.iter_env, step_number=0, max_num=self.max_num)
             for step in range(self.mission_num):
                 cur_mission = solu.iter_env.mission_list[step]
                 if np.random.rand() <= 0:
@@ -173,8 +173,7 @@ class LACollector:
                     new_state = state
                     # reward = -makespan
                 else:
-                    new_state = get_state_n(iter_solution=solu.iter_env, step_number=step + 1, max_num=self.max_num,
-                                            machine_num=self.machine_num)
+                    new_state = get_state_n(env=solu.iter_env, step_number=step + 1, max_num=self.max_num)
                     # reward = 0
                 pre_makespan = makespan
                 self.data_buffer.append(state, action, new_state, reward, done)
@@ -211,8 +210,6 @@ class LACollector:
                 self.rl_logger.add_scalar(tag=f'l_train/makespan' + str(i + 1),
                                           scalar_value=makespan_forall[i],
                                           global_step=int(self.train_time / 20))
-                # field_name.append('makespan' + str(i + 1))
-                # value.append(makespan_forall[i])
             field_name.append('train_makespan')
             value.append(makespan_forall[-2])
             field_name.append('test_makespan')
@@ -230,8 +227,7 @@ class LACollector:
             for i in range(len(self.test_solus)):
                 torch.manual_seed(42)
                 solu = self.test_solus[i]
-                state = get_state_n(iter_solution=solu.iter_env, step_number=0, max_num=self.max_num,
-                                    machine_num=self.machine_num)
+                state = get_state_n(env=solu.iter_env, step_number=0, max_num=self.max_num)
                 pre_makespan = 0
                 total_reward = 0
                 for step in range(self.mission_num):
@@ -242,8 +238,7 @@ class LACollector:
                     if step == self.mission_num - 1:
                         new_state = state
                     else:
-                        new_state = get_state_n(iter_solution=solu.iter_env, step_number=step + 1,
-                                                max_num=self.max_num, machine_num=self.machine_num)
+                        new_state = get_state_n(env=solu.iter_env, step_number=step + 1, max_num=self.max_num)
                     pre_makespan = makespan
                     state = new_state
                 makespan_forall.append(makespan)
@@ -260,7 +255,7 @@ class LACollector:
                 self.best_result[-1] = makespan_forall[-1]
                 torch.save(self.agent.qf, self.save_path + '/eval_' + self.task + '.pkl')
                 torch.save(self.agent.qf_target, self.save_path + '/target_' + self.task + '.pkl')
-                # print("更新了")
+                print("更新了")
         return makespan_forall, reward_forall
 
     def rollout(self):
@@ -273,21 +268,17 @@ class LACollector:
                 for step in range(self.mission_num):
                     cur_mission = solu.iter_env.mission_list[step]
                     min_pos = 5
-                    for j in range(0, 4):
+                    for j in range(solu.init_env.ls_num):
                         temp_solu = deepcopy(solu)
                         temp_cur_mission = temp_solu.iter_env.mission_list[step]
                         temp_makespan = temp_solu.step_v2(j, temp_cur_mission, step)
                         for v_step in range(step + 1, self.mission_num):
                             temp_cur_mission = temp_solu.iter_env.mission_list[v_step]
-                            state = get_state_n(iter_solution=temp_solu.iter_env, step_number=v_step,
-                                                max_num=self.max_num, machine_num=self.machine_num)
+                            state = get_state_n(env=temp_solu.iter_env, step_number=v_step, max_num=self.max_num)
                             action = self.agent.forward(state, False)
                             temp_makespan = temp_solu.step_v2(action, temp_cur_mission, v_step)
-                            # if temp_makespan > min_makespan:
-                            #     break 不能 原因是不是consistent improve的 因为有可能后来的会改进
                         if temp_makespan <= min_makespan:
                             min_makespan = temp_makespan
-                            # print(min_makespan)
                             min_pos = j
                     makespan = solu.step_v2(min_pos, cur_mission, step)
                     # self.sol_var[i][step] = min_pos
@@ -375,7 +366,7 @@ class LACollector:
     def get_transition(self, assign_dict: dict, solu: IterSolution) -> None:
         done = 0
         pre_makespan = 0
-        state = get_state_n(iter_solution=solu.iter_env, step_number=0, max_num=self.max_num)
+        state = get_state_n(env=solu.iter_env, step_number=0, max_num=self.max_num)
         makespan = 0
         for step in range(self.mission_num):
             if self.train_time == 1:
@@ -390,7 +381,7 @@ class LACollector:
                 new_state = state
                 # reward = -makespan
             else:
-                new_state = get_state_n(iter_solution=solu.iter_env, step_number=step + 1, max_num=self.max_num)
+                new_state = get_state_n(env=solu.iter_env, step_number=step + 1, max_num=self.max_num)
                 # reward = 0
             self.data_buffer.append(state, action, new_state, reward, done)
             if self.train_time > 1:

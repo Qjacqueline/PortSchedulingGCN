@@ -15,7 +15,8 @@ from statistics import mean
 import numpy as np
 
 import conf.configs as cf
-from algorithm_factory.algo_utils.machine_cal_methods import match_mission_crossover
+from algorithm_factory.algo_utils.machine_cal_methods import match_mission_crossover, generate_instance_type, \
+    generate_yard_blocks_set
 from common.buffer import Buffer
 from common.crossover import Crossover
 from common.iter_solution import IterSolution
@@ -31,8 +32,9 @@ from utils.log import Logger
 logger = Logger().get_logger()
 
 mission_count = 1
-yard_blocks_set = ['A1', 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4', 'C1', 'C2', 'C3',
-                   'C4']  # , 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4', 'C1', 'C2', 'C3', 'C4'
+yard_blocks_set = ['A1', 'A2', 'A3', 'A4',
+                   'B1', 'B2', 'B3', 'B4',
+                   'C1', 'C2', 'C3', 'C4']
 
 
 def read_json_from_file(file_name):
@@ -128,27 +130,26 @@ def create_lock_station_dict(idx, location, capacity, handling_time, lock_statio
     return lock_station_info
 
 
-# 生成任务
-def generate_missions_info(idx, mission_num, cur_yar_blocks):
+# 生成任务ls_num, yc_num, m_num
+def generate_missions_info(idx, cur_yar_blocks, m_num):
     missions_info = {}
     missions = {}
     global mission_count
-    for i in range(mission_num):
-        yard_crane_process_time = random.uniform(cf.YARDCRANE_HANDLING_TIME[0], cf.YARDCRANE_HANDLING_TIME[1])
-        yard_block_loc = (
-            random.choice(cur_yar_blocks), random.randint(0, cf.SLOT_NUM_X - 1),
-            random.randint(0, cf.SLOT_NUM_Y - 1))
-        vehicle_speed = (cf.VEHICLE_SPEED[0] + cf.VEHICLE_SPEED[
-            1]) / 2  # random.uniform(cf.VEHICLE_SPEED[0], cf.VEHICLE_SPEED[1]
+
+    for m in range(m_num):
+        vehicle_speed = (cf.VEHICLE_SPEED[0] + cf.VEHICLE_SPEED[1]) / 2
         station_process_time = random.uniform(cf.LOCK_STATION_HANDLING_TIME[0], cf.LOCK_STATION_HANDLING_TIME[1])
+        yard_crane_process_time = random.uniform(cf.YARDCRANE_HANDLING_TIME[0], cf.YARDCRANE_HANDLING_TIME[1])
+        yard_block_loc = (random.choice(cur_yar_blocks), random.randint(0, cf.SLOT_NUM_X - 1),
+                          random.randint(0, cf.SLOT_NUM_Y - 1))
         missions_info['M' + str(mission_count)] = create_mission_dict('M' + str(mission_count), idx,
                                                                       yard_block_loc,
                                                                       yard_crane_process_time,
-                                                                      True, 0 + cf.QUAY_CRANE_RELEASE_TIME * i,
+                                                                      True, 0 + cf.QUAY_CRANE_RELEASE_TIME * m,
                                                                       vehicle_speed, station_process_time)
         missions['M' + str(mission_count)] = Mission('M' + str(mission_count), idx, yard_block_loc,
                                                      yard_crane_process_time,
-                                                     True, 0 + cf.QUAY_CRANE_RELEASE_TIME * i, vehicle_speed,
+                                                     True, 0 + cf.QUAY_CRANE_RELEASE_TIME * m, vehicle_speed,
                                                      station_process_time)
         mission_count += 1
     return missions_info, missions
@@ -164,15 +165,16 @@ def create_mission_dict(idx, quay_crane_id, yard_block_loc, yard_crane_process_t
 
 
 # 生成岸桥
-def generate_quay_cranes_info(quay_crane_to_location, mission_num):
+def generate_quay_cranes_info(quay_crane_to_location, qc_num, is_num, yc_num, m_num):
     quay_cranes_info = {}
     quay_cranes = {}
-    if mission_num * cf.CRANE_NUM <= 300:
-        cur_yar_blocks = random.sample(yard_blocks_set, 4)
-    else:
-        cur_yar_blocks = random.sample(yard_blocks_set, 4)
+    cur_yar_blocks = generate_yard_blocks_set(is_num, yc_num)
+    cnt = 0
     for idx, location in quay_crane_to_location.items():
-        missions_info, missions = generate_missions_info(idx, mission_num, cur_yar_blocks)
+        if cnt >= qc_num:
+            break
+        cnt = cnt + 1
+        missions_info, missions = generate_missions_info(idx, cur_yar_blocks, m_num)
         quay_cranes_info[idx] = create_quay_crane_dict(idx, missions_info, location.tolist())
         quay_cranes[idx] = QuayCrane(idx, missions, location.tolist())
     return quay_cranes_info, quay_cranes
@@ -206,16 +208,13 @@ def generate_crossovers_info(crossovers_to_location, yard_blocks_to_crossover):
     crossovers = {}
     for idx, location in crossovers_to_location.items():
         yard_block_list = yard_blocks_to_crossover[idx]
-        crossovers_info[idx] = create_crossover_dict(idx, location.tolist(), yard_block_list,
-                                                     cf.CROSSOVER_MAX_WAIT_TIME)
-        crossovers[idx] = Crossover(idx, location.tolist(), yard_block_list,
-                                    cf.CROSSOVER_MAX_WAIT_TIME)
+        crossovers_info[idx] = create_crossover_dict(idx, location.tolist(), yard_block_list)
+        crossovers[idx] = Crossover(idx, location.tolist(), yard_block_list)
     return crossovers_info, crossovers
 
 
-def create_crossover_dict(idx, location, yard_block_list, max_wait_time):
-    crossover_info = {'idx': idx, 'location': location, 'yard_block_list': yard_block_list,
-                      'max_wait_time': max_wait_time}
+def create_crossover_dict(idx, location, yard_block_list):
+    crossover_info = {'idx': idx, 'location': location, 'yard_block_list': yard_block_list}
     return crossover_info
 
 
@@ -234,12 +233,6 @@ def cal_block_to_location():
                          'C1': first_block + np.array([2 * b_dx, 0]), 'C2': first_block + np.array([2 * b_dx, b_dy]),
                          'C3': first_block + np.array([2 * b_dx, 2 * b_dy]),
                          'C4': first_block + np.array([2 * b_dx, 3 * b_dy])}
-    # block_to_location = {'A1': first_block, 'A2': first_block + np.array([0, b_dy]),
-    #                      'A3': first_block + np.array([0, 2 * b_dy]),
-    #                      'B1': first_block + np.array([b_dx, 0]), 'B2': first_block + np.array([b_dx, b_dy]),
-    #                      'B3': first_block + np.array([b_dx, 2 * b_dy]),
-    #                      'C1': first_block + np.array([2 * b_dx, 0]), 'C2': first_block + np.array([2 * b_dx, b_dy]),
-    #                      'C3': first_block + np.array([2 * b_dx, 2 * b_dy])}
     return block_to_location
 
 
@@ -248,8 +241,9 @@ def cal_quay_crane_to_location():
     # 场桥所在位置
     first_quay_crane = cf.QUAY_EXIT + (cf.QUAYCRANE_EXIT_SPACE, 0)
     qc_dx = cf.QUAYCRANE_CRANE_SPACE
-    quay_crane_to_location = {'QC1': first_quay_crane, 'QC2': first_quay_crane + np.array([qc_dx, 0]),
-                              'QC3': first_quay_crane + np.array([qc_dx * 2, 0])}
+    quay_crane_to_location = {}
+    for m in range(cf.QUAYCRANE_NUM):
+        quay_crane_to_location['QC' + str(m + 1)] = first_quay_crane + np.array([m * qc_dx, 0])
     return quay_crane_to_location
 
 
@@ -258,10 +252,8 @@ def cal_station_to_location():
     first_station = cf.S1_STATION_LOCATION
     s_dx = cf.LOCK_STATION_SPACE
     station_to_location = {}
-    for i in range(cf.LOCK_STATION_NUM):
-        station_to_location['S' + str(i + 1)] = first_station + np.array([i * s_dx, 0])
-    # 'S5': first_station + np.array([4 * s_dx, 0]),
-    #  'S6': first_station + np.array([5 * s_dx, 0])
+    for m in range(cf.LOCK_STATION_NUM):
+        station_to_location['S' + str(m + 1)] = first_station + np.array([m * s_dx, 0])
     return station_to_location
 
 
@@ -305,34 +297,35 @@ def missions_dict_to_obj(machine, flag):
 
 
 # 生成模拟数据
-def generate_data_for_test(train_num, mission_num_one_crane=cf.MISSION_NUM_ONE_QUAY_CRANE):
+def generate_data_for_test(inst_idx, inst_type='A'):
     logger.info("生成数据.")
     global mission_count
     mission_count = 1
+    qc_num, ls_num, is_num, yc_num, m_num = generate_instance_type(inst_type)
+
+    # 生成场桥信息
+    quay_crane_to_location = cal_quay_crane_to_location()
+    quay_cranes_info, quay_cranes = generate_quay_cranes_info(quay_crane_to_location, qc_num, is_num, yc_num, m_num)
+    # 生成缓冲区信息
+    buffers_info, buffers = generate_buffers_info(quay_crane_to_location)
+    # 生成锁站信息
+    station_to_location = cal_station_to_location()
+    lock_stations_info, lock_stations = generate_lock_stations_info(station_to_location)
+    # 生成交叉口信息
+    crossovers_to_location, yard_blocks_to_crossover = cal_yard_blocks_to_crossover()
+    crossovers_info, crossovers = generate_crossovers_info(crossovers_to_location, yard_blocks_to_crossover)
     # 生成堆场信息
     block_to_location = cal_block_to_location()
     yard_blocks_info, yard_blocks = generate_yard_blocks_info(block_to_location)
     yard_cranes_info, yard_cranes = generate_yard_cranes_info(block_to_location)
-    # 生成锁站信息
-    station_to_location = cal_station_to_location()
-    lock_stations_info, lock_stations = generate_lock_stations_info(station_to_location)
-    # 生成场桥信息
-    quay_crane_to_location = cal_quay_crane_to_location()
-    quay_cranes_info, quay_cranes = generate_quay_cranes_info(quay_crane_to_location, mission_num_one_crane)
-    # 生成缓冲区信息
-    buffers_info, buffers = generate_buffers_info(quay_crane_to_location)
-    # 生成交叉口信息
-    crossovers_to_location, yard_blocks_to_crossover = cal_yard_blocks_to_crossover()
-    crossovers_info, crossovers = generate_crossovers_info(crossovers_to_location, yard_blocks_to_crossover)
-
     input_data = {'quay_cranes': list(quay_cranes_info.values()), 'buffers': list(buffers_info.values()),
                   'lock_stations': list(lock_stations_info.values()), 'crossovers': list(crossovers_info.values()),
                   'yard_blocks': list(yard_blocks_info.values()), 'yard_cranes': list(yard_cranes_info.values())}
-    # 写入文件
-    write_json_to_file(
-        os.path.join(cf.DATA_PATH, 'train_' + str(train_num) + '_' + str(mission_num_one_crane) + '.json'), input_data)
 
-    instance = PortEnv(quay_cranes, buffers, lock_stations, crossovers, yard_blocks, yard_cranes)
+    # 写入文件
+    write_json_to_file(os.path.join(cf.DATA_PATH, 'train_' + inst_type + '_' + str(inst_idx) + '_' '.json'), input_data)
+    instance = PortEnv(quay_cranes, buffers, lock_stations, crossovers, yard_blocks, yard_cranes,
+                       (qc_num, ls_num, is_num, yc_num, m_num))
     return instance
 
 
@@ -505,14 +498,14 @@ def cal_transfer_time(instance: PortEnv):
     for station in instance.lock_stations.values():
         station.distance_to_exit = (abs(station.location[0] - cf.QUAY_EXIT[0]) + abs(
             station.location[1] - cf.QUAY_EXIT[1]))
-        instance.exit_to_station_matrix[int(station.idx[-1]) - 1] = station.distance_to_exit
+        instance.exit_to_ls_matrix[int(station.idx[-1]) - 1] = station.distance_to_exit
         for crossover in instance.crossovers.values():
-            instance.station_to_crossover_matrix[int(station.idx[-1]) - 1][int(crossover.idx[-1]) - 1] = abs(
+            instance.ls_to_co_matrix[int(station.idx[-1]) - 1][int(crossover.idx[-1]) - 1] = abs(
                 crossover.location[0] - station.location[0]) + abs(
                 crossover.location[1] - station.location[1])
-    instance.exit_to_station_min = min(instance.exit_to_station_matrix)
-    instance.station_to_crossover_min = [min(row) for row in
-                                         list(map(list, zip(*instance.station_to_crossover_matrix)))]
+    instance.exit_to_station_min = min(instance.exit_to_ls_matrix)
+    instance.ls_to_co_min = [min(row) for row in
+                             list(map(list, zip(*instance.ls_to_co_matrix)))]
     for quay_crane in instance.quay_cranes.values():
         quay_crane.time_to_exit = (cf.QUAYCRANE_EXIT_SPACE + (
                 int(quay_crane.idx[-1]) - 1) * cf.QUAYCRANE_CRANE_SPACE) / (sum(cf.VEHICLE_SPEED) / 2.0)
@@ -527,15 +520,14 @@ def cal_transfer_time(instance: PortEnv):
             mission.crossover_id = crossover.idx
             crossover_loc = crossover.location
             mission.transfer_time_e2s_min = instance.exit_to_station_min / mission.vehicle_speed
-            mission.transfer_time_s2c_min = instance.station_to_crossover_min[
+            mission.transfer_time_s2c_min = instance.ls_to_co_min[
                                                 int(crossover.idx[-1]) - 1] / mission.vehicle_speed
             mission.transfer_time_c2y = (abs(mission.yard_stop_loc[0] - crossover_loc[0]) + abs(
                 mission.yard_stop_loc[1] - crossover_loc[1])) / mission.vehicle_speed
 
 
-def read_input(prefix: str = 'train_0_', mission_num: int = cf.MISSION_NUM_ONE_QUAY_CRANE) -> IterSolution:
-    # logger.info("读取环境：" + prefix)
-    filepath = os.path.join(cf.DATA_PATH, prefix + str(mission_num) + '.json')
+def read_input(pre, inst_idx, inst_type) -> IterSolution:
+    filepath = os.path.join(cf.DATA_PATH, pre + '_' + inst_type + '_' + str(inst_idx) + '_' '.json')
     input_data = read_json_from_file(filepath)
     quay_cranes = read_quay_cranes_info(input_data.get('quay_cranes'))
     buffers = read_buffers_info(input_data.get('buffers'))
@@ -543,7 +535,8 @@ def read_input(prefix: str = 'train_0_', mission_num: int = cf.MISSION_NUM_ONE_Q
     crossovers = read_crossovers_info(input_data.get('crossovers'))
     yard_blocks = read_yard_blocks_info(input_data.get('yard_blocks'))
     yard_cranes = read_yard_cranes_info(input_data.get('yard_cranes'))
-    port_env = PortEnv(quay_cranes, buffers, lock_stations, crossovers, yard_blocks, yard_cranes)
+    port_env = PortEnv(quay_cranes, buffers, lock_stations, crossovers, yard_blocks, yard_cranes,
+                       generate_instance_type(inst_type))
     cal_transfer_time(port_env)
     # plot_layout(instance) # 绘制堆场布局
     iter_solution = IterSolution(port_env)
@@ -600,7 +593,7 @@ def count_yard_block_assign(port_env):
 if __name__ == '__main__':
     np.random.seed(0)
     random.seed(0)
-    for i in range(0, 1):
+    for i in range(0, 2):
         generate_data_for_test(i)
     # instance = read_input()
     # a = 1

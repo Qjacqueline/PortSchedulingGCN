@@ -150,7 +150,7 @@ class UANewCollector:
         for solu in self.train_solus:
             self.curr_time = [0, 0, 0]
             pre_makespan = 0
-            state = get_state_n(iter_solution=solu.iter_env, step_number=0, max_num=self.m_max_num)
+            state = get_state_n(env=solu.iter_env, step_number=0, max_num=self.m_max_num)
             for step in range(self.mission_num):
                 cur_mission = get_next_job_at_quay_cranes(solu.iter_env, self.curr_time)
                 solu.released_missions.append(cur_mission)
@@ -159,8 +159,7 @@ class UANewCollector:
                 makespan = self.process(solu, cur_mission, u_action, l_action, step)
                 reward = (pre_makespan - makespan)
                 if step != self.mission_num - 1:
-                    new_state = get_state_n(iter_solution=solu.iter_env, step_number=step + 1,
-                                            max_num=self.m_max_num)
+                    new_state = get_state_n(env=solu.iter_env, step_number=step + 1, max_num=self.m_max_num)
                     done = 0
                 else:
                     new_state = state
@@ -187,7 +186,7 @@ class UANewCollector:
             for i in range(len(self.test_solus)):
                 torch.manual_seed(42)
                 solu = self.test_solus[i]
-                state = get_state_n(iter_solution=solu.iter_env, step_number=0, max_num=self.m_max_num)
+                state = get_state_n(env=solu.iter_env, step_number=0, max_num=self.m_max_num)
                 pre_makespan = 0
                 total_reward = 0
                 self.curr_time = [0, 0, 0]
@@ -203,7 +202,7 @@ class UANewCollector:
                     makespan = self.process(solu, cur_mission, u_action, l_action, step)
                     total_reward += (pre_makespan - makespan)
                     if step != self.mission_num - 1:
-                        new_state = get_state_n(iter_solution=solu.iter_env, step_number=step + 1,
+                        new_state = get_state_n(env=solu.iter_env, step_number=step + 1,
                                                 max_num=self.m_max_num)
                     else:
                         new_state = state

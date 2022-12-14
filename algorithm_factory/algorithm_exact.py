@@ -97,6 +97,6 @@ def Exact_Method(port_env):
 
 
 if __name__ == '__main__':
-    instance = read_input()
+    instance = read_input('train', 0, 'A')
     global_mini_makespan, global_mini_instance, global_mini_assign_list = Exact_Method(instance.init_env)
     print("最小makespan为:" + str(global_mini_makespan))
