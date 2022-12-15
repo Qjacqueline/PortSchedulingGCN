@@ -14,8 +14,7 @@ import torch
 
 LOGGING_LEVEL = logging.INFO  # logging.WARNING/DEBUG
 
-dataset = 'v0'
-MISSION_NUM_ONE_QUAY_CRANE = 30  # 一个场桥对应的任务数
+inst_type = 'A'
 
 # 布局配置
 STAGE_NUM = 3  # lock_station+crossover+yard
@@ -26,8 +25,6 @@ LOCK_STATION_NUM = 5  # 锁站个数
 QUAY_EXIT = np.array([280, 0])  # 岸桥操作后小车出口坐标（单位：m）
 QUAYCRANE_EXIT_SPACE = 40  # 出口距离最重起重机间距（单位：m）
 QUAYCRANE_CRANE_SPACE = 45  # 起重机与起重机间间距（单位：m）
-MISSION_NUM = QUAYCRANE_NUM * MISSION_NUM_ONE_QUAY_CRANE  # 任务个数
-
 S1_STATION_LOCATION = np.array([180, 64])  # 第一个锁站所在位置
 LOCK_STATION_SPACE = 150  # 锁站间距 150
 LOCK_STATION_BUFFER_SPACE = 5  # 等待区距离锁站的垂直间距
@@ -65,15 +62,15 @@ DEVICE = torch.device("cuda:1" if torch.cuda.is_available() else 'cpu')
 
 # 文件路径
 ROOT_FOLDER_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_PATH = os.path.join(ROOT_FOLDER_PATH, 'data/data_' + dataset)
+DATA_PATH = os.path.join(ROOT_FOLDER_PATH, 'data/data_' + inst_type)
 if not os.path.exists(DATA_PATH):
     os.makedirs(DATA_PATH)
 OUTPUT_RESULT_PATH = os.path.join(ROOT_FOLDER_PATH, 'output_result')  # output_result文件底下
-OUTPUT_PATH = os.path.join(OUTPUT_RESULT_PATH, 'output_' + str(MISSION_NUM_ONE_QUAY_CRANE) + '.json')
+OUTPUT_PATH = os.path.join(OUTPUT_RESULT_PATH, 'output_' + str(inst_type) + '.json')
 LAYOUT_PATH = os.path.join(OUTPUT_RESULT_PATH, 'layout.png')
 MODEL_PATH = os.path.join(OUTPUT_RESULT_PATH, 'model')
 LOSS_PLOT_PATH = os.path.join(OUTPUT_RESULT_PATH, 'loss_')
-OUTPUT_SOLUTION_PATH = os.path.join(OUTPUT_RESULT_PATH, 'solution_' + dataset + '/')
+OUTPUT_SOLUTION_PATH = os.path.join(OUTPUT_RESULT_PATH, 'solution_' + inst_type + '/')
 
 # SA
 T0 = 4000
@@ -90,12 +87,12 @@ POLICY_LR_LA1 = 1e-6  # actor网络的学习率
 VF_LR_LA1 = 1e-5  # critic网络的学习率,应该比actor大
 GAMMA_LA1 = 0.98  # 衰减率
 # RL_LA2
-N_STEPS_LA2 = MISSION_NUM  # 每一个epoch里挑选action的step数
+# N_STEPS_LA2 = MISSION_NUM  # 每一个epoch里挑选action的step数
 N_EPOCH_LA2 = 200  # 同一个实例train的epoch数
 FEATURE_SIZE_QUAY = 6  # RNN yard点特征数
 MAX_LENGTH_QUAY = 6  # RNN yard序列最多点数
 FEATURE_SIZE_MACHINE = 3  # RNN 其他机器点特征数
-MAX_LENGTH_MACHINE = MISSION_NUM + 1  # RNN 其他机器序列最多点数
+# MAX_LENGTH_MACHINE = MISSION_NUM + 1  # RNN 其他机器序列最多点数
 ACTION_NUM_LA2 = LOCK_STATION_NUM  # action的个数
 HIDDEN_SIZE = 32  # RNN隐藏层元个数
 N_LAYERS = 2  # RNN层数
@@ -104,7 +101,7 @@ VF_LR_LA2 = 1e-5  # critic网络的学习率,应该比actor大
 GAMMA_LA2 = 0.9  # 衰减率
 ACCEPT_PROB_LA2 = 0.99  # 差解接受概率
 # RL_LA3
-N_STEPS_LA3 = MISSION_NUM  # 每一个epoch里挑选action的step数
+# N_STEPS_LA3 = MISSION_NUM  # 每一个epoch里挑选action的step数
 N_EPOCH_LA3 = 100  # 同一个实例train的epoch数
 BATCH_SIZE_LA3 = 32
 LR_LA3 = 1e-2
@@ -115,7 +112,7 @@ Q_NETWORK_ITERATION_LA3 = 100
 NUM_NODE_FEATURES_LA3 = 3  # node的特征个数
 ACTION_NUM_LA3 = LOCK_STATION_NUM  # action的个数
 # RL_LA4
-N_STEPS_LA4 = MISSION_NUM  # 每一个epoch里挑选action的step数
+# N_STEPS_LA4 = MISSION_NUM  # 每一个epoch里挑选action的step数
 N_EPOCH_LA4 = 100  # 同一个实例train的epoch数
 NUM_NODE_FEATURES_LA4 = 3  # node的特征个数
 ACTION_NUM_LA4 = LOCK_STATION_NUM  # action的个数4
@@ -123,7 +120,7 @@ POLICY_LR_LA4 = 1e-7  # actor网络的学习率
 VF_LR_LA4 = 1e-6  # critic网络的学习率,应该比actor大
 GAMMA_LA4 = 0.98  # 衰减率
 # RL_LA5
-N_STEPS_LA5 = MISSION_NUM  # 每一个epoch里挑选action的step数
+# N_STEPS_LA5 = MISSION_NUM  # 每一个epoch里挑选action的step数
 N_EPOCH_LA5 = 300  # 同一个实例train的epoch数
 BATCH_SIZE_LA5 = 10
 LR_LA5 = 0.0001
@@ -134,7 +131,7 @@ Q_NETWORK_ITERATION_LA5 = 100
 NUM_NODE_FEATURES_LA5 = 3  # node的特征个数
 ACTION_NUM_LA5 = LOCK_STATION_NUM  # action的个数
 # RL_LA6
-N_STEPS_LA6 = MISSION_NUM  # 每一个epoch里挑选action的step数
+# N_STEPS_LA6 = MISSION_NUM  # 每一个epoch里挑选action的step数
 N_EPOCH_LA6 = 60  # 同一个实例train的epoch数
 BATCH_SIZE_LA6 = 40
 LR_LA6 = 1e-4

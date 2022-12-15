@@ -30,12 +30,10 @@ logger = Logger().get_logger()
 
 def get_args(**kwargs):
     parser = argparse.ArgumentParser()
-    parser.add_argument('--task', type=str, default=cf.dataset + '_' + str(cf.MISSION_NUM_ONE_QUAY_CRANE))
+    parser.add_argument('--task', type=str, default=cf.inst_type + '_' + str(cf.MISSION_NUM_ONE_QUAY_CRANE))
     # parser.add_argument('--task', type=str, default=cf.dataset + '_' + str(10))
     parser.add_argument('--seed', type=int, default=0)
 
-    parser.add_argument('--mission_num', type=int, default=cf.MISSION_NUM)
-    parser.add_argument('--mission_num_each', type=int, default=cf.MISSION_NUM_ONE_QUAY_CRANE)
     parser.add_argument('--dim_action', type=int, default=cf.LOCK_STATION_NUM)
     parser.add_argument('--max_num', type=int, default=5)
     parser.add_argument('--machine_num', type=int, default=22)

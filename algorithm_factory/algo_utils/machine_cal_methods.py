@@ -458,7 +458,9 @@ def match_mission_yard_crane_num(mission):
     return yard_crane_num
 
 
-def del_station_afterwards(port_env, buffer_flag=True, step_number=cf.MISSION_NUM, released_mission_ls=None):
+def del_station_afterwards(port_env: PortEnv, buffer_flag, step_number=None, released_mission_ls=None):
+    if step_number is None:
+        step_number = port_env.m_num_all
     # a_station2 a_crossover4 a_yard6
     if buffer_flag:
         crossover_stage = 5
@@ -695,7 +697,7 @@ def assign_mission_to_station(mission, curr_station, buffer_flag=False):
         mission.stage = 4
 
 
-def crossover_process_by_order(port_env, buffer_flag=False, step_number=cf.MISSION_NUM, released_mission_ls=None):
+def crossover_process_by_order(port_env, buffer_flag=False, step_number=None, released_mission_ls=None):
     # 阶段五：交叉口 TODO 更新多辆等待 预assign
     crossover_assign_dict = {}
     for crossover_idx in port_env.crossovers.keys():
@@ -704,6 +706,8 @@ def crossover_process_by_order(port_env, buffer_flag=False, step_number=cf.MISSI
         ls = released_mission_ls
     else:
         ls = port_env.mission_list
+    if step_number is None:
+        step_number = port_env.m_num_all
     for i in range(step_number):
         mission = ls[i]
         crossover = port_env.crossovers[mission.crossover_id]
@@ -770,7 +774,7 @@ def assign_mission_to_crossover(lock_stations, crossovers, mission, buffer_flag=
         mission.stage = 6
 
 
-def yard_crane_process_by_order(port_env, buffer_flag=False, step_number=cf.MISSION_NUM, released_mission_ls=None):
+def yard_crane_process_by_order(port_env, buffer_flag=False, step_number=None, released_mission_ls=None):
     # 阶段六：场桥
     yard_crane_assign_dict = {}
     for yard_crane_idx in port_env.yard_cranes.keys():
@@ -779,6 +783,8 @@ def yard_crane_process_by_order(port_env, buffer_flag=False, step_number=cf.MISS
         ls = released_mission_ls
     else:
         ls = port_env.mission_list
+    if step_number is None:
+        step_number = port_env.m_num_all
     for i in range(step_number):
         mission = ls[i]
         yard_crane_assign_dict['YC' + mission.yard_block_loc[0]].append(mission)
@@ -1175,7 +1181,6 @@ def get_crossovers_release_state(co_ls: dict, max_num: int):
 
 
 def get_yards_release_state(yc_ls: dict, max_num: int):
-    yard_blocks_set = ['A1', 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4', 'C1', 'C2', 'C3', 'C4']
     yards_attr = []
     seq_lengths = []
     for yard_crane_idx in yc_ls.keys():
@@ -1234,7 +1239,7 @@ def get_quay_release_RNN_Sequence(iter_solution, step_number):
     return quay_node_attr, seq_length
 
 
-def get_stations_RNN_Sequence(iter_solution: PortEnv, cur_time: float, max_num: int = cf.MISSION_NUM):
+def get_stations_RNN_Sequence(iter_solution: PortEnv, cur_time: float, max_num: int = 1):
     stations_attr = []
     seq_lengths = []
     for station in iter_solution.lock_stations.values():
@@ -1265,7 +1270,7 @@ def get_crossovers_RNN_Sequence(iter_solution):
     return crossovers_attr, seq_lengths
 
 
-def get_crossover_RNN_Sequence(crossover: Crossover, cur_time: float, max_num: int = cf.MISSION_NUM):
+def get_crossover_RNN_Sequence(crossover: Crossover, cur_time: float, max_num: int = 1):
     crossover_attr = [[0, 0, 0]]
     seq_length = 1
     for i in range(len(crossover.mission_list) - 1, -1, -1):
@@ -1293,7 +1298,7 @@ def get_yards_RNN_Sequence(iter_solution, yard_cranes_set):
     return yards_attr, seq_lengths
 
 
-def get_yard_RNN_Sequence(yard_crane: YardCrane, cur_time: float = 0, max_num: int = cf.MISSION_NUM):
+def get_yard_RNN_Sequence(yard_crane: YardCrane, cur_time: float = 0, max_num: int = 1):
     yard_attr = [[0, 0, 0, 0, 0]]
     seq_length = 1
     for i in range(len(yard_crane.mission_list) - 1, -1, -1):

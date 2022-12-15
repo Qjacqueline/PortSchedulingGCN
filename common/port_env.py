@@ -26,6 +26,7 @@ class PortEnv:
         self.exit_to_ls_matrix = [0 for _ in range(len(self.lock_stations))]
         self.ls_to_co_min = [0 for _ in range(len(self.crossovers))]
         self.qc_num, self.ls_num, self.is_num, self.yc_num, self.m_num = inst_type
+        self.m_num_all = self.qc_num * self.m_num
         self.machine_num = self.qc_num + self.ls_num + self.is_num + self.yc_num
         self.machine_name_to_idx = self.match_machine_name_to_idx()
 
@@ -61,11 +62,10 @@ class PortEnv:
             for mission in quay_crane.missions.values():
                 if mission.yard_block_loc[0] not in yard_cranes_set:
                     yard_cranes_set.append(mission.yard_block_loc[0])
-        sorted(yard_cranes_set)
+        yard_cranes_set = sorted(yard_cranes_set)
         return yard_cranes_set
 
     def match_machine_name_to_idx(self):
-
         machine_name_to_idx = {}
         cnt = 0
         for i in range(self.qc_num):

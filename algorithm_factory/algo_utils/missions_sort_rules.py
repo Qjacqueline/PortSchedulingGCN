@@ -56,4 +56,3 @@ class sort_missions(object):
         missions.sort(
             key=lambda x: (
                 x.machine_start_time[1], int(x.idx[1:])))  # 按照到达锁站时间排序
-

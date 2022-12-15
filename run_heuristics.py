@@ -26,7 +26,7 @@ if __name__ == '__main__':
     # for i in range(0, 1):
     #     env_names.append('train_' + str(i) + '_')
     env_names = ['train_0_']
-    print(Cf.dataset + " " + str(Cf.MISSION_NUM_ONE_QUAY_CRANE))
+    print(Cf.inst_type + " " + str(Cf.MISSION_NUM_ONE_QUAY_CRANE))
     print("Fixed order")
     env = read_input('train', 0, 'A')
     makespan, _, _ = Fixed_order(env.init_env, [2, 2, 0, 3, 0, 0, 1, 1, 0, 2, 1, 3, 2, 1, 1])  # [1, 1, 0, 3, 1, 2]

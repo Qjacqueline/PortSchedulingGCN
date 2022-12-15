@@ -593,8 +593,10 @@ def count_yard_block_assign(port_env):
 if __name__ == '__main__':
     np.random.seed(0)
     random.seed(0)
-    for i in range(0, 2):
-        generate_data_for_test(i)
+    for i in range(0, 50):
+        env = generate_data_for_test(i)
+        if len(env.yard_cranes_set) < 5:
+            print(i)  # 检查分配锁站数是否一致
     # instance = read_input()
     # a = 1
     # count_yard_block_assign(instance)

@@ -144,7 +144,7 @@ class UANewCollector:
         self.curr_time = [0, 0, 0]
         self.init_release_time_gap = init_gap
         self.train_time = 0
-        self.task = cf.dataset + '_' + str(cf.MISSION_NUM_ONE_QUAY_CRANE)
+        self.task = cf.inst_type + '_' + str(cf.MISSION_NUM_ONE_QUAY_CRANE)
 
     def collect_rl(self):
         for solu in self.train_solus:

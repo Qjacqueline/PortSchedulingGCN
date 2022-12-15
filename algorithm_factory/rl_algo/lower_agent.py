@@ -268,7 +268,7 @@ class LACollector:
                 for step in range(self.mission_num):
                     cur_mission = solu.iter_env.mission_list[step]
                     min_pos = 5
-                    for j in range(solu.init_env.ls_num):
+                    for j in range(solu.inainit_env.ls_num):
                         temp_solu = deepcopy(solu)
                         temp_cur_mission = temp_solu.iter_env.mission_list[step]
                         temp_makespan = temp_solu.step_v2(j, temp_cur_mission, step)

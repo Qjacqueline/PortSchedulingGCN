@@ -65,9 +65,9 @@ if __name__ == '__main__':
     # env
     train_solus = []
     test_solus = []
-    for i in range(0, 1):
+    for i in range(0, 40):
         train_solus.append(read_input('train', str(i), args.inst_type))
-    for i in range(0, 2):
+    for i in range(0, 50):
         test_solus.append(read_input('train', str(i), args.inst_type))
     for solu in train_solus:
         solu.l2a_init()
