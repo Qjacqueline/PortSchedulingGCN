@@ -39,7 +39,7 @@ def algorithm_interface(test_env, algorithm_index, RL_config=Cf.RL_CONFIG, train
     elif algorithm_index == 4:
         return Least_Distance_Choice(test_env, buffer_flag)
     elif algorithm_index == 5:
-        return SA(test_env, buffer_flag).run()
+        return SA(test_env).run()
     elif algorithm_index == 6:
         return L2S(train_envs=train_env, test_envs=test_env, buffer_flag=buffer_flag).run(RL_config)
     elif algorithm_index == 7:

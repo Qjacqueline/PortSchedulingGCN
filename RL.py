@@ -30,23 +30,20 @@ logger = Logger().get_logger()
 def get_args(**kwargs):
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--inst_type', type=str, default='A')
-    parser.add_argument('--seed', type=int, default=0)
-
+    parser.add_argument('--inst_type', type=str, default='CA')
     parser.add_argument('--max_num', type=int, default=5)
 
+    parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--hidden', type=int, default=64)
     parser.add_argument('--device', type=str, default='cuda:0' if torch.cuda.is_available() else 'cpu')
     parser.add_argument('--gamma', type=float, default=0.99)  # 0.9
     parser.add_argument('--epsilon', type=float, default=0.5)
     parser.add_argument('--lr', type=float, default=1e-4)
-
+    parser.add_argument('--epoch_num', type=int, default=40)
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--buffer_size', type=int, default=128000)
-
-    parser.add_argument('--epoch_num', type=int, default=40)
-
     parser.add_argument('-save_path', type=str, default=cf.MODEL_PATH)
+
     command_list = []
     for key, value in kwargs.items():
         command_list.append(f'--{key}={value}')
@@ -95,7 +92,7 @@ if __name__ == '__main__':
     data_buffer = LABuffer(buffer_size=args.buffer_size)
     collector = LACollector(inst_type=args.inst_type, train_solus=train_solus, test_solus=test_solus,
                             data_buffer=data_buffer, batch_size=args.batch_size,
-                            mission_num=train_solus[0].init_env.m_num * train_solus[0].init_env.qc_num, agent=agent,
+                            mission_num=train_solus[0].init_env.J_num * train_solus[0].init_env.qc_num, agent=agent,
                             rl_logger=rl_logger, save_path=args.save_path, max_num=args.max_num)
     # agent.qf = torch.load(args.save_path + '/eval_' + args.task + '.pkl')
     # agent.qf_target = torch.load(args.save_path + '/target_' + args.task + '.pkl')

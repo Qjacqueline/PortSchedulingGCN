@@ -139,6 +139,7 @@ def generate_missions_info(idx, cur_yar_blocks, m_num):
     for m in range(m_num):
         vehicle_speed = (cf.VEHICLE_SPEED[0] + cf.VEHICLE_SPEED[1]) / 2
         station_process_time = random.uniform(cf.LOCK_STATION_HANDLING_TIME[0], cf.LOCK_STATION_HANDLING_TIME[1])
+        intersection_process_time = random.uniform(cf.CROSSOVER_HANDLING_TIME[0], cf.CROSSOVER_HANDLING_TIME[1])
         yard_crane_process_time = random.uniform(cf.YARDCRANE_HANDLING_TIME[0], cf.YARDCRANE_HANDLING_TIME[1])
         yard_block_loc = (random.choice(cur_yar_blocks), random.randint(0, cf.SLOT_NUM_X - 1),
                           random.randint(0, cf.SLOT_NUM_Y - 1))
@@ -146,21 +147,23 @@ def generate_missions_info(idx, cur_yar_blocks, m_num):
                                                                       yard_block_loc,
                                                                       yard_crane_process_time,
                                                                       True, 0 + cf.QUAY_CRANE_RELEASE_TIME * m,
-                                                                      vehicle_speed, station_process_time)
+                                                                      vehicle_speed, station_process_time,
+                                                                      intersection_process_time)
         missions['M' + str(mission_count)] = Mission('M' + str(mission_count), idx, yard_block_loc,
                                                      yard_crane_process_time,
                                                      True, 0 + cf.QUAY_CRANE_RELEASE_TIME * m, vehicle_speed,
-                                                     station_process_time)
+                                                     station_process_time, intersection_process_time)
         mission_count += 1
     return missions_info, missions
 
 
 def create_mission_dict(idx, quay_crane_id, yard_block_loc, yard_crane_process_time, locked,
-                        release_time, vehicle_speed, station_process_time):
+                        release_time, vehicle_speed, station_process_time, intersection_process_time):
     mission_info = {'idx': idx, 'quay_crane_id': quay_crane_id, 'yard_block_loc': yard_block_loc,
                     'yard_crane_process_time': yard_crane_process_time, 'locked': locked,
                     'release_time': release_time, 'vehicle_speed': vehicle_speed,
-                    'station_process_time': station_process_time}
+                    'station_process_time': station_process_time,
+                    'intersection_process_time': intersection_process_time}
     return mission_info
 
 
@@ -237,35 +240,36 @@ def cal_block_to_location():
 
 
 # 通过配置数据计算场桥初始位置
-def cal_quay_crane_to_location():
+def cal_quay_crane_to_location(qc_num):
     # 场桥所在位置
     first_quay_crane = cf.QUAY_EXIT + (cf.QUAYCRANE_EXIT_SPACE, 0)
     qc_dx = cf.QUAYCRANE_CRANE_SPACE
     quay_crane_to_location = {}
-    for m in range(cf.QUAYCRANE_NUM):
+    for m in range(qc_num):
         quay_crane_to_location['QC' + str(m + 1)] = first_quay_crane + np.array([m * qc_dx, 0])
     return quay_crane_to_location
 
 
-def cal_station_to_location():
+def cal_station_to_location(ls_num):
     # 锁站所在位置
     first_station = cf.S1_STATION_LOCATION
     s_dx = cf.LOCK_STATION_SPACE
     station_to_location = {}
-    for m in range(cf.LOCK_STATION_NUM):
+    for m in range(ls_num):
         station_to_location['S' + str(m + 1)] = first_station + np.array([m * s_dx, 0])
     return station_to_location
 
 
-def cal_yard_blocks_to_crossover():
+def cal_yard_blocks_to_crossover(is_num):
     first_block = cf.A1_LOCATION
     # 交叉口位置及对应箱区
-    crossovers_to_location = {'CO1': first_block + np.array([cf.BLOCK_SPACE_X - 3 * cf.LANE_X / 4, -cf.LANE_Y]),
-                              'CO2': first_block + np.array([2 * cf.BLOCK_SPACE_X - 3 * cf.LANE_X / 4, -cf.LANE_Y]),
-                              'CO3': first_block + np.array([3 * cf.BLOCK_SPACE_X - 3 * cf.LANE_X / 4, -cf.LANE_Y])}
-    yard_blocks_to_crossover = {'CO1': ['A1', 'A2', 'A3', 'A4'],
-                                'CO2': ['B1', 'B2', 'B3', 'B4'],
-                                'CO3': ['C1', 'C2', 'C3', 'C4']}
+    crossovers_to_location, yard_blocks_to_crossover = {}, {}
+    yard_blocks_to_crossover_t = [['A1', 'A2', 'A3', 'A4'], ['B1', 'B2', 'B3', 'B4'], ['C1', 'C2', 'C3', 'C4']]
+    for i in range(is_num):
+        crossovers_to_location['CO' + str(i + 1)] = first_block + \
+                                                    np.array(
+                                                        [(i + 1) * cf.BLOCK_SPACE_X - 3 * cf.LANE_X / 4, -cf.LANE_Y])
+        yard_blocks_to_crossover['CO' + str(i + 1)] = yard_blocks_to_crossover_t[i]
     return crossovers_to_location, yard_blocks_to_crossover
 
 
@@ -304,15 +308,15 @@ def generate_data_for_test(inst_idx, inst_type='A'):
     qc_num, ls_num, is_num, yc_num, m_num = generate_instance_type(inst_type)
 
     # 生成场桥信息
-    quay_crane_to_location = cal_quay_crane_to_location()
+    quay_crane_to_location = cal_quay_crane_to_location(qc_num)
     quay_cranes_info, quay_cranes = generate_quay_cranes_info(quay_crane_to_location, qc_num, is_num, yc_num, m_num)
     # 生成缓冲区信息
     buffers_info, buffers = generate_buffers_info(quay_crane_to_location)
     # 生成锁站信息
-    station_to_location = cal_station_to_location()
+    station_to_location = cal_station_to_location(ls_num)
     lock_stations_info, lock_stations = generate_lock_stations_info(station_to_location)
     # 生成交叉口信息
-    crossovers_to_location, yard_blocks_to_crossover = cal_yard_blocks_to_crossover()
+    crossovers_to_location, yard_blocks_to_crossover = cal_yard_blocks_to_crossover(is_num)
     crossovers_info, crossovers = generate_crossovers_info(crossovers_to_location, yard_blocks_to_crossover)
     # 生成堆场信息
     block_to_location = cal_block_to_location()
@@ -323,7 +327,7 @@ def generate_data_for_test(inst_idx, inst_type='A'):
                   'yard_blocks': list(yard_blocks_info.values()), 'yard_cranes': list(yard_cranes_info.values())}
 
     # 写入文件
-    write_json_to_file(os.path.join(cf.DATA_PATH, 'train_' + inst_type + '_' + str(inst_idx) + '_' '.json'), input_data)
+    write_json_to_file(os.path.join(cf.DATA_PATH, 'train_' + inst_type + '_' + str(inst_idx) + '.json'), input_data)
     instance = PortEnv(quay_cranes, buffers, lock_stations, crossovers, yard_blocks, yard_cranes,
                        (qc_num, ls_num, is_num, yc_num, m_num))
     return instance
@@ -527,7 +531,7 @@ def cal_transfer_time(instance: PortEnv):
 
 
 def read_input(pre, inst_idx, inst_type) -> IterSolution:
-    filepath = os.path.join(cf.DATA_PATH, pre + '_' + inst_type + '_' + str(inst_idx) + '_' '.json')
+    filepath = os.path.join(cf.DATA_PATH, pre + '_' + inst_type + '_' + str(inst_idx) + '.json')
     input_data = read_json_from_file(filepath)
     quay_cranes = read_quay_cranes_info(input_data.get('quay_cranes'))
     buffers = read_buffers_info(input_data.get('buffers'))
@@ -593,10 +597,12 @@ def count_yard_block_assign(port_env):
 if __name__ == '__main__':
     np.random.seed(0)
     random.seed(0)
+    # env = generate_data_for_test(0, cf.inst_type)
     for i in range(0, 50):
-        env = generate_data_for_test(i)
-        if len(env.yard_cranes_set) < 5:
-            print(i)  # 检查分配锁站数是否一致
+        env = generate_data_for_test(i, cf.inst_type)
+        if len(env.yard_cranes_set) < 8:
+            print(i)  # 检查分配场桥数是否一致
+            print(env.yard_cranes_set)
     # instance = read_input()
     # a = 1
     # count_yard_block_assign(instance)

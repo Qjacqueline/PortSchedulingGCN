@@ -28,8 +28,7 @@ from algorithm_factory.algo_utils.rl_methods import soft_update
 from branch_and_bound import BB_depth_binary, BB_priority_wide
 from common.iter_solution import IterSolution
 from data_process.input_process import read_json_from_file
-from gurobi_solver import PortModel, solve_model, PortModelRLP, CongestionPortModel
-from gurobi_solver import Data
+from gurobi_solver import solve_model, CongestionPortModel
 from utils.log import Logger
 
 logger = Logger().get_logger()
@@ -268,7 +267,7 @@ class LACollector:
                 for step in range(self.mission_num):
                     cur_mission = solu.iter_env.mission_list[step]
                     min_pos = 5
-                    for j in range(solu.inainit_env.ls_num):
+                    for j in range(solu.init_env.ls_num):
                         temp_solu = deepcopy(solu)
                         temp_cur_mission = temp_solu.iter_env.mission_list[step]
                         temp_makespan = temp_solu.step_v2(j, temp_cur_mission, step)
@@ -288,69 +287,71 @@ class LACollector:
                 # solu.reset()
             makespan_forall.append(sum(makespan_forall[0:len(self.train_solus)]))
             makespan_forall.append(sum(makespan_forall[0:-1]) - sum(makespan_forall[0:len(self.train_solus)]))
-            return makespan_forall, solu
+            return makespan_forall, self.test_solus
 
-    def exact(self, solu, inst_idx=0):
+    def exact(self, inst_type):
         with torch.no_grad():
             makespan_forall = []
-            model = CongestionPortModel(J_num=int(self.mission_num / 3),
-                                        data=Data(inst_idx=inst_idx, J_num=int(self.mission_num / 3)))
-            model.construct()
-            s_t_g = time.time()
-            solve_model(MLP=model.MLP, inst_idx=inst_idx, J_num=int(self.mission_num / 3), solu=solu, tag='_exact',
-                        Y_flag=False, X_flag=False)
-            e_t_g = time.time()
-            makespan_forall.append(model.MLP.ObjVal)
+            for i in range(len(self.train_solus)):
+                solu = self.train_solus[i]
+                model = CongestionPortModel(solu)
+                model.construct()
+                s_t_g = time.time()
+                solve_model(MLP=model.MLP, inst_idx=inst_type, solved_solu=solu, tag='_exact', X_flag=False,
+                            Y_flag=False)
+                e_t_g = time.time()
+                makespan_forall.append(model.MLP.ObjVal)
             return makespan_forall, e_t_g - s_t_g
 
-    def exact_fix_x(self, solu, inst_idx=0):
+    def exact_fix_x(self, inst_type=0):
         with torch.no_grad():
             makespan_forall = []
-            model = CongestionPortModel(J_num=int(self.mission_num / 3),
-                                        data=Data(inst_idx=inst_idx, J_num=int(self.mission_num / 3)))
-            model.construct()
-            s_t_g = time.time()
-            solve_model(MLP=model.MLP, inst_idx=inst_idx, J_num=int(self.mission_num / 3), solu=solu, tag='_fix_x',
-                        Y_flag=False)
-            e_t_g = time.time()
-            makespan_forall.append(model.MLP.ObjVal)
+            for i in range(len(self.test_solus)):
+                solu = self.test_solus[i]
+                model = CongestionPortModel(solu)
+                model.construct()
+                s_t_g = time.time()
+                solve_model(MLP=model.MLP, inst_idx=inst_type, solved_solu=solu, tag='_fix_x', Y_flag=False)
+                e_t_g = time.time()
+                makespan_forall.append(model.MLP.ObjVal)
         return makespan_forall, e_t_g - s_t_g
 
-    def exact_fix_all(self, solu, inst_idx=0):
+    def exact_fix_all(self, inst_type=0):
         with torch.no_grad():
             makespan_forall = []
-            model = CongestionPortModel(J_num=int(self.mission_num / 3),
-                                        data=Data(inst_idx=inst_idx, J_num=int(self.mission_num / 3)))
-            model.construct()
-            s_t_g = time.time()
-            solve_model(MLP=model.MLP, inst_idx=inst_idx, J_num=int(self.mission_num / 3), solu=solu, tag='_fix_all')
-            e_t_g = time.time()
-            makespan_forall.append(model.MLP.ObjVal)
+            for i in range(len(self.test_solus)):
+                solu = self.test_solus[i]
+                model = CongestionPortModel(solu)
+                model.construct()
+                s_t_g = time.time()
+                solve_model(MLP=model.MLP, inst_idx=inst_type, solved_solu=solu, tag='_fix_all')
+                e_t_g = time.time()
+                makespan_forall.append(model.MLP.ObjVal)
             return makespan_forall, e_t_g - s_t_g
 
-    def bb_depth_binary(self, solu, global_UB, inst_idx=0):
-        with torch.no_grad():
-            makespan_forall = []
-            model = PortModelRLP(J_num=int(self.mission_num / 3),
-                                 data=Data(inst_idx=inst_idx, J_num=int(self.mission_num / 3)))
-            model.construct()
-            s_t_g = time.time()
-            global_LB = BB_depth_binary(model.MLP, solu, J_num=self.mission_num, global_UB=global_UB)
-            e_t_g = time.time()
-            makespan_forall.append(global_LB)
-        return makespan_forall, e_t_g - s_t_g
-
-    def bb_depth_wide(self, solu, global_UB, inst_idx=0):
-        with torch.no_grad():
-            makespan_forall = []
-            model = PortModelRLP(J_num=int(self.mission_num / 3),
-                                 data=Data(inst_idx=inst_idx, J_num=int(self.mission_num / 3)))
-            model.construct()
-            s_t_g = time.time()
-            global_LB = BB_priority_wide(model.MLP, solu, J_num=self.mission_num, global_UB=global_UB)
-            e_t_g = time.time()
-            makespan_forall.append(global_LB)
-        return makespan_forall, e_t_g - s_t_g
+    # def bb_depth_binary(self, solu, global_UB, inst_idx=0):
+    #     with torch.no_grad():
+    #         makespan_forall = []
+    #         model = PortModelRLP(J_num=int(self.mission_num / 3),
+    #                              data=Data(inst_idx=inst_idx, J_num=int(self.mission_num / 3)))
+    #         model.construct()
+    #         s_t_g = time.time()
+    #         global_LB = BB_depth_binary(model.MLP, solu, J_num=self.mission_num, global_UB=global_UB)
+    #         e_t_g = time.time()
+    #         makespan_forall.append(global_LB)
+    #     return makespan_forall, e_t_g - s_t_g
+    #
+    # def bb_depth_wide(self, solu, global_UB, inst_idx=0):
+    #     with torch.no_grad():
+    #         makespan_forall = []
+    #         model = PortModelRLP(J_num=int(self.mission_num / 3),
+    #                              data=Data(inst_idx=inst_idx, J_num=int(self.mission_num / 3)))
+    #         model.construct()
+    #         s_t_g = time.time()
+    #         global_LB = BB_priority_wide(model.MLP, solu, J_num=self.mission_num, global_UB=global_UB)
+    #         e_t_g = time.time()
+    #         makespan_forall.append(global_LB)
+    #     return makespan_forall, e_t_g - s_t_g
 
     def collect_heuristics(self, data_ls: List[str]) -> None:
         logger.info("收集启发式方法数据")

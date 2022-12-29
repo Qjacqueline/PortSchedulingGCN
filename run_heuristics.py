@@ -19,52 +19,50 @@ from data_process.input_process import read_input
 if __name__ == '__main__':
     random.seed(Cf.RANDOM_SEED)
     np.random.seed(Cf.RANDOM_SEED)
-    # get heuristic result
-    # env_names = []  # ['train_1_', 'train_2_', 'train_3_', 'train_4_', 'train_5_', 'train_6_', 'train_7_', 'train_8_',
-    # 'train_9_', 'train_10_', 'train_11_', 'train_12_', 'train_13_', 'train_14_', 'train_15_', 'train_16_',
-    # 'train_17_', 'train_18_', 'train_19_', 'train_0_']
-    # for i in range(0, 1):
-    #     env_names.append('train_' + str(i) + '_')
-    env_names = ['train_0_']
-    print(Cf.inst_type + " " + str(Cf.MISSION_NUM_ONE_QUAY_CRANE))
+    print(Cf.inst_type)
+    train_set_num = 1
+
     print("Fixed order")
-    env = read_input('train', 0, 'A')
-    makespan, _, _ = Fixed_order(env.init_env, [2, 2, 0, 3, 0, 0, 1, 1, 0, 2, 1, 3, 2, 1, 1])  # [1, 1, 0, 3, 1, 2]
-    # [3, 2, 0, 3, 0, 2, 1, 2, 0, 3, 1, 3, 2, 1, 1, 0]
+    env = read_input('train', 0, Cf.inst_type)
+    makespan, _, _ = Fixed_order(env.init_env, [1, 1, 1, 1, 0, 0, 0, 0])
+    print("total_makespan:" + str(makespan))
     print("Random_Choice")
     total_makespan = 0
-    for env_name in env_names:
-        env = read_input('train', 0, 'A')
+    for i in range(train_set_num):
+        env = read_input('train', i, Cf.inst_type)
         makespan, _, _ = Random_Choice(env.init_env)
         total_makespan += makespan
     print("total_makespan:" + str(total_makespan))
 
     total_makespan = 0
     print("Least_Wait_Time_Choice")
-    for env_name in env_names:
-        env = read_input('train', 0, 'A')
+    for i in range(train_set_num):
+        env = read_input('train', i, Cf.inst_type)
         makespan, _, _ = Least_Wait_Time_Choice(env.init_env)
         total_makespan += makespan
     print("total_makespan:" + str(total_makespan))
+
     total_makespan = 0
     print("Least_Mission_Num_Choice")
-    for env_name in env_names:
-        env = read_input('train', 0, 'A')
+    for i in range(train_set_num):
+        env = read_input('train', i, Cf.inst_type)
         makespan, _, _ = Least_Mission_Num_Choice(env.init_env)
         total_makespan += makespan
     print("total_makespan:" + str(total_makespan))
+
     total_makespan = 0
     print("Least_Distance_Choice")
-    for env_name in env_names:
-        env = read_input('train', 0, 'A')
+    for i in range(train_set_num):
+        env = read_input('train', i, Cf.inst_type)
         makespan, _, _ = Least_Distance_Choice(env.init_env)
         total_makespan += makespan
     print("total_makespan:" + str(total_makespan))
+
     total_makespan = 0
     print("sa")
-    for env_name in env_names:
-        env = read_input('train', 0, 'A')
-        sa = SA(env, env_name)
+    for i in range(train_set_num):
+        env = read_input('train', i, Cf.inst_type)
+        sa = SA(env)
         sa.iter_solu.l2i_init()
         print(env.last_step_makespan)
         sa.run()

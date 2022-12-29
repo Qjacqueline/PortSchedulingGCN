@@ -25,8 +25,8 @@ class PortEnv:
         self.ls_to_co_matrix = [[0 for _ in range(len(self.crossovers))] for _ in range(len(self.lock_stations))]
         self.exit_to_ls_matrix = [0 for _ in range(len(self.lock_stations))]
         self.ls_to_co_min = [0 for _ in range(len(self.crossovers))]
-        self.qc_num, self.ls_num, self.is_num, self.yc_num, self.m_num = inst_type
-        self.m_num_all = self.qc_num * self.m_num
+        self.qc_num, self.ls_num, self.is_num, self.yc_num, self.J_num = inst_type
+        self.J_num_all = self.qc_num * self.J_num
         self.machine_num = self.qc_num + self.ls_num + self.is_num + self.yc_num
         self.machine_name_to_idx = self.match_machine_name_to_idx()
 

@@ -30,26 +30,20 @@ logger = Logger().get_logger()
 
 def get_args(**kwargs):
     parser = argparse.ArgumentParser()
-    parser.add_argument('--task', type=str, default=cf.inst_type + '_' + str(cf.MISSION_NUM_ONE_QUAY_CRANE))
-    # parser.add_argument('--task', type=str, default=cf.dataset + '_' + str(10))
-    parser.add_argument('--seed', type=int, default=0)
-
-    parser.add_argument('--dim_action', type=int, default=cf.LOCK_STATION_NUM)
+    parser.add_argument('--inst_type', type=str, default=cf.inst_type)
     parser.add_argument('--max_num', type=int, default=5)
-    parser.add_argument('--machine_num', type=int, default=22)
 
+    parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--hidden', type=int, default=64)
     parser.add_argument('--device', type=str, default='cuda:0' if torch.cuda.is_available() else 'cpu')
     parser.add_argument('--gamma', type=float, default=0.9)  # 0.9
     parser.add_argument('--epsilon', type=float, default=0.5)
     parser.add_argument('--lr', type=float, default=1e-5)
-
+    parser.add_argument('--epoch_num', type=int, default=60)
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--buffer_size', type=int, default=128000)
-
-    parser.add_argument('--epoch_num', type=int, default=60)
-
     parser.add_argument('-save_path', type=str, default=cf.MODEL_PATH)
+
     command_list = []
     for key, value in kwargs.items():
         command_list.append(f'--{key}={value}')
@@ -59,7 +53,7 @@ def get_args(**kwargs):
 if __name__ == '__main__':
     # ==============  Create environment & buffer  =============
     args = get_args()
-    exp_dir = exp_dir(desc=f'{args.task}')
+    exp_dir = exp_dir(desc=f'{args.inst_type}')
     rl_logger = SummaryWriter(exp_dir)
     rl_logger.add_text(tag='parameters', text_string=str(args))
     rl_logger.add_text(tag='characteristic', text_string='New State')  # 'debug'
@@ -68,9 +62,9 @@ if __name__ == '__main__':
     train_solus = []
     test_solus = []
     for i in range(0, 1):  # 40
-        train_solus.append(read_input('train', 0, 'A'))
+        train_solus.append(read_input('train', str(i), args.inst_type))
     for i in range(0, 1):  # 50
-        test_solus.append(read_input('train', 0, 'A'))
+        test_solus.append(read_input('train', str(i),  args.inst_type))
     for solu in train_solus:
         solu.l2a_init()
     for solu in test_solus:
@@ -83,50 +77,54 @@ if __name__ == '__main__':
 
     # ========================= load RL =========================
     agent = DDQN(
-        eval_net=QNet(device=args.device, in_dim_max=args.max_num, hidden=args.hidden),
-        target_net=QNet(device=args.device, in_dim_max=args.max_num, hidden=args.hidden),
-        dim_action=args.dim_action,
+        eval_net=QNet(device=args.device, in_dim_max=args.max_num, hidden=args.hidden,
+                      out_dim=train_solus[0].init_env.ls_num, ma_num=train_solus[0].init_env.machine_num),
+        target_net=QNet(device=args.device, in_dim_max=args.max_num, hidden=args.hidden,
+                        out_dim=train_solus[0].init_env.ls_num, ma_num=train_solus[0].init_env.machine_num),
+        dim_action=train_solus[0].init_env.ls_num,
         device=args.device,
         gamma=args.gamma,
         epsilon=args.epsilon,
         lr=args.lr)
 
+    # ======================== Data ==========================
     data_buffer = LABuffer(buffer_size=args.buffer_size)
-    collector = LACollector(train_solus=train_solus, test_solus=test_solus, data_buffer=data_buffer,
-                            batch_size=args.batch_size, mission_num=args.mission_num, agent=agent, rl_logger=rl_logger,
-                            save_path=args.save_path, max_num=args.max_num)
+    collector = LACollector(inst_type=args.inst_type, train_solus=train_solus, test_solus=test_solus,
+                            data_buffer=data_buffer, batch_size=args.batch_size,
+                            mission_num=train_solus[0].init_env.J_num * train_solus[0].init_env.qc_num, agent=agent,
+                            rl_logger=rl_logger, save_path=args.save_path, max_num=args.max_num)
     # init eval
-    agent.qf = torch.load(args.save_path + '/eval_' + 'v0_100' + '.pkl')
-    agent.qf_target = torch.load(args.save_path + '/target_' + 'v0_100' + '.pkl')
+    agent.qf = torch.load(args.save_path + '/eval_' + args.inst_type + '.pkl')
+    agent.qf_target = torch.load(args.save_path + '/target_' + args.inst_type + '.pkl')
 
     # for makespan in makespan_forall:
     #     print("初始la分配makespan为" + str(makespan))
     # print("*********************************************")
 
-    # ========================= RL =========================
+    # # ========================= RL =========================
     # makespan_forall_RL, reward_forall = collector.eval()
-
-    # ========================= Rollout =========================
+    #
+    # # ========================= Rollout =========================
     # s_t_r = time.time()
-    makespan_forall_rollout, solu = collector.rollout()
+    # makespan_forall_rollout, solus = collector.rollout()
     # e_t_r = time.time()
-    # write_env_to_file(solu.iter_env, 0, cf.MISSION_NUM_ONE_QUAY_CRANE)
+    # # write_env_to_file(solu.iter_env, 0, cf.MISSION_NUM_ONE_QUAY_CRANE)
 
     # ========================= Gurobi =========================
     # mode 1 直接精确算法求解
-    # makespan_forall_gurobi, time_g = collector.exact(solu=None)
+    makespan_forall_gurobi, time_g = collector.exact(args.inst_type)
 
     # mode 2 fix Xjm加solver
-    # makespan_forall_gurobi2, time_g2 = collector.exact_fix_x(solu)
-
-    # mode 3 fix all加solver
-    makespan_forall_gurobi3, time_g3 = collector.exact_fix_all(solu)
-
-    # branch_and_bound
-    # makespan_forall_gurobi4, time_g4 = collector.bb_depth_wide(solu, global_UB=makespan_forall_gurobi3[0] + 1e-5)
-
-    # ========================= Print Result =========================
-    # print("算例为" + str(cf.MISSION_NUM_ONE_QUAY_CRANE))
+    # makespan_forall_gurobi2, time_g2 = collector.exact_fix_x(args.inst_type)
+    #
+    # # mode 3 fix all加solver
+    # makespan_forall_gurobi3, time_g3 = collector.exact_fix_all(args.inst_type)
+    #
+    # # branch_and_bound
+    # # makespan_forall_gurobi4, time_g4 = collector.bb_depth_wide(solu, global_UB=makespan_forall_gurobi3[0] + 1e-5)
+    #
+    # # ========================= Print Result =========================
+    # # print("算例为" + str(cf.MISSION_NUM_ONE_QUAY_CRANE))
     # for makespan in makespan_forall_RL:
     #     print("RL后makespan为" + str(makespan))
     # for makespan in makespan_forall_rollout:
@@ -138,9 +136,9 @@ if __name__ == '__main__':
     # for makespan in makespan_forall_gurobi2:
     #     print("fix Xjm makespan为" + str(makespan))
     # print("fix Xjm 算法时间" + str(time_g2))
-    for makespan in makespan_forall_gurobi3:
-        print("fix all makespan为" + str(makespan))
-    print("fix all 算法时间" + str(time_g3))
+    # for makespan in makespan_forall_gurobi3:
+    #     print("fix all makespan为" + str(makespan))
+    # print("fix all 算法时间" + str(time_g3))
     # for makespan in makespan_forall_gurobi4:
     #     print("branch_and_bound makespan为" + str(makespan))
     # print("branch_and_bound 算法时间" + str(time_g4))

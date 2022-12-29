@@ -109,7 +109,8 @@ def process_init_solution_for_l2a(port_env: PortEnv, order='A_EXIT'):
 def get_least_wait_station(port_env: PortEnv, mission: Mission) -> int:
     min_wait_time: float = float('inf')
     min_station: LockStation = list(port_env.lock_stations.items())[0][1]
-    for curr_station in port_env.lock_stations.values():
+    for i in range(port_env.ls_num):
+        curr_station = list(port_env.lock_stations.values())[i]
         transfer_time_station = curr_station.distance_to_exit / mission.vehicle_speed
         arrive_time_station = mission.total_process_time + mission.release_time + transfer_time_station
         if any(curr_station.process_time):
@@ -125,7 +126,8 @@ def get_least_wait_station(port_env: PortEnv, mission: Mission) -> int:
 def get_least_num_station(port_env: PortEnv) -> int:
     min_num: int = 100000
     min_station: LockStation = list(port_env.lock_stations.items())[0][1]
-    for curr_station in port_env.lock_stations.values():
+    for i in range(port_env.ls_num):
+        curr_station = list(port_env.lock_stations.values())[i]
         curr_station_num = len(curr_station.mission_list)
         if curr_station_num < min_num:
             min_num = curr_station_num
@@ -147,7 +149,8 @@ def get_matched_crossover(mission: Mission):
 
 def get_est_arrive_crossover_time(port_env: PortEnv, mission: Mission):
     min_tmp_time = float('Inf')
-    for station in port_env.lock_stations.values():
+    for i in range(port_env.ls_num):
+        station = list(port_env.lock_stations.values())[i]
         arrive_station_time = mission.machine_start_time[1] + station.distance_to_exit / (sum(cf.VEHICLE_SPEED) / 2.0)
         transfer_time_station_crossover = port_env.ls_to_co_matrix[int(station.idx[-1]) - 1][
                                               int(mission.crossover_id[-1]) - 1] / (sum(cf.VEHICLE_SPEED) / 2.0)
@@ -243,13 +246,17 @@ def get_cur_time_status_v2(port_env: PortEnv, cur_time: float):
 # 匹配算例类型
 def generate_instance_type(inst_type):
     if inst_type == 'A':
-        qc_num, ls_num, is_num, yc_num, m_num = 2, 2, 2, 5, 10
+        qc_num, ls_num, is_num, yc_num, m_num = 2, 2, 2, 5, 4
     elif inst_type == 'B':
         qc_num, ls_num, is_num, yc_num, m_num = 3, 3, 3, 3, 100
     elif inst_type == 'C':
         qc_num, ls_num, is_num, yc_num, m_num = 3, 3, 3, 3, 100
+    elif inst_type == 'D':
+        qc_num, ls_num, is_num, yc_num, m_num = 3, 4, 3, 3, 5
     elif inst_type == 'G':
         qc_num, ls_num, is_num, yc_num, m_num = 5, 4, 3, 8, 700
+    elif inst_type == 'CA':
+        qc_num, ls_num, is_num, yc_num, m_num = 6, 4, 3, 8, 382
     else:
         qc_num, ls_num, is_num, yc_num, m_num = 5, 4, 3, 8, 700
     return qc_num, ls_num, is_num, yc_num, m_num
@@ -349,7 +356,7 @@ def station_process_by_random(port_env, buffer_flag=False):
     for station_idx in port_env.lock_stations.keys():
         station_assign_dict.setdefault(station_idx, [])
     for mission in port_env.mission_list:
-        r = random.randint(0, len(port_env.lock_stations) - 1)
+        r = random.randint(0, port_env.ls_num - 1)
         curr_station = list(port_env.lock_stations.items())[r][1]
         station_assign_dict[curr_station.idx].append(mission)
     for station_idx in station_assign_dict.keys():
@@ -396,7 +403,8 @@ def station_process_by_least_wait(port_env, buffer_flag=True):
 def find_min_wait_station(port_env: PortEnv, mission: Mission):
     min_wait_time = float('inf')
     min_station = list(port_env.lock_stations.items())[0][1]
-    for curr_station in port_env.lock_stations.values():
+    for i in range(port_env.ls_num):
+        curr_station = list(port_env.lock_stations.values())[i]
         transfer_time_station = curr_station.distance_to_exit / mission.vehicle_speed
         arrive_time_station = mission.total_process_time + mission.release_time + transfer_time_station
         if any(curr_station.process_time):
@@ -409,10 +417,11 @@ def find_min_wait_station(port_env: PortEnv, mission: Mission):
     return min_station
 
 
-def station_process_by_least_mission_num(port_env, buffer_flag=False):
+def station_process_by_least_mission_num(port_env:PortEnv, buffer_flag=False):
     # 阶段四：锁站
     station_assign_dict = {}
-    for station_idx in port_env.lock_stations.keys():
+    for i in range(port_env.ls_num):
+        station_idx = list(port_env.lock_stations)[i]
         station_assign_dict.setdefault(station_idx, [])
     getattr(sort_missions, 'A_EXIT')(port_env.mission_list)
     for mission in port_env.mission_list:
@@ -446,21 +455,21 @@ def match_mission_crossover(crossovers, mission):
     return curr_crossover
 
 
-def match_mission_yard_crane_num(mission):
-    yard_crane_num = 20
+def match_mission_yard_crane_num(mission, env: PortEnv):
+    yc_idx = env.qc_num + env.ls_num + env.ls_num - 1
     block_column = mission.yard_block_loc[0][0]
     if block_column == 'A':  # YC 10-13
-        yard_crane_num = 9 + int(mission.yard_block_loc[0][-1])
+        yc_idx = yc_idx + int(mission.yard_block_loc[0][-1])
     if block_column == 'B':  # YC 14-17
-        yard_crane_num = 13 + int(mission.yard_block_loc[0][-1])
+        yc_idx = yc_idx + 4 + int(mission.yard_block_loc[0][-1])
     if block_column == 'C':  # YC 18-21
-        yard_crane_num = 17 + int(mission.yard_block_loc[0][-1])
-    return yard_crane_num
+        yc_idx = yc_idx + 8 + int(mission.yard_block_loc[0][-1])
+    return yc_idx
 
 
 def del_station_afterwards(port_env: PortEnv, buffer_flag, step_number=None, released_mission_ls=None):
     if step_number is None:
-        step_number = port_env.m_num_all
+        step_number = port_env.J_num_all
     # a_station2 a_crossover4 a_yard6
     if buffer_flag:
         crossover_stage = 5
@@ -559,13 +568,15 @@ def quay_crane_release_mission(port_env: PortEnv, mission: Mission):
 def station_process_by_least_distance(port_env, buffer_flag=False):
     station_assign_dict = {}
     # 阶段四：锁站
-    for station_idx in port_env.lock_stations.keys():
+    for i in range(port_env.ls_num):
+        station_idx = list(port_env.lock_stations)[i]
         station_assign_dict.setdefault(station_idx, [])
     for mission in port_env.mission_list:
         min_distance = 10000
         min_station = list(port_env.lock_stations.items())[0][1]
         curr_crossover = port_env.crossovers[mission.crossover_id]
-        for curr_station in port_env.lock_stations.values():
+        for i in range(port_env.ls_num):
+            curr_station = list(port_env.lock_stations.values())[i]
             curr_station_loc = curr_station.location
             distance = (abs(curr_crossover.location[0] - curr_station_loc[0]) +
                         abs(curr_crossover.location[1] - curr_station_loc[1]))
@@ -707,7 +718,7 @@ def crossover_process_by_order(port_env, buffer_flag=False, step_number=None, re
     else:
         ls = port_env.mission_list
     if step_number is None:
-        step_number = port_env.m_num_all
+        step_number = port_env.J_num_all
     for i in range(step_number):
         mission = ls[i]
         crossover = port_env.crossovers[mission.crossover_id]
@@ -730,25 +741,7 @@ def assign_mission_to_crossover(lock_stations, crossovers, mission, buffer_flag=
     transfer_time_crossover = (abs(curr_crossover.location[0] - temp_station_loc[0]) + abs(
         curr_crossover.location[1] - temp_station_loc[1])) / mission.vehicle_speed
     arrive_time_crossover = mission.total_process_time + mission.release_time + transfer_time_crossover
-
-    seq_length = 0
-    for i in range(len(curr_crossover.mission_list) - 1, -1, -1):
-        tmp_mission = curr_crossover.mission_list[i]
-        if tmp_mission.machine_start_time[6] + tmp_mission.machine_process_time[6] <= arrive_time_crossover:
-            break
-        else:
-            seq_length += 1
-    if seq_length == 0:
-        handling_time_crossover = 5
-    elif seq_length == 1:
-        handling_time_crossover = 20
-    elif seq_length == 2:
-        handling_time_crossover = 33.3
-    elif seq_length == 3:
-        handling_time_crossover = 50
-    else:
-        handling_time_crossover = 100
-        # print(mission.idx + " " + str(seq_length) + " " + str(handling_time_crossover))
+    handling_time_crossover = mission.intersection_process_time
     if any(curr_crossover.process_time):
         start_time_crossover = max(arrive_time_crossover, curr_crossover.process_time[-1][-1])
     else:
@@ -784,7 +777,7 @@ def yard_crane_process_by_order(port_env, buffer_flag=False, step_number=None, r
     else:
         ls = port_env.mission_list
     if step_number is None:
-        step_number = port_env.m_num_all
+        step_number = port_env.J_num_all
     for i in range(step_number):
         mission = ls[i]
         yard_crane_assign_dict['YC' + mission.yard_block_loc[0]].append(mission)
@@ -808,7 +801,7 @@ def assign_mission_to_yard(yard_cranes, mission, buffer_flag=False):
     moving_time_yard_crane = abs(
         curr_yard_crane.location[0] - curr_yard_loc[1]) * cf.SLOT_LENGTH / cf.YARDCRANE_SPEED_X + abs(
         cf.SLOT_NUM_Y - curr_yard_loc[2]) * cf.SLOT_WIDTH / cf.YARDCRANE_SPEED_Y * 2
-    handling_time_yard_crane = curr_yard_crane.handling_time
+    handling_time_yard_crane = mission.yard_crane_process_time
     arrive_time_yard = mission.total_process_time + mission.release_time + transfer_time_yard
     if any(curr_yard_crane.process_time):
         start_time_yard_crane = max(arrive_time_yard, curr_yard_crane.process_time[-1][-1])

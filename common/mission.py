@@ -10,7 +10,7 @@
 
 class Mission(object):
 
-    def __init__(self, idx, quay_crane_id, yard_block_loc, yard_crane_process_time, locked,
+    def __init__(self, idx, quay_crane_id, yard_block_loc, yard_crane_process_time, intersection_process_time, locked,
                  release_time, vehicle_speed, station_process_time):
         """
 
@@ -33,6 +33,7 @@ class Mission(object):
         self.quay_crane_id = quay_crane_id
         self.release_time = release_time
         self.station_process_time = station_process_time
+        self.intersection_process_time = intersection_process_time
         self.yard_crane_process_time = yard_crane_process_time
         self.crossover_id = None
         self.yard_block_loc = yard_block_loc

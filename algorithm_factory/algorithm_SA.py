@@ -38,18 +38,12 @@ def eval_solution(best_solution, tmp_solution, temp):
 
 
 class SA(object):
-    def __init__(self,
-                 iter_solu: IterSolution,
-                 data_name: str,
-                 T0: float = Cf.T0,
-                 Tend: float = Cf.TEND,
-                 rate: float = Cf.RATE,
+    def __init__(self, iter_solu: IterSolution, T0: float = Cf.T0, Tend: float = Cf.TEND, rate: float = Cf.RATE,
                  buffer_flag: bool = True):
         self.T0: float = T0
         self.Tend: float = Tend
         self.rate: float = rate
         self.iter_solu: IterSolution = iter_solu
-        self.data_name = data_name
         self.buffer_flag: bool = buffer_flag
         self.iter_x: list = list()
         self.iter_y: list = list()
@@ -106,7 +100,7 @@ class SA(object):
     @staticmethod
     def get_new_solution(solution: IterSolution):
         # operator 产生新解
-        action = random.randint(0, Cf.ACTION_NUM_SA - 1)
+        action = random.randint(0, solution.iter_env.ls_num - 1)
         reward, flag = solution.step_v1(action)
         return solution, flag
 
