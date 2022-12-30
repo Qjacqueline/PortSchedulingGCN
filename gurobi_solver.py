@@ -756,7 +756,7 @@ class CongestionPortModel:
             self.MLP.addConstr(self.x[j][jj][k] == 1, "con11" + str(j) + str(jj))
             self.MLP.addConstr(self.r[jj] - self.r[j] == 120, "con00" + str(j) + str(jj))  # FIXME: match RL
         self.MLP.addConstr(self.r[-2] == 0, "con00")
-        for i in range(3):
+        for i in range(self.env.qc_num):
             self.MLP.addConstr(self.r[i * self.J_num] == 0, "con00")  # FIXME: match RL
         self.MLP.addConstrs((self.o[s][j] == self.pt[s][j] for s in range(0, 3) for j in self.J[0:-2]), "con200")
         self.MLP.addConstrs((self.o[3][j] == self.pt[3][j] + sum(
@@ -923,7 +923,7 @@ def solve_model(MLP, inst_idx, solved_solu: IterSolution = None, tag='', X_flag=
             tmp_str = var.VarName.split('_')
             # print(var.VarName + ": " + str(var.X))
             if tmp_str[0] == 'v' and solved_solu.iter_env.ls_num + solved_solu.iter_env.qc_num - 1 >= int(
-                    tmp_str[2]) >= solved_solu.iter_env.ls_num and int(tmp_str[1]) < J_num_all:
+                    tmp_str[2]) >= solved_solu.iter_env.qc_num and int(tmp_str[1]) < J_num_all:
                 ls_ls.append(int(tmp_str[2]) - solved_solu.iter_env.qc_num)
             if tmp_str[0] == 'x':
                 if m_ls.get(int(tmp_str[-1])) is None:

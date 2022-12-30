@@ -22,10 +22,10 @@ if __name__ == '__main__':
     print(Cf.inst_type)
     train_set_num = 1
 
-    print("Fixed order")
-    env = read_input('train', 0, Cf.inst_type)
-    makespan, _, _ = Fixed_order(env.init_env, [1, 1, 1, 1, 0, 0, 0, 0])
-    print("total_makespan:" + str(makespan))
+    # print("Fixed order")
+    # env = read_input('train', 0, Cf.inst_type)
+    # makespan, _, _ = Fixed_order(env.init_env, [1, 1, 1, 1, 0, 0, 0, 0])
+    # print("total_makespan:" + str(makespan))
     print("Random_Choice")
     total_makespan = 0
     for i in range(train_set_num):

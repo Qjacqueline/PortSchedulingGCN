@@ -14,7 +14,7 @@ import torch
 
 LOGGING_LEVEL = logging.INFO  # logging.WARNING/DEBUG
 
-inst_type = 'CA'
+inst_type = 'H'
 
 # 布局配置
 STAGE_NUM = 3  # lock_station+crossover+yard
@@ -45,7 +45,7 @@ QUAY_CRANE_RELEASE_TIME = 120  # 岸桥释放集装箱任务时间间隔
 QUAYCRANE_PROCESS_TIME = [38, 70]  # 岸桥放下并装载集装箱时间服从U(38,70)分布（单位：秒）
 BUFFER_PROCESS_TIME = 60  # 缓冲区操作所需时间（单位：秒）
 # LOCK_STATION_CAPACITY = 1  # 锁站处理能力（单位：辆）
-LOCK_STATION_HANDLING_TIME = [90, 140]  # 解锁所需时间（单位：s） [100, 150]
+LOCK_STATION_HANDLING_TIME = [90, 150]  # 解锁所需时间（单位：s） [100, 150]
 WAIT_TIME_DELAY = [0, 0, 0, 0]  # 由于停留在锁站缓冲区所增加的等待时间[30, 32, 50, 52]
 CROSSOVER_HANDLING_TIME = [20, 60]  # 交叉口处理时间（单位：s）
 YARDCRANE_SPEED_X = 2.17  # 场桥x方向移动速度（单位：m/s）2.17

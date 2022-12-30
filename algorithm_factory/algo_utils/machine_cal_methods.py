@@ -245,18 +245,30 @@ def get_cur_time_status_v2(port_env: PortEnv, cur_time: float):
 
 # 匹配算例类型
 def generate_instance_type(inst_type):
-    if inst_type == 'A':
-        qc_num, ls_num, is_num, yc_num, m_num = 2, 2, 2, 5, 4
+    if inst_type == 'A_10':
+        qc_num, ls_num, is_num, yc_num, m_num = 1, 2, 1, 2, 3
+    elif inst_type == 'A_30':
+        qc_num, ls_num, is_num, yc_num, m_num = 1, 2, 1, 2, 20
+    elif inst_type == 'A':
+        qc_num, ls_num, is_num, yc_num, m_num = 1, 2, 1, 2, 100
     elif inst_type == 'B':
-        qc_num, ls_num, is_num, yc_num, m_num = 3, 3, 3, 3, 100
+        qc_num, ls_num, is_num, yc_num, m_num = 2, 2, 2, 4, 50
     elif inst_type == 'C':
-        qc_num, ls_num, is_num, yc_num, m_num = 3, 3, 3, 3, 100
+        qc_num, ls_num, is_num, yc_num, m_num = 3, 2, 2, 3, 30
     elif inst_type == 'D':
-        qc_num, ls_num, is_num, yc_num, m_num = 3, 4, 3, 3, 5
+        qc_num, ls_num, is_num, yc_num, m_num = 3, 3, 1, 3, 30
+    elif inst_type == 'E':
+        qc_num, ls_num, is_num, yc_num, m_num = 3, 4, 2, 4, 30
+    elif inst_type == 'F':
+        qc_num, ls_num, is_num, yc_num, m_num = 3, 5, 2, 3, 30
     elif inst_type == 'G':
-        qc_num, ls_num, is_num, yc_num, m_num = 5, 4, 3, 8, 700
+        qc_num, ls_num, is_num, yc_num, m_num = 4, 4, 3, 6, 25
+    elif inst_type == 'H':
+        qc_num, ls_num, is_num, yc_num, m_num = 5, 5, 3, 7, 20
+    elif inst_type == 'Z':
+        qc_num, ls_num, is_num, yc_num, m_num = 6, 5, 3, 8, 16
     elif inst_type == 'CA':
-        qc_num, ls_num, is_num, yc_num, m_num = 6, 4, 3, 8, 382
+        qc_num, ls_num, is_num, yc_num, m_num = 6, 5, 3, 8, 382
     else:
         qc_num, ls_num, is_num, yc_num, m_num = 5, 4, 3, 8, 700
     return qc_num, ls_num, is_num, yc_num, m_num

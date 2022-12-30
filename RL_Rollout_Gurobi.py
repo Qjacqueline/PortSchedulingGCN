@@ -94,8 +94,8 @@ if __name__ == '__main__':
                             mission_num=train_solus[0].init_env.J_num * train_solus[0].init_env.qc_num, agent=agent,
                             rl_logger=rl_logger, save_path=args.save_path, max_num=args.max_num)
     # init eval
-    agent.qf = torch.load(args.save_path + '/eval_' + args.inst_type + '.pkl')
-    agent.qf_target = torch.load(args.save_path + '/target_' + args.inst_type + '.pkl')
+    # agent.qf = torch.load(args.save_path + '/eval_' + args.inst_type + '.pkl')
+    # agent.qf_target = torch.load(args.save_path + '/target_' + args.inst_type + '.pkl')
 
     # for makespan in makespan_forall:
     #     print("初始la分配makespan为" + str(makespan))
@@ -132,7 +132,7 @@ if __name__ == '__main__':
     # print("rollout算法时间" + str(e_t_r - s_t_r))
     # for makespan in makespan_forall_gurobi:
     #     print("gurobi后makespan为" + str(makespan))
-    # print("gurobi算法时间" + str(time_g))
+    print("gurobi算法时间" + str(time_g))
     # for makespan in makespan_forall_gurobi2:
     #     print("fix Xjm makespan为" + str(makespan))
     # print("fix Xjm 算法时间" + str(time_g2))
