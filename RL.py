@@ -30,7 +30,7 @@ logger = Logger().get_logger()
 def get_args(**kwargs):
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--inst_type', type=str, default='CA')
+    parser.add_argument('--inst_type', type=str, default=cf.inst_type)
     parser.add_argument('--max_num', type=int, default=5)
 
     parser.add_argument('--seed', type=int, default=0)

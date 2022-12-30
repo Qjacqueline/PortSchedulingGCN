@@ -61,14 +61,14 @@ class QNet(nn.Module):
         self.device = device
         self.ma_num = ma_num
         fea_dim = in_dim_max * attr_dim
-        self.conv1 = GCNConv(fea_dim, hidden)
-        self.conv2 = GCNConv(hidden, hidden)
-        self.linear = FlattenMlp(ma_num * (hidden + fea_dim), out_dim, (hidden, hidden, hidden))
+        self.conv1 = GCNConv(fea_dim, hidden).to(self.device)
+        self.conv2 = GCNConv(hidden, hidden).to(self.device)
+        self.linear = FlattenMlp(ma_num * (hidden + fea_dim), out_dim, (hidden, hidden, hidden)).to(self.device)
         # self.resnet = models.resnet50(pretrained=False, num_classes=4)
         # self.linear = nn.Linear(machine_num * (hidden + fea_dim), 4)
 
     def forward(self, state) -> torch.Tensor:
-        xx, edge_index, edge_weight = state.x, state.edge_index, state.edge_weight
+        xx, edge_index, edge_weight = state.x.to(self.device), state.edge_index.to(self.device), state.edge_weight.to(self.device)
         x = self.conv1(xx, edge_index, edge_weight)  # 传入卷积层
         x = F.leaky_relu_(x)  # 激活函数
         # x = F.dropout(x, p=0.5, training=self.training)  # dropout层,防止过拟合
