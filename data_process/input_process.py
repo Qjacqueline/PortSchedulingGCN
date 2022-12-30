@@ -600,7 +600,7 @@ if __name__ == '__main__':
     # env = generate_data_for_test(0, cf.inst_type)
     for i in range(0, 50):
         env = generate_data_for_test(i, cf.inst_type)
-        if len(env.yard_cranes_set) < 8:
+        if len(env.yard_cranes_set) < 7:
             print(i)  # 检查分配场桥数是否一致
             print(env.yard_cranes_set)
     # instance = read_input()
