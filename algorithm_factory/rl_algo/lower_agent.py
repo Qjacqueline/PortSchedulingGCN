@@ -25,7 +25,6 @@ from algorithm_factory.algo_utils.machine_cal_methods import get_state, get_stat
 from algorithm_factory.algo_utils.net_models import QNet
 from algorithm_factory.algo_utils.rl_methods import print_result
 from algorithm_factory.algo_utils.rl_methods import soft_update
-from branch_and_bound import BB_depth_binary, BB_priority_wide
 from common.iter_solution import IterSolution
 from data_process.input_process import read_json_from_file
 from gurobi_solver import solve_model, CongestionPortModel
@@ -176,7 +175,6 @@ class LACollector:
                     # reward = 0
                 pre_makespan = makespan
                 self.data_buffer.append(state, action, new_state, reward, done)
-
                 # train & eval
                 if self.train_time == 0:
                     self.dl_train = DataLoader(dataset=self.data_buffer, batch_size=self.batch_size, shuffle=True)
