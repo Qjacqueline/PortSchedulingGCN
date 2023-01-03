@@ -290,6 +290,7 @@ class LACollector:
     def exact(self, inst_type):
         with torch.no_grad():
             makespan_forall = []
+            time_forall = []
             for i in range(len(self.train_solus)):
                 solu = self.train_solus[i]
                 model = CongestionPortModel(solu)
@@ -299,7 +300,8 @@ class LACollector:
                             Y_flag=False)
                 e_t_g = time.time()
                 makespan_forall.append(model.MLP.ObjVal)
-            return makespan_forall, e_t_g - s_t_g
+                time_forall.append(e_t_g - s_t_g)
+            return makespan_forall, time_forall
 
     def exact_fix_x(self, inst_type=0):
         with torch.no_grad():

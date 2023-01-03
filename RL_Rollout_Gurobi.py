@@ -61,10 +61,15 @@ if __name__ == '__main__':
     # env
     train_solus = []
     test_solus = []
-    for i in range(0, 1):  # 40
+    ls = [10, 28, 37]
+    # for i in range(0, 50):
+    #     train_solus.append(read_input('train', str(i), args.inst_type))
+    # for i in range(0, 50):
+    #     test_solus.append(read_input('train', str(i), args.inst_type))
+    for i in ls:
         train_solus.append(read_input('train', str(i), args.inst_type))
-    for i in range(0, 1):  # 50
-        test_solus.append(read_input('train', str(i),  args.inst_type))
+    for i in ls:
+        test_solus.append(read_input('train', str(i), args.inst_type))
     for solu in train_solus:
         solu.l2a_init()
     for solu in test_solus:
@@ -91,7 +96,7 @@ if __name__ == '__main__':
     data_buffer = LABuffer(buffer_size=args.buffer_size)
     collector = LACollector(inst_type=args.inst_type, train_solus=train_solus, test_solus=test_solus,
                             data_buffer=data_buffer, batch_size=args.batch_size,
-                            mission_num=train_solus[0].init_env.J_num * train_solus[0].init_env.qc_num, agent=agent,
+                            mission_num=train_solus[0].init_env.J_num_all, agent=agent,
                             rl_logger=rl_logger, save_path=args.save_path, max_num=args.max_num)
     # init eval
     # agent.qf = torch.load(args.save_path + '/eval_' + args.inst_type + '.pkl')
@@ -112,7 +117,7 @@ if __name__ == '__main__':
 
     # ========================= Gurobi =========================
     # mode 1 直接精确算法求解
-    makespan_forall_gurobi, time_g = collector.exact(args.inst_type)
+    # makespan_forall_gurobi, time_g = collector.exact(args.inst_type)
 
     # mode 2 fix Xjm加solver
     # makespan_forall_gurobi2, time_g2 = collector.exact_fix_x(args.inst_type)
@@ -130,9 +135,10 @@ if __name__ == '__main__':
     # for makespan in makespan_forall_rollout:
     #     print("rollout后makespan为" + str(makespan))
     # print("rollout算法时间" + str(e_t_r - s_t_r))
-    # for makespan in makespan_forall_gurobi:
-    #     print("gurobi后makespan为" + str(makespan))
-    print("gurobi算法时间" + str(time_g))
+    # for i in range(len(makespan_forall_gurobi)):
+    #     print("算例为" + str(ls[i]))
+    #     print("gurobi后makespan为" + str(makespan_forall_gurobi[i]))
+    #     print("gurobi算法时间" + str(time_g[i]))
     # for makespan in makespan_forall_gurobi2:
     #     print("fix Xjm makespan为" + str(makespan))
     # print("fix Xjm 算法时间" + str(time_g2))

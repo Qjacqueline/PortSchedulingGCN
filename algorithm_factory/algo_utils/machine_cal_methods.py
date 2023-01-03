@@ -243,12 +243,29 @@ def get_cur_time_status_v2(port_env: PortEnv, cur_time: float):
     return qc_ls, qc_ls_ls, ls_ls, ls_co_ls, co_ls, co_yc_ls, yc_ls, f_ls
 
 
+def split_integer(m, n):
+    assert n > 0
+    quotient = int(m / n)
+    remainder = m % n
+    if remainder > 0:
+        return [quotient] * (n - remainder) + [quotient + 1] * remainder
+    if remainder < 0:
+        return [quotient - 1] * -remainder + [quotient] * (n + remainder)
+    return [quotient] * n
+
+
 # 匹配算例类型
 def generate_instance_type(inst_type):
-    if inst_type == 'A_10':
-        qc_num, ls_num, is_num, yc_num, m_num = 1, 2, 1, 2, 3
-    elif inst_type == 'A_30':
-        qc_num, ls_num, is_num, yc_num, m_num = 1, 2, 1, 2, 20
+    if inst_type == 'A_t':
+        qc_num, ls_num, is_num, yc_num, m_num = 1, 2, 1, 2, cf.MISSION_NUM
+    elif inst_type == 'B_t':
+        qc_num, ls_num, is_num, yc_num, m_num = 2, 2, 2, 4, cf.MISSION_NUM
+    elif inst_type == 'C_t':
+        qc_num, ls_num, is_num, yc_num, m_num = 3, 2, 2, 3, cf.MISSION_NUM
+    elif inst_type == 'D_t':
+        qc_num, ls_num, is_num, yc_num, m_num = 3, 3, 1, 3, cf.MISSION_NUM
+    elif inst_type == 'H_t':
+        qc_num, ls_num, is_num, yc_num, m_num = 5, 5, 3, 7, cf.MISSION_NUM
     elif inst_type == 'A':
         qc_num, ls_num, is_num, yc_num, m_num = 1, 2, 1, 2, 100
     elif inst_type == 'B':
@@ -429,7 +446,7 @@ def find_min_wait_station(port_env: PortEnv, mission: Mission):
     return min_station
 
 
-def station_process_by_least_mission_num(port_env:PortEnv, buffer_flag=False):
+def station_process_by_least_mission_num(port_env: PortEnv, buffer_flag=False):
     # 阶段四：锁站
     station_assign_dict = {}
     for i in range(port_env.ls_num):
