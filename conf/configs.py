@@ -14,8 +14,8 @@ import torch
 
 LOGGING_LEVEL = logging.INFO  # logging.WARNING/DEBUG
 
-inst_type = 'H'
-
+inst_type = 'A_t'
+MISSION_NUM = 13
 # 布局配置
 STAGE_NUM = 3  # lock_station+crossover+yard
 # QUAYCRANE_NUM = 5  # 场桥个数

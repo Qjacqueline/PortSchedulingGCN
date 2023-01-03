@@ -539,7 +539,8 @@ class CongestionPortModel:
         self.env = solu.init_env
         self.solu = solu
         self.S_num = 4  # 阶段数
-        self.J_num = -1  # 任务数
+        self.J_num = self.env.J_num  # 任务数
+        self.J_num_all = self.env.J_num_all
         self.K_num = -1  # 机器数
         self.big_M = 10000  # 无穷大数
         self.S = [0, 1, 2, 3]  # 阶段编号集合
@@ -548,10 +549,10 @@ class CongestionPortModel:
         self.J = []  # 任务编号集合
         self.J_k = []  # 机器可处理任务集合
         self.A = []  # 顺序工件对集合
-        self.st = [[self.big_M for _ in range(self.env.J_num_all + 2)] for _ in range(self.env.J_num_all + 2)]  # 两两之间距离
-        self.pt = [[0 for _ in range(self.env.J_num_all + 2)] for _ in self.S]  # 每阶段处理任务所需时间
+        self.st = [[self.big_M for _ in range(self.J_num_all + 2)] for _ in range(self.J_num_all + 2)]  # 两两之间距离
+        self.pt = [[0 for _ in range(self.J_num_all + 2)] for _ in self.S]  # 每阶段处理任务所需时间
         self.tt = [[[0 for _ in range(self.env.machine_num)] for _ in range(self.env.machine_num - self.env.qc_num)] for
-                   _ in range(self.env.J_num_all + 2)]
+                   _ in range(self.J_num_all + 2)]
         self.init_model()
 
         self.MLP = None
@@ -565,7 +566,6 @@ class CongestionPortModel:
         self.beta = None
 
     def init_model(self):
-        self.J_num = self.env.J_num
         self.K_num = self.env.machine_num
         self.big_M = 100000  # 无穷大数
         self.K_s = [[i for i in range(self.env.qc_num)],
@@ -574,7 +574,7 @@ class CongestionPortModel:
                     [i + self.env.qc_num + self.env.ls_num + self.env.is_num for i in
                      range(self.env.yc_num)]]  # 每个阶段包括的机器编号集合
         self.K = [i for i in range(self.env.machine_num)]  # 机器编号集合
-        self.J = [j for j in range(self.J_num * self.env.qc_num)]  # 任务编号集合
+        self.J = [j for j in range(self.J_num_all)]  # 任务编号集合
         self.J.append(self.J[-1] + 1)  # dummy job N+1
         self.J.append(self.J[-1] + 1)  # dummy job N+2
 
@@ -593,7 +593,7 @@ class CongestionPortModel:
                 self.J_k[is_idx].append(mission_idx)
                 self.J_k[yc_idx].append(mission_idx)
                 # A
-                if (mission_idx + 1) != (int(qc.idx[-1])) * self.J_num:
+                if (mission_idx + 1) != sum(self.J_num[0:qc_idx + 1]):
                     self.A.append([mission_idx, mission_idx + 1])
                 # pt[s][j]
                 self.pt[0][mission_idx] = mission.machine_process_time[0]
@@ -642,7 +642,8 @@ class CongestionPortModel:
                         self.env.machine_name_to_idx[mission.crossover_id]] = \
                         self.env.ls_to_co_matrix[ls][int(mission.crossover_id[-1]) - 1] / mission.vehicle_speed
                 self.tt[j][self.env.machine_name_to_idx[mission.crossover_id]][
-                    self.env.machine_name_to_idx['YC'+mission.yard_block_loc[0]]] = tmp_mission_ls[j].transfer_time_c2y
+                    self.env.machine_name_to_idx['YC' + mission.yard_block_loc[0]]] = tmp_mission_ls[
+                    j].transfer_time_c2y
             else:
                 for qc in range(self.env.qc_num):
                     for ls in range(self.env.ls_num):
@@ -754,10 +755,10 @@ class CongestionPortModel:
             self.MLP.addConstr(self.r[jj] - self.C[0][j] >= 0, "con10" + str(j) + str(jj))
             k = int(tmp_mission_ls[j].quay_crane_id[-1]) - 1
             self.MLP.addConstr(self.x[j][jj][k] == 1, "con11" + str(j) + str(jj))
-            self.MLP.addConstr(self.r[jj] - self.r[j] == 120, "con00" + str(j) + str(jj))  # FIXME: match RL
+            # self.MLP.addConstr(self.r[jj] - self.r[j] == 120, "con00" + str(j) + str(jj))  # FIXME: match RL
         self.MLP.addConstr(self.r[-2] == 0, "con00")
-        for i in range(self.env.qc_num):
-            self.MLP.addConstr(self.r[i * self.J_num] == 0, "con00")  # FIXME: match RL
+        # for i in range(self.env.qc_num):
+            # self.MLP.addConstr(self.r[sum(self.J_num[0:i])] == 0, "con00")  # FIXME: match RL
         self.MLP.addConstrs((self.o[s][j] == self.pt[s][j] for s in range(0, 3) for j in self.J[0:-2]), "con200")
         self.MLP.addConstrs((self.o[3][j] == self.pt[3][j] + sum(
             self.x[jj][j][k] * self.st[jj][j] for jj in self.J for k in self.K_s[3]) for j in self.J[0:-2]), "con201")
@@ -898,7 +899,7 @@ def solve_model(MLP, inst_idx, solved_solu: IterSolution = None, tag='', X_flag=
     # min_q_2 = 2401.81184668972
     # MLP.addConstr((vars[-1] <= epsilon * (max_q_2 - min_q_2) + min_q_2), "multi-objectives")
     MLP.update()
-    MLP.setParam('OutputFlag', 0)
+    # MLP.setParam('OutputFlag', 0)
     # ============== 求解模型 ================
     MLP.write("output_result/gurobi/mod_" + str(inst_idx) + "_" + tag + ".lp")
     MLP.Params.timelimit = 7200

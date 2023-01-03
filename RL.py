@@ -30,7 +30,7 @@ logger = Logger().get_logger()
 def get_args(**kwargs):
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--inst_type', type=str, default='CA')
+    parser.add_argument('--inst_type', type=str, default=cf.inst_type)
     parser.add_argument('--max_num', type=int, default=5)
 
     parser.add_argument('--seed', type=int, default=0)
@@ -62,9 +62,14 @@ if __name__ == '__main__':
     # env
     train_solus = []
     test_solus = []
-    for i in range(0, 40):
+    ls = [cf.MISSION_NUM]
+    # for i in range(0, 50):
+    #     train_solus.append(read_input('train', str(i), args.inst_type))
+    # for i in range(0, 50):
+    #     test_solus.append(read_input('train', str(i), args.inst_type))
+    for i in ls:
         train_solus.append(read_input('train', str(i), args.inst_type))
-    for i in range(0, 50):
+    for i in ls:
         test_solus.append(read_input('train', str(i), args.inst_type))
     for solu in train_solus:
         solu.l2a_init()
@@ -92,7 +97,7 @@ if __name__ == '__main__':
     data_buffer = LABuffer(buffer_size=args.buffer_size)
     collector = LACollector(inst_type=args.inst_type, train_solus=train_solus, test_solus=test_solus,
                             data_buffer=data_buffer, batch_size=args.batch_size,
-                            mission_num=train_solus[0].init_env.J_num * train_solus[0].init_env.qc_num, agent=agent,
+                            mission_num=train_solus[0].init_env.J_num_all, agent=agent,
                             rl_logger=rl_logger, save_path=args.save_path, max_num=args.max_num)
     # agent.qf = torch.load(args.save_path + '/eval_' + args.task + '.pkl')
     # agent.qf_target = torch.load(args.save_path + '/target_' + args.task + '.pkl')

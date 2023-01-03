@@ -6,6 +6,7 @@
 @Author  ：JacQ
 @Date    ：2022/1/4 16:17
 """
+
 from utils.log import Logger
 
 logger = Logger(name='root').get_logger()
@@ -25,8 +26,8 @@ class PortEnv:
         self.ls_to_co_matrix = [[0 for _ in range(len(self.crossovers))] for _ in range(len(self.lock_stations))]
         self.exit_to_ls_matrix = [0 for _ in range(len(self.lock_stations))]
         self.ls_to_co_min = [0 for _ in range(len(self.crossovers))]
-        self.qc_num, self.ls_num, self.is_num, self.yc_num, self.J_num = inst_type
-        self.J_num_all = self.qc_num * self.J_num
+        self.qc_num, self.ls_num, self.is_num, self.yc_num, self.J_num_all = inst_type
+        self.J_num = split_integer(self.J_num_all, self.qc_num)
         self.machine_num = self.qc_num + self.ls_num + self.is_num + self.yc_num
         self.machine_name_to_idx = self.match_machine_name_to_idx()
 
@@ -81,6 +82,17 @@ class PortEnv:
             machine_name_to_idx['YC' + yard_crane] = cnt
             cnt = cnt + 1
         return machine_name_to_idx
+
+
+def split_integer(m, n):
+    assert n > 0
+    quotient = int(m / n)
+    remainder = m % n
+    if remainder > 0:
+        return [quotient] * (n - remainder) + [quotient + 1] * remainder
+    if remainder < 0:
+        return [quotient - 1] * -remainder + [quotient] * (n + remainder)
+    return [quotient] * n
 
 
 if __name__ == "main":

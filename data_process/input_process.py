@@ -16,7 +16,7 @@ import numpy as np
 
 import conf.configs as cf
 from algorithm_factory.algo_utils.machine_cal_methods import match_mission_crossover, generate_instance_type, \
-    generate_yard_blocks_set
+    generate_yard_blocks_set, split_integer
 from common.buffer import Buffer
 from common.crossover import Crossover
 from common.iter_solution import IterSolution
@@ -173,13 +173,14 @@ def generate_quay_cranes_info(quay_crane_to_location, qc_num, is_num, yc_num, m_
     quay_cranes = {}
     cur_yar_blocks = generate_yard_blocks_set(is_num, yc_num)
     cnt = 0
+    m_num_ls = split_integer(m_num, qc_num)
     for idx, location in quay_crane_to_location.items():
         if cnt >= qc_num:
             break
-        cnt = cnt + 1
-        missions_info, missions = generate_missions_info(idx, cur_yar_blocks, m_num)
+        missions_info, missions = generate_missions_info(idx, cur_yar_blocks, m_num_ls[cnt])
         quay_cranes_info[idx] = create_quay_crane_dict(idx, missions_info, location.tolist())
         quay_cranes[idx] = QuayCrane(idx, missions, location.tolist())
+        cnt = cnt + 1
     return quay_cranes_info, quay_cranes
 
 
@@ -530,7 +531,7 @@ def cal_transfer_time(instance: PortEnv):
                 mission.yard_stop_loc[1] - crossover_loc[1])) / mission.vehicle_speed
 
 
-def read_input(pre, inst_idx, inst_type) -> IterSolution:
+def read_input(pre, inst_idx, inst_type, mission_num=None) -> IterSolution:
     filepath = os.path.join(cf.DATA_PATH, pre + '_' + inst_type + '_' + str(inst_idx) + '.json')
     input_data = read_json_from_file(filepath)
     quay_cranes = read_quay_cranes_info(input_data.get('quay_cranes'))
@@ -539,8 +540,10 @@ def read_input(pre, inst_idx, inst_type) -> IterSolution:
     crossovers = read_crossovers_info(input_data.get('crossovers'))
     yard_blocks = read_yard_blocks_info(input_data.get('yard_blocks'))
     yard_cranes = read_yard_cranes_info(input_data.get('yard_cranes'))
-    port_env = PortEnv(quay_cranes, buffers, lock_stations, crossovers, yard_blocks, yard_cranes,
-                       generate_instance_type(inst_type))
+    cell = generate_instance_type(inst_type)
+    if mission_num is not None:
+        cell = (cell[0], cell[1], cell[2], cell[3], mission_num)
+    port_env = PortEnv(quay_cranes, buffers, lock_stations, crossovers, yard_blocks, yard_cranes, cell)
     cal_transfer_time(port_env)
     # plot_layout(instance) # 绘制堆场布局
     iter_solution = IterSolution(port_env)
@@ -598,9 +601,9 @@ if __name__ == '__main__':
     np.random.seed(0)
     random.seed(0)
     # env = generate_data_for_test(0, cf.inst_type)
-    for i in range(0, 50):
+    for i in range(cf.MISSION_NUM, cf.MISSION_NUM + 1):
         env = generate_data_for_test(i, cf.inst_type)
-        if len(env.yard_cranes_set) < 7:
+        if len(env.yard_cranes_set) < env.yc_num:
             print(i)  # 检查分配场桥数是否一致
             print(env.yard_cranes_set)
     # instance = read_input()
