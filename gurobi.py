@@ -59,7 +59,7 @@ if __name__ == '__main__':
     # env
     train_solus = []
     test_solus = []
-    ls = [ 25, 37]
+    ls = [18]
 
     makespan_forall = []
     time_forall = []

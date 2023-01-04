@@ -830,7 +830,7 @@ def solve_model(MLP, inst_idx, solved_solu: IterSolution = None, tag='', X_flag=
                                   machine_num * l_mission_idx + ls_idx
                         # Y[p_mission_idx][l_mission_idx][3 + i]
                         MLP.addConstr(vars[var_idx] == 1, "fixed_ls_" + str(i))
-                    print(vars[var_idx])
+                    # print(vars[var_idx])
             for i in range(len(solved_solu.iter_env.crossovers)):
                 co_idx = solved_solu.init_env.machine_name_to_idx['CO' + str(i + 1)]
                 for j in range(len(solved_solu.iter_env.crossovers['CO' + str(i + 1)].mission_list)):
@@ -863,7 +863,7 @@ def solve_model(MLP, inst_idx, solved_solu: IterSolution = None, tag='', X_flag=
                                   machine_num * l_mission_idx + co_idx
                         # Y[p_mission_idx][l_mission_idx][7 + i]
                         MLP.addConstr(vars[var_idx] == 1, "fixed_co_" + str(i))
-                    print(vars[var_idx])
+                    # print(vars[var_idx])
             for yc in solved_solu.init_env.yard_cranes_set:
                 yc_idx = solved_solu.init_env.machine_name_to_idx['YC' + yc]
                 for j in range(len(solved_solu.iter_env.yard_cranes['YC' + yc].mission_list)):
@@ -894,7 +894,7 @@ def solve_model(MLP, inst_idx, solved_solu: IterSolution = None, tag='', X_flag=
                                   machine_num * l_mission_idx + yc_idx
                         # Y[p_mission_idx][l_mission_idx][7 + i]
                         MLP.addConstr(vars[var_idx] == 1, "fixed_qc_" + yc)
-                    print(vars[var_idx])
+                    # print(vars[var_idx])
     # max_q_2 = 53348.4599303192
     # min_q_2 = 2401.81184668972
     # MLP.addConstr((vars[-1] <= epsilon * (max_q_2 - min_q_2) + min_q_2), "multi-objectives")
