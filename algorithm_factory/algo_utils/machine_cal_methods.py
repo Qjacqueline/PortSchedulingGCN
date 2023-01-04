@@ -264,30 +264,38 @@ def generate_instance_type(inst_type):
         qc_num, ls_num, is_num, yc_num, m_num = 3, 2, 2, 3, cf.MISSION_NUM
     elif inst_type == 'D_t':
         qc_num, ls_num, is_num, yc_num, m_num = 3, 3, 1, 3, cf.MISSION_NUM
+    elif inst_type == 'E_t':
+        qc_num, ls_num, is_num, yc_num, m_num = 3, 4, 2, 4, cf.MISSION_NUM
+    elif inst_type == 'F_t':
+        qc_num, ls_num, is_num, yc_num, m_num = 3, 5, 2, 3, cf.MISSION_NUM
+    elif inst_type == 'G_t':
+        qc_num, ls_num, is_num, yc_num, m_num = 4, 4, 3, 6, cf.MISSION_NUM
     elif inst_type == 'H_t':
         qc_num, ls_num, is_num, yc_num, m_num = 5, 5, 3, 7, cf.MISSION_NUM
+    elif inst_type == 'Z_t':
+        qc_num, ls_num, is_num, yc_num, m_num = 6, 5, 3, 8, cf.MISSION_NUM
     elif inst_type == 'A':
         qc_num, ls_num, is_num, yc_num, m_num = 1, 2, 1, 2, 100
     elif inst_type == 'B':
-        qc_num, ls_num, is_num, yc_num, m_num = 2, 2, 2, 4, 50
+        qc_num, ls_num, is_num, yc_num, m_num = 2, 2, 2, 4, 100
     elif inst_type == 'C':
-        qc_num, ls_num, is_num, yc_num, m_num = 3, 2, 2, 3, 30
+        qc_num, ls_num, is_num, yc_num, m_num = 3, 2, 2, 3, 100
     elif inst_type == 'D':
-        qc_num, ls_num, is_num, yc_num, m_num = 3, 3, 1, 3, 30
+        qc_num, ls_num, is_num, yc_num, m_num = 3, 3, 1, 3, 100
     elif inst_type == 'E':
-        qc_num, ls_num, is_num, yc_num, m_num = 3, 4, 2, 4, 30
+        qc_num, ls_num, is_num, yc_num, m_num = 3, 4, 2, 4, 100
     elif inst_type == 'F':
-        qc_num, ls_num, is_num, yc_num, m_num = 3, 5, 2, 3, 30
+        qc_num, ls_num, is_num, yc_num, m_num = 3, 5, 2, 3, 100
     elif inst_type == 'G':
-        qc_num, ls_num, is_num, yc_num, m_num = 4, 4, 3, 6, 25
+        qc_num, ls_num, is_num, yc_num, m_num = 4, 4, 3, 6, 100
     elif inst_type == 'H':
-        qc_num, ls_num, is_num, yc_num, m_num = 5, 5, 3, 7, 20
+        qc_num, ls_num, is_num, yc_num, m_num = 5, 5, 3, 7, 100
     elif inst_type == 'Z':
-        qc_num, ls_num, is_num, yc_num, m_num = 6, 5, 3, 8, 16
+        qc_num, ls_num, is_num, yc_num, m_num = 6, 5, 3, 8, 100
     elif inst_type == 'CA':
         qc_num, ls_num, is_num, yc_num, m_num = 6, 5, 3, 8, 382
     else:
-        qc_num, ls_num, is_num, yc_num, m_num = 5, 4, 3, 8, 700
+        qc_num, ls_num, is_num, yc_num, m_num = 5, 4, 3, 8, -1
     return qc_num, ls_num, is_num, yc_num, m_num
 
 

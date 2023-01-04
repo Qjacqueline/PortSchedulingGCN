@@ -37,9 +37,9 @@ def get_args(**kwargs):
     parser.add_argument('--hidden', type=int, default=64)
     parser.add_argument('--device', type=str, default='cuda:0' if torch.cuda.is_available() else 'cpu')
     parser.add_argument('--gamma', type=float, default=0.99)  # 0.9
-    parser.add_argument('--epsilon', type=float, default=0.5)
+    parser.add_argument('--epsilon', type=float, default=0.8)
     parser.add_argument('--lr', type=float, default=1e-4)
-    parser.add_argument('--epoch_num', type=int, default=40)
+    parser.add_argument('--epoch_num', type=int, default=5)
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--buffer_size', type=int, default=128000)
     parser.add_argument('-save_path', type=str, default=cf.MODEL_PATH)
@@ -51,7 +51,7 @@ def get_args(**kwargs):
 
 
 if __name__ == '__main__':
-    # ==============  Create environment & buffer  =============
+    # ==============  Create environment  =============
     args = get_args()
     exp_dir = exp_dir(desc=f'{args.inst_type}')
     rl_logger = SummaryWriter(exp_dir)
@@ -59,27 +59,22 @@ if __name__ == '__main__':
     rl_logger.add_text(tag='characteristic', text_string='init')  # 'debug'
     s_t = time.time()
 
+    # seed
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    random.seed(args.seed)
+
     # env
     train_solus = []
     test_solus = []
-    ls = [cf.MISSION_NUM]
-    # for i in range(0, 50):
-    #     train_solus.append(read_input('train', str(i), args.inst_type))
-    # for i in range(0, 50):
-    #     test_solus.append(read_input('train', str(i), args.inst_type))
-    for i in ls:
+    for i in range(0, 40):
         train_solus.append(read_input('train', str(i), args.inst_type))
-    for i in ls:
+    for i in range(0, 50):
         test_solus.append(read_input('train', str(i), args.inst_type))
     for solu in train_solus:
         solu.l2a_init()
     for solu in test_solus:
         solu.l2a_init()
-
-    # seed
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
-    random.seed(args.seed)
 
     # ========================= Policy ======================
     agent = DDQN(
@@ -99,11 +94,7 @@ if __name__ == '__main__':
                             data_buffer=data_buffer, batch_size=args.batch_size,
                             mission_num=train_solus[0].init_env.J_num_all, agent=agent,
                             rl_logger=rl_logger, save_path=args.save_path, max_num=args.max_num)
-    # agent.qf = torch.load(args.save_path + '/eval_' + args.task + '.pkl')
-    # agent.qf_target = torch.load(args.save_path + '/target_' + args.task + '.pkl')
-    # makespan_forall, reward_forall = collector.eval()
-    # for makespan in makespan_forall:
-    #     print("初始la分配makespan为" + str(makespan))
+
     # =================== heuristic l_train ==================
     # collector.get_transition(
     #     read_json_from_file(cf.OUTPUT_SOLUTION_PATH + 'train_1_SA_10_1868.875721615327.json'), test_solus[0])
@@ -112,29 +103,10 @@ if __name__ == '__main__':
     # collector.collect_heuristics(data_name)
 
     # ======================= train =======================
-    # agent.qf = torch.load(args.save_path + '/eval_best_fixed.pkl')
-    # agent.qf_target = torch.load(args.save_path + '/target_best_fixed.pkl')
     for i in range(1, args.epoch_num):
         collector.collect_rl()
     e_t = time.time()
     print("training time" + str(e_t - s_t))
 
-    # ======================== eval =========================
-    agent.qf = torch.load(args.save_path + '/eval_' + args.inst_type + '.pkl')
-    agent.qf_target = torch.load(args.save_path + '/target_' + args.inst_type + '.pkl')
-    makespan_forall, reward_forall = collector.eval()
-    for makespan in makespan_forall:
-        print("初始la分配makespan为" + str(makespan))
-    print("*********************************************")
-
-    # ========================= Rollout =========================
-    s_t = time.time()
-    makespan_forall, _ = collector.rollout()
-    for makespan in makespan_forall:
-        print("rollout后makespan为" + str(makespan))
-    e_t = time.time()
-    print("算法时间" + str(e_t - s_t))
-
-    # ===================== heuristic l_train ====================
     os.rename(exp_dir, f'{exp_dir}_done')
     rl_logger.close()

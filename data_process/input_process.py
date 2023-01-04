@@ -600,15 +600,18 @@ def count_yard_block_assign(port_env):
 if __name__ == '__main__':
     np.random.seed(0)
     random.seed(0)
-    # env = generate_data_for_test(0, cf.inst_type)
+
+    # 生成单独测试算例
     for i in range(cf.MISSION_NUM, cf.MISSION_NUM + 1):
         env = generate_data_for_test(i, cf.inst_type)
         if len(env.yard_cranes_set) < env.yc_num:
             print(i)  # 检查分配场桥数是否一致
             print(env.yard_cranes_set)
-    # instance = read_input()
-    # a = 1
-    # count_yard_block_assign(instance)
-    # logger.info("读取数据.")
-    # input_data = read_json_from_file(cf.OUTPUT_PATH)
-    # buffers = read_buffers_info(input_data.get('buffers'))
+
+    # # 生成训练标准算例，任务数100
+    # for i in range(0, 50):
+    #     env = generate_data_for_test(i, cf.inst_type)
+    #     if len(env.yard_cranes_set) < env.yc_num:
+    #         print(i)  # 检查分配场桥数是否一致
+    #         print(env.yard_cranes_set)
+

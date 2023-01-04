@@ -53,23 +53,15 @@ def get_args(**kwargs):
 if __name__ == '__main__':
     # ==============  Create environment & buffer  =============
     args = get_args()
-    exp_dir = exp_dir(desc=f'{args.inst_type}')
-    rl_logger = SummaryWriter(exp_dir)
-    rl_logger.add_text(tag='parameters', text_string=str(args))
-    rl_logger.add_text(tag='characteristic', text_string='New State')  # 'debug'
 
     # env
     train_solus = []
     test_solus = []
-    ls = [10, 28, 37]
-    # for i in range(0, 50):
-    #     train_solus.append(read_input('train', str(i), args.inst_type))
-    # for i in range(0, 50):
-    #     test_solus.append(read_input('train', str(i), args.inst_type))
+    ls = [2295]
     for i in ls:
-        train_solus.append(read_input('train', str(i), args.inst_type))
+        train_solus.append(read_input('train', str(i), args.inst_type, i))
     for i in ls:
-        test_solus.append(read_input('train', str(i), args.inst_type))
+        test_solus.append(read_input('train', str(i), args.inst_type, i))
     for solu in train_solus:
         solu.l2a_init()
     for solu in test_solus:
@@ -97,56 +89,77 @@ if __name__ == '__main__':
     collector = LACollector(inst_type=args.inst_type, train_solus=train_solus, test_solus=test_solus,
                             data_buffer=data_buffer, batch_size=args.batch_size,
                             mission_num=train_solus[0].init_env.J_num_all, agent=agent,
-                            rl_logger=rl_logger, save_path=args.save_path, max_num=args.max_num)
+                            rl_logger=None, save_path=args.save_path, max_num=args.max_num)
+
     # init eval
-    # agent.qf = torch.load(args.save_path + '/eval_' + args.inst_type + '.pkl')
-    # agent.qf_target = torch.load(args.save_path + '/target_' + args.inst_type + '.pkl')
+    agent.qf = torch.load(args.save_path + '/eval_' + args.inst_type[0] + '.pkl')
+    agent.qf_target = torch.load(args.save_path + '/target_' + args.inst_type[0] + '.pkl')
 
-    # for makespan in makespan_forall:
-    #     print("初始la分配makespan为" + str(makespan))
-    # print("*********************************************")
+    # ========================= mode =========================
+    RL_flag, rollout_flag, exact_flag, fix_xjm, fix_all = True, False, False, False, False
 
-    # # ========================= RL =========================
-    # makespan_forall_RL, reward_forall = collector.eval()
-    #
-    # # ========================= Rollout =========================
-    # s_t_r = time.time()
-    # makespan_forall_rollout, solus = collector.rollout()
-    # e_t_r = time.time()
-    # # write_env_to_file(solu.iter_env, 0, cf.MISSION_NUM_ONE_QUAY_CRANE)
+    # ========================= RL =========================
+    if RL_flag:
+        makespan_forall_RL, reward_forall, time_forall_RL = collector.eval(False)
+
+    # ========================= Rollout =========================
+    if rollout_flag:
+        makespan_forall_rollout, solus, time_forall_rollout = collector.rollout()
+    # write_env_to_file(solu.iter_env, 0, cf.MISSION_NUM_ONE_QUAY_CRANE)
 
     # ========================= Gurobi =========================
     # mode 1 直接精确算法求解
-    # makespan_forall_gurobi, time_g = collector.exact(args.inst_type)
+    if exact_flag:
+        makespan_forall_gurobi, time_g = collector.exact(args.inst_type)
 
     # mode 2 fix Xjm加solver
-    # makespan_forall_gurobi2, time_g2 = collector.exact_fix_x(args.inst_type)
-    #
-    # # mode 3 fix all加solver
-    # makespan_forall_gurobi3, time_g3 = collector.exact_fix_all(args.inst_type)
-    #
-    # # branch_and_bound
-    # # makespan_forall_gurobi4, time_g4 = collector.bb_depth_wide(solu, global_UB=makespan_forall_gurobi3[0] + 1e-5)
-    #
-    # # ========================= Print Result =========================
-    # # print("算例为" + str(cf.MISSION_NUM_ONE_QUAY_CRANE))
-    # for makespan in makespan_forall_RL:
-    #     print("RL后makespan为" + str(makespan))
-    # for makespan in makespan_forall_rollout:
-    #     print("rollout后makespan为" + str(makespan))
-    # print("rollout算法时间" + str(e_t_r - s_t_r))
-    # for i in range(len(makespan_forall_gurobi)):
-    #     print("算例为" + str(ls[i]))
-    #     print("gurobi后makespan为" + str(makespan_forall_gurobi[i]))
-    #     print("gurobi算法时间" + str(time_g[i]))
-    # for makespan in makespan_forall_gurobi2:
-    #     print("fix Xjm makespan为" + str(makespan))
-    # print("fix Xjm 算法时间" + str(time_g2))
-    # for makespan in makespan_forall_gurobi3:
-    #     print("fix all makespan为" + str(makespan))
-    # print("fix all 算法时间" + str(time_g3))
-    # for makespan in makespan_forall_gurobi4:
-    #     print("branch_and_bound makespan为" + str(makespan))
-    # print("branch_and_bound 算法时间" + str(time_g4))
-    # os.rename(exp_dir, f'{exp_dir}_done')
-    rl_logger.close()
+    if fix_xjm:
+        makespan_forall_gurobi2, time_g2 = collector.exact_fix_x(args.inst_type)
+
+    # mode 3 fix all加solver
+    if fix_all:
+        makespan_forall_gurobi3, time_g3 = collector.exact_fix_all(args.inst_type)
+
+    # branch_and_bound
+    # makespan_forall_gurobi4, time_g4 = collector.bb_depth_wide(solu, global_UB=makespan_forall_gurobi3[0] + 1e-5)
+
+    # ========================= Print Result =========================
+    if exact_flag:
+        print("exact", end='\t')
+        for i in range(len(ls)):
+            print("算例为:" + str(ls[i]), end='\t')
+            print("makespan:" + str(makespan_forall_gurobi[i]), end='\t')
+            print("t:" + str(time_g[i]), end='\t')
+        print()
+
+    if RL_flag:
+        print("RL", end='\t')
+        for i in range(len(ls)):
+            print("算例为:" + str(ls[i]), end='\t')
+            print("makespan:" + str(makespan_forall_RL[i]), end='\t')
+            print("t:" + str(time_forall_RL[i]), end='\t')
+        print()
+
+    if rollout_flag:
+        print("rollout", end='\t')
+        for i in range(len(ls)):
+            print("算例为:" + str(ls[i]), end='\t')
+            print("makespan:" + str(makespan_forall_rollout[i]), end='\t')
+            print("t:" + str(time_forall_rollout[i]), end='\t')
+        print()
+
+    if fix_xjm:
+        print("fix Xjm", end='\t')
+        for i in range(len(ls)):
+            print("算例为:" + str(ls[i]), end='\t')
+            print("makespan:" + str(makespan_forall_gurobi2[i]), end='\t')
+            print("t:" + str(time_g2[i]), end='\t')
+        print()
+
+    if fix_all:
+        print("fix all", end='\t')
+        for i in range(len(ls)):
+            print("算例为:" + str(ls[i]), end='\t')
+            print("makespan:" + str(makespan_forall_gurobi3[i]), end='\t')
+            print("t:" + str(time_g3[i]), end='\t')
+        print()

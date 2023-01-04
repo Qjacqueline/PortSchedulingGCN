@@ -96,7 +96,7 @@ class SA(object):
         print("best_makespan为: " + str(best_makespan) + " time: " + str(time.time() - T1))
         return best_makespan, best_solution
 
-    # 产生一个新的解：随机交换两个元素的位置
+    # 产生一个新解：随机交换两个元素的位置
     @staticmethod
     def get_new_solution(solution: IterSolution):
         # operator 产生新解
@@ -105,7 +105,6 @@ class SA(object):
         return solution, flag
 
     # 退火策略，根据温度变化有一定概率接受差的解
-
     def plot_result(self):
         # 解决中文乱码
         plt.rcParams["font.sans-serif"] = ["SimHei"]

@@ -202,7 +202,7 @@ class LACollector:
         if self.train_time % 20 == 0:
             field_name = ['Epoch', 'loss', 'loss/q']
             value = [self.train_time, total_loss, torch.sqrt(total_loss) * train_num / total_q_eval]
-            makespan_forall, reward_forall = self.eval()
+            makespan_forall, reward_forall, _ = self.eval()
             for i in range(len(makespan_forall)):
                 self.rl_logger.add_scalar(tag=f'l_train/makespan' + str(i + 1),
                                           scalar_value=makespan_forall[i],
@@ -217,17 +217,19 @@ class LACollector:
                                           global_step=int(self.train_time / 20))
             print_result(field_name=field_name, value=value)
 
-    def eval(self):
+    def eval(self, update_flag=True):
         with torch.no_grad():
             makespan_forall = []
             reward_forall = []
+            time_forall = []
             for i in range(len(self.test_solus)):
                 torch.manual_seed(42)
                 solu = self.test_solus[i]
                 state = get_state_n(env=solu.iter_env, step_number=0, max_num=self.max_num)
                 pre_makespan = 0
                 total_reward = 0
-                for step in range(self.mission_num):
+                s_t_g = time.time()
+                for step in range(solu.init_env.J_num_all):
                     cur_mission = solu.iter_env.mission_list[step]
                     action = self.agent.forward(state, False)
                     makespan = solu.step_v2(action, cur_mission, step)
@@ -238,38 +240,43 @@ class LACollector:
                         new_state = get_state_n(env=solu.iter_env, step_number=step + 1, max_num=self.max_num)
                     pre_makespan = makespan
                     state = new_state
+                e_t_g = time.time()
                 makespan_forall.append(makespan)
                 reward_forall.append(total_reward)
+                time_forall.append(e_t_g - s_t_g)
                 if makespan < self.best_result[i]:
                     self.best_result[i] = makespan
                 solu.reset()
             makespan_forall.append(sum(makespan_forall[0:len(self.train_solus)]))
             makespan_forall.append(sum(makespan_forall[0:-1]) - sum(makespan_forall[0:len(self.train_solus)]))
             reward_forall.append(sum(reward_forall[0:len(self.train_solus)]))
-            if makespan_forall[-2] < self.best_result[-2]:
-                self.best_result[-2] = makespan_forall[-2]
-            if makespan_forall[-1] < self.best_result[-1]:
-                self.best_result[-1] = makespan_forall[-1]
-                torch.save(self.agent.qf, self.save_path + '/eval_' + self.task + '.pkl')
-                torch.save(self.agent.qf_target, self.save_path + '/target_' + self.task + '.pkl')
-                print("更新了")
-        return makespan_forall, reward_forall
+            if update_flag:
+                if makespan_forall[-2] < self.best_result[-2]:
+                    self.best_result[-2] = makespan_forall[-2]
+                if makespan_forall[-1] < self.best_result[-1]:
+                    self.best_result[-1] = makespan_forall[-1]
+                    torch.save(self.agent.qf, self.save_path + '/eval_' + self.task + '.pkl')
+                    torch.save(self.agent.qf_target, self.save_path + '/target_' + self.task + '.pkl')
+                    print("更新了")
+        return makespan_forall, reward_forall, time_forall
 
     def rollout(self):
         with torch.no_grad():
             makespan_forall = []
+            time_forall = []
             for i in range(len(self.test_solus)):
                 torch.manual_seed(42)
                 solu = self.test_solus[i]
                 min_makespan = float('Inf')
-                for step in range(self.mission_num):
+                s_t_g = time.time()
+                for step in range(solu.init_env.J_num_all):
                     cur_mission = solu.iter_env.mission_list[step]
                     min_pos = 5
                     for j in range(solu.init_env.ls_num):
                         temp_solu = deepcopy(solu)
                         temp_cur_mission = temp_solu.iter_env.mission_list[step]
                         temp_makespan = temp_solu.step_v2(j, temp_cur_mission, step)
-                        for v_step in range(step + 1, self.mission_num):
+                        for v_step in range(step + 1, solu.init_env.J_num_all):
                             temp_cur_mission = temp_solu.iter_env.mission_list[v_step]
                             state = get_state_n(env=temp_solu.iter_env, step_number=v_step, max_num=self.max_num)
                             action = self.agent.forward(state, False)
@@ -278,14 +285,13 @@ class LACollector:
                             min_makespan = temp_makespan
                             min_pos = j
                     makespan = solu.step_v2(min_pos, cur_mission, step)
-                    # self.sol_var[i][step] = min_pos
+                e_t_g = time.time()
                 makespan_forall.append(makespan)
-                # print("rollout后makespan为" + str(makespan))
-                # print(self.sol_var[i])
+                time_forall.append(e_t_g - s_t_g)
                 # solu.reset()
             makespan_forall.append(sum(makespan_forall[0:len(self.train_solus)]))
             makespan_forall.append(sum(makespan_forall[0:-1]) - sum(makespan_forall[0:len(self.train_solus)]))
-            return makespan_forall, self.test_solus
+            return makespan_forall, self.test_solus, time_forall
 
     def exact(self, inst_type):
         with torch.no_grad():
@@ -306,6 +312,7 @@ class LACollector:
     def exact_fix_x(self, inst_type=0):
         with torch.no_grad():
             makespan_forall = []
+            time_forall = []
             for i in range(len(self.test_solus)):
                 solu = self.test_solus[i]
                 model = CongestionPortModel(solu)
@@ -314,11 +321,13 @@ class LACollector:
                 solve_model(MLP=model.MLP, inst_idx=inst_type, solved_solu=solu, tag='_fix_x', Y_flag=False)
                 e_t_g = time.time()
                 makespan_forall.append(model.MLP.ObjVal)
-        return makespan_forall, e_t_g - s_t_g
+                time_forall.append(e_t_g - s_t_g)
+        return makespan_forall, time_forall
 
     def exact_fix_all(self, inst_type=0):
         with torch.no_grad():
             makespan_forall = []
+            time_forall = []
             for i in range(len(self.test_solus)):
                 solu = self.test_solus[i]
                 model = CongestionPortModel(solu)
@@ -327,7 +336,8 @@ class LACollector:
                 solve_model(MLP=model.MLP, inst_idx=inst_type, solved_solu=solu, tag='_fix_all')
                 e_t_g = time.time()
                 makespan_forall.append(model.MLP.ObjVal)
-            return makespan_forall, e_t_g - s_t_g
+                time_forall.append(e_t_g - s_t_g)
+            return makespan_forall, time_forall
 
     # def bb_depth_binary(self, solu, global_UB, inst_idx=0):
     #     with torch.no_grad():
