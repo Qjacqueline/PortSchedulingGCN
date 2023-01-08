@@ -59,7 +59,8 @@ if __name__ == '__main__':
     # env
     train_solus = []
     test_solus = []
-    ls = [18]
+    # ls = [cf.MISSION_NUM]
+    ls = [11, 12, 13, 14]
 
     makespan_forall = []
     time_forall = []

@@ -532,7 +532,8 @@ def cal_transfer_time(instance: PortEnv):
 
 
 def read_input(pre, inst_idx, inst_type, mission_num=None) -> IterSolution:
-    filepath = os.path.join(cf.DATA_PATH, pre + '_' + inst_type + '_' + str(inst_idx) + '.json')
+    filepath = os.path.join(cf.ROOT_FOLDER_PATH,
+                            'data/data_' + inst_type + '/' + pre + '_' + inst_type + '_' + str(inst_idx) + '.json')
     input_data = read_json_from_file(filepath)
     quay_cranes = read_quay_cranes_info(input_data.get('quay_cranes'))
     buffers = read_buffers_info(input_data.get('buffers'))
@@ -614,4 +615,3 @@ if __name__ == '__main__':
     #     if len(env.yard_cranes_set) < env.yc_num:
     #         print(i)  # 检查分配场桥数是否一致
     #         print(env.yard_cranes_set)
-

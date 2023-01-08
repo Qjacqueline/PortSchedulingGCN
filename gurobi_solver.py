@@ -777,7 +777,7 @@ class CongestionPortModel:
         self.MLP.addConstrs((q_1 >= self.C[3][j] for j in self.J), "obj1")
         self.MLP.addConstr((q_2 == sum(self.C[s + 1][j] - self.o[s + 1][j]
                                        - self.C[s][j] - self.u[s][j] for j in tmp_J for s in range(0, 3))), "obj2")
-        self.MLP.setObjective(q_1 + 0.000001 * sum(self.C[s][j] for j in tmp_J for s in self.S),
+        self.MLP.setObjective(q_1 + 0.01 * q_2,
                               GRB.MINIMIZE)  # fixme+ 0.000001 * sum(self.FT[s][j] for s in self.S for j in self.J)
         self.MLP.update()
 
@@ -895,13 +895,14 @@ def solve_model(MLP, inst_idx, solved_solu: IterSolution = None, tag='', X_flag=
                         # Y[p_mission_idx][l_mission_idx][7 + i]
                         MLP.addConstr(vars[var_idx] == 1, "fixed_qc_" + yc)
                     # print(vars[var_idx])
+
     # max_q_2 = 53348.4599303192
     # min_q_2 = 2401.81184668972
     # MLP.addConstr((vars[-1] <= epsilon * (max_q_2 - min_q_2) + min_q_2), "multi-objectives")
     MLP.update()
     # MLP.setParam('OutputFlag', 0)
     # ============== 求解模型 ================
-    MLP.write("output_result/gurobi/mod_" + str(inst_idx) + "_" + tag + ".lp")
+    # MLP.write("output_result/gurobi/mod_" + str(inst_idx) + "_" + tag + ".lp")
     MLP.Params.timelimit = 7200
     T1 = time.time()
     MLP.optimize()
@@ -914,46 +915,48 @@ def solve_model(MLP, inst_idx, solved_solu: IterSolution = None, tag='', X_flag=
             if c.IISConstr:
                 print('%s' % c.constrName)
         MLP.write("output_result/gurobi/sol_" + str(inst_idx) + "_" + tag + ".ilp")
-    MLP.write("output_result/gurobi/sol_" + str(inst_idx) + "_" + tag + ".sol")
-    # 非0变量及LS选择
-    ls_ls = []
-    m_ls = {}
-    f_2 = 0
-    for var in MLP.getVars():
-        if int(var.x) is not 0:
-            tmp_str = var.VarName.split('_')
-            # print(var.VarName + ": " + str(var.X))
-            if tmp_str[0] == 'v' and solved_solu.iter_env.ls_num + solved_solu.iter_env.qc_num - 1 >= int(
-                    tmp_str[2]) >= solved_solu.iter_env.qc_num and int(tmp_str[1]) < J_num_all:
-                ls_ls.append(int(tmp_str[2]) - solved_solu.iter_env.qc_num)
-            if tmp_str[0] == 'x':
-                if m_ls.get(int(tmp_str[-1])) is None:
-                    m_ls.setdefault(int(tmp_str[-1]), [int(tmp_str[1]), int(tmp_str[2]), -1])
-                else:
-                    tmp: list = m_ls.get(int(tmp_str[-1]))
-                    if tmp.count(int(tmp_str[1])) is not 0:
-                        tmp.insert(tmp.index(int(tmp_str[1])) + 1, int(tmp_str[2]))
-                    elif tmp.count(int(tmp_str[2])) is not 0:
-                        tmp.insert(tmp.index(int(tmp_str[2])), int(tmp_str[1]))
+    elif MLP.status == GRB.Status.OPTIMAL:
+        # 非0变量及LS选择
+        ls_ls = []
+        m_ls = {}
+        f_2 = 0
+        for var in MLP.getVars():
+            if int(var.x) is not 0:
+                tmp_str = var.VarName.split('_')
+                # print(var.VarName + ": " + str(var.X))
+                if tmp_str[0] == 'v' and solved_solu.iter_env.ls_num + solved_solu.iter_env.qc_num - 1 >= int(
+                        tmp_str[2]) >= solved_solu.iter_env.qc_num and int(tmp_str[1]) < J_num_all:
+                    ls_ls.append(int(tmp_str[2]) - solved_solu.iter_env.qc_num)
+                if tmp_str[0] == 'x':
+                    if m_ls.get(int(tmp_str[-1])) is None:
+                        m_ls.setdefault(int(tmp_str[-1]), [int(tmp_str[1]), int(tmp_str[2]), -1])
                     else:
-                        tmp.extend([int(tmp_str[1]), int(tmp_str[2])])
+                        tmp: list = m_ls.get(int(tmp_str[-1]))
+                        if tmp.count(int(tmp_str[1])) is not 0:
+                            tmp.insert(tmp.index(int(tmp_str[1])) + 1, int(tmp_str[2]))
+                        elif tmp.count(int(tmp_str[2])) is not 0:
+                            tmp.insert(tmp.index(int(tmp_str[2])), int(tmp_str[1]))
+                        else:
+                            tmp.extend([int(tmp_str[1]), int(tmp_str[2])])
 
-    print(ls_ls)
-    m_ls = sorted(m_ls.items(), key=lambda d: d[0], reverse=False)
-    for m in m_ls:
-        print(m)
-    var_ls = [solved_solu.iter_env.qc_num + i * machine_num + (J_num_all + 2) * machine_num
-              for i in range(0, (J_num_all + 2) * (J_num_all + 2))]
-    var_ls.extend([solved_solu.iter_env.qc_num + 1 + i * machine_num + (J_num_all + 2) * machine_num
-                   for i in range(0, (J_num_all + 2) * (J_num_all + 2))])
-    var_ls.extend([solved_solu.iter_env.qc_num + 2 + i * machine_num + (J_num_all + 2) * machine_num
-                   for i in range(0, (J_num_all + 2) * (J_num_all + 2))])
-    var_ls.extend([solved_solu.iter_env.qc_num + 3 + i * machine_num + (J_num_all + 2) * machine_num
-                   for i in range(0, (J_num_all + 2) * (J_num_all + 2))])
-    print('Solution:', [MLP.getVars()[i].VarName for i in var_ls if
-                        MLP.getVars()[i].x != 0])
-    print('Makespan: ', MLP.getVars()[-2].x)
-    print('Congestion time: ', MLP.getVars()[-1].x)
+        print(ls_ls)
+        m_ls = sorted(m_ls.items(), key=lambda d: d[0], reverse=False)
+        for m in m_ls:
+            print(m)
+        var_ls = [solved_solu.iter_env.qc_num + i * machine_num + (J_num_all + 2) * machine_num
+                  for i in range(0, (J_num_all + 2) * (J_num_all + 2))]
+        var_ls.extend([solved_solu.iter_env.qc_num + 1 + i * machine_num + (J_num_all + 2) * machine_num
+                       for i in range(0, (J_num_all + 2) * (J_num_all + 2))])
+        var_ls.extend([solved_solu.iter_env.qc_num + 2 + i * machine_num + (J_num_all + 2) * machine_num
+                       for i in range(0, (J_num_all + 2) * (J_num_all + 2))])
+        var_ls.extend([solved_solu.iter_env.qc_num + 3 + i * machine_num + (J_num_all + 2) * machine_num
+                       for i in range(0, (J_num_all + 2) * (J_num_all + 2))])
+        print('Solution:', [MLP.getVars()[i].VarName for i in var_ls if
+                            MLP.getVars()[i].x != 0])
+        print('Makespan: ', MLP.getVars()[-2].x)
+        print('Congestion time: ', MLP.getVars()[-1].x)
+    else:
+        print("NO optimal solution" + str(MLP.status))
     return MLP
 
 
