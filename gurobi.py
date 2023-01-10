@@ -60,7 +60,7 @@ if __name__ == '__main__':
     train_solus = []
     test_solus = []
     # ls = [cf.MISSION_NUM]
-    ls = [11, 12, 13, 14]
+    ls = [10, 12]  # 10, 11, 12, 13, 14, 15, 16
 
     makespan_forall = []
     time_forall = []
@@ -70,11 +70,13 @@ if __name__ == '__main__':
         model = CongestionPortModel(solu)
         model.construct()
         s_t_g = time.time()
-        solve_model(MLP=model.MLP, inst_idx=cf.inst_type + '_' + str(i), solved_solu=solu, tag='_exact',
+        solve_model(MLP=model.MLP, inst_idx=cf.inst_type + '_' + str(i), solved_env=solu, tag='_exact',
                     X_flag=False, Y_flag=False)
         e_t_g = time.time()
         makespan_forall.append(model.MLP.ObjVal)
         time_forall.append(e_t_g - s_t_g)
+        if model.MLP.ObjVal == float('Inf'):
+            break
 
     for i in range(len(makespan_forall)):
         print("算例为" + str(ls[i]))

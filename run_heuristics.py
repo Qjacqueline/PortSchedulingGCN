@@ -13,7 +13,7 @@ import numpy as np
 import conf.configs as cf
 from algorithm_factory.algorithm_SA import SA
 from algorithm_factory.algorithm_heuristic_rules import Random_Choice, Least_Wait_Time_Choice, Least_Mission_Num_Choice, \
-    Least_Distance_Choice, Fixed_order
+    Least_Distance_Choice
 from data_process.input_process import read_input
 
 if __name__ == '__main__':
@@ -22,8 +22,8 @@ if __name__ == '__main__':
 
     print(cf.inst_type)
 
-    ls = [cf.MISSION_NUM]
-    # ls = [i for i in range(50)]
+    # ls = [cf.MISSION_NUM]
+    ls = [i for i in range(50)]
 
     # print("Fixed order")
     # env = read_input('train', 0, cf.inst_type)

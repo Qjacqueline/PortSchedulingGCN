@@ -302,7 +302,7 @@ class LACollector:
                 model = CongestionPortModel(solu)
                 model.construct()
                 s_t_g = time.time()
-                solve_model(MLP=model.MLP, inst_idx=inst_type, solved_solu=solu, tag='_exact', X_flag=False,
+                solve_model(MLP=model.MLP, inst_idx=inst_type, solved_env=solu, tag='_exact', X_flag=False,
                             Y_flag=False)
                 e_t_g = time.time()
                 makespan_forall.append(model.MLP.ObjVal)
@@ -318,7 +318,7 @@ class LACollector:
                 model = CongestionPortModel(solu)
                 model.construct()
                 s_t_g = time.time()
-                solve_model(MLP=model.MLP, inst_idx=inst_type, solved_solu=solu, tag='_fix_x', Y_flag=False)
+                solve_model(MLP=model.MLP, inst_idx=inst_type, solved_env=solu, tag='_fix_x', Y_flag=False)
                 e_t_g = time.time()
                 makespan_forall.append(model.MLP.ObjVal)
                 time_forall.append(e_t_g - s_t_g)
@@ -333,7 +333,7 @@ class LACollector:
                 model = CongestionPortModel(solu)
                 model.construct()
                 s_t_g = time.time()
-                solve_model(MLP=model.MLP, inst_idx=inst_type, solved_solu=solu, tag='_fix_all')
+                solve_model(MLP=model.MLP, inst_idx=inst_type, solved_env=solu, tag='_fix_all')
                 e_t_g = time.time()
                 makespan_forall.append(model.MLP.ObjVal)
                 time_forall.append(e_t_g - s_t_g)

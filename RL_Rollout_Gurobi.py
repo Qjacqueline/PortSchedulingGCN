@@ -57,11 +57,12 @@ if __name__ == '__main__':
     # env
     train_solus = []
     test_solus = []
-    ls = [2295]
+    ls = [cf.MISSION_NUM]
+    # ls = [i for i in range(50)]
     for i in ls:
-        train_solus.append(read_input('train', str(i), args.inst_type, i))
+        train_solus.append(read_input('train', str(i), args.inst_type))
     for i in ls:
-        test_solus.append(read_input('train', str(i), args.inst_type, i))
+        test_solus.append(read_input('train', str(i), args.inst_type))
     for solu in train_solus:
         solu.l2a_init()
     for solu in test_solus:
@@ -92,8 +93,8 @@ if __name__ == '__main__':
                             rl_logger=None, save_path=args.save_path, max_num=args.max_num)
 
     # init eval
-    agent.qf = torch.load(args.save_path + '/eval_' + args.inst_type[0] + '.pkl')
-    agent.qf_target = torch.load(args.save_path + '/target_' + args.inst_type[0] + '.pkl')
+    # agent.qf = torch.load(args.save_path + '/eval_' + args.inst_type[0] + '.pkl')
+    # agent.qf_target = torch.load(args.save_path + '/target_' + args.inst_type[0] + '.pkl')
 
     # ========================= mode =========================
     RL_flag, rollout_flag, exact_flag, fix_xjm, fix_all = True, False, False, False, False
