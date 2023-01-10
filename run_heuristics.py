@@ -22,8 +22,8 @@ if __name__ == '__main__':
 
     print(cf.inst_type)
 
-    # ls = [cf.MISSION_NUM]
-    ls = [i for i in range(50)]
+    ls = [cf.MISSION_NUM]
+    # ls = [i for i in range(50)]
 
     # print("Fixed order")
     # env = read_input('train', 0, cf.inst_type)

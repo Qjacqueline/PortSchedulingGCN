@@ -242,7 +242,6 @@ def cal_block_to_location():
 
 # 通过配置数据计算场桥初始位置
 def cal_quay_crane_to_location(qc_num):
-    # 场桥所在位置
     first_quay_crane = cf.QUAY_EXIT + (cf.QUAYCRANE_EXIT_SPACE, 0)
     qc_dx = cf.QUAYCRANE_CRANE_SPACE
     quay_crane_to_location = {}
@@ -261,15 +260,15 @@ def cal_station_to_location(ls_num):
     return station_to_location
 
 
-def cal_yard_blocks_to_crossover(is_num):
+def cal_yard_blocks_to_crossover(is_num, block_to_location):
     first_block = cf.A1_LOCATION
     # 交叉口位置及对应箱区
     crossovers_to_location, yard_blocks_to_crossover = {}, {}
     yard_blocks_to_crossover_t = [['A1', 'A2', 'A3', 'A4'], ['B1', 'B2', 'B3', 'B4'], ['C1', 'C2', 'C3', 'C4']]
     for i in range(is_num):
-        crossovers_to_location['CO' + str(i + 1)] = first_block + \
-                                                    np.array(
-                                                        [(i + 1) * cf.BLOCK_SPACE_X - 3 * cf.LANE_X / 4, -cf.LANE_Y])
+        crossovers_to_location['CO' + str(i + 1)] = block_to_location[yard_blocks_to_crossover_t[i][0]] + \
+                                                    np.array([cf.BLOCK_IS_SPACE_X, -cf.BLOCK_IS_SPACE_Y]) + np.array(
+            [cf.SLOT_LENGTH * cf.SLOT_NUM_X, -cf.SLOT_WIDTH * cf.SLOT_NUM_Y])
         yard_blocks_to_crossover['CO' + str(i + 1)] = yard_blocks_to_crossover_t[i]
     return crossovers_to_location, yard_blocks_to_crossover
 
@@ -316,13 +315,13 @@ def generate_data_for_test(inst_idx, inst_type='A'):
     # 生成锁站信息
     station_to_location = cal_station_to_location(ls_num)
     lock_stations_info, lock_stations = generate_lock_stations_info(station_to_location)
-    # 生成交叉口信息
-    crossovers_to_location, yard_blocks_to_crossover = cal_yard_blocks_to_crossover(is_num)
-    crossovers_info, crossovers = generate_crossovers_info(crossovers_to_location, yard_blocks_to_crossover)
     # 生成堆场信息
     block_to_location = cal_block_to_location()
     yard_blocks_info, yard_blocks = generate_yard_blocks_info(block_to_location)
     yard_cranes_info, yard_cranes = generate_yard_cranes_info(block_to_location)
+    # 生成交叉口信息
+    crossovers_to_location, yard_blocks_to_crossover = cal_yard_blocks_to_crossover(is_num, block_to_location)
+    crossovers_info, crossovers = generate_crossovers_info(crossovers_to_location, yard_blocks_to_crossover)
     input_data = {'quay_cranes': list(quay_cranes_info.values()), 'buffers': list(buffers_info.values()),
                   'lock_stations': list(lock_stations_info.values()), 'crossovers': list(crossovers_info.values()),
                   'yard_blocks': list(yard_blocks_info.values()), 'yard_cranes': list(yard_cranes_info.values())}
@@ -374,9 +373,9 @@ def read_yard_blocks_info(yard_blocks_info):
         # 通过赋值新实例的dict属性以赋值参数。
         yard_block.__dict__ = yard_block_info
         if int(yard_block.idx[1:]) % 2 == 1:
-            lane_loc = yard_block.block_location + np.array([0, -cf.LANE_Y / 4])
+            lane_loc = yard_block.block_location + np.array([0, cf.LANE_WIDTH])
         else:
-            lane_loc = yard_block.block_location + np.array([0, +cf.BLOCK_SPACE_Y - 3 * cf.LANE_Y / 4])
+            lane_loc = yard_block.block_location + np.array([0, -cf.LANE_WIDTH])
         lane_loc = lane_loc.tolist()
         yard_block.slot_width = cf.SLOT_WIDTH
         yard_block.slot_length = cf.SLOT_LENGTH
@@ -512,14 +511,15 @@ def cal_transfer_time(instance: PortEnv):
     instance.ls_to_co_min = [min(row) for row in
                              list(map(list, zip(*instance.ls_to_co_matrix)))]
     for quay_crane in instance.quay_cranes.values():
-        quay_crane.time_to_exit = (cf.QUAYCRANE_EXIT_SPACE + (
-                int(quay_crane.idx[-1]) - 1) * cf.QUAYCRANE_CRANE_SPACE) / (sum(cf.VEHICLE_SPEED) / 2.0)
+        quay_crane.time_to_exit = (abs(quay_crane.location[0] - cf.QUAY_EXIT[0]) + abs(
+            quay_crane.location[1] - cf.QUAY_EXIT[1])) / (sum(cf.VEHICLE_SPEED) / 2.0)
         for mission in quay_crane.missions.values():
             # 提前计算停车位置
             curr_yard_loc = mission.yard_block_loc  # 任务堆存堆场的位置 ('A1',5,6)
             curr_yard_block = instance.yard_blocks[curr_yard_loc[0]]  # 对应箱区定位点所在位置
             mission.yard_stop_loc = [curr_yard_loc[1] * cf.SLOT_LENGTH + curr_yard_block.block_location[0],
                                      curr_yard_block.lane_loc[1]]  # 任务停车点位置
+
             # 计算运输时间
             crossover = match_mission_crossover(instance.crossovers, mission)
             mission.crossover_id = crossover.idx
@@ -602,16 +602,16 @@ if __name__ == '__main__':
     np.random.seed(0)
     random.seed(0)
 
-    # 生成单独测试算例
-    for i in range(cf.MISSION_NUM, cf.MISSION_NUM + 1):
-        env = generate_data_for_test(i, cf.inst_type)
-        if len(env.yard_cranes_set) < env.yc_num:
-            print(i)  # 检查分配场桥数是否一致
-            print(env.yard_cranes_set)
-
-    # # 生成训练标准算例，任务数100
-    # for i in range(0, 50):
+    # # 生成单独测试算例
+    # for i in range(cf.MISSION_NUM, cf.MISSION_NUM + 1):
     #     env = generate_data_for_test(i, cf.inst_type)
     #     if len(env.yard_cranes_set) < env.yc_num:
     #         print(i)  # 检查分配场桥数是否一致
     #         print(env.yard_cranes_set)
+
+    # # 生成训练标准算例，任务数100
+    for i in range(0, 50):
+        env = generate_data_for_test(i, cf.inst_type)
+        if len(env.yard_cranes_set) < env.yc_num:
+            print(i)  # 检查分配场桥数是否一致
+            print(env.yard_cranes_set)

@@ -47,8 +47,7 @@ def plot_layout(port_env):
         plt.text(block.block_location[0] + 5, block.block_location[1] + 5, block_id, fontsize=7, color='w')
         plt.text(block.block_location[0] + 25, block.block_location[1] + 5, str(block.block_location),
                  fontsize=5, color='r')
-    exit_loc = [list(port_env.quay_cranes.values())[0].location[0] - Cf.QUAYCRANE_EXIT_SPACE,
-                list(port_env.quay_cranes.values())[0].location[1]]
+    exit_loc = Cf.QUAY_EXIT
     plt.plot(exit_loc[0], exit_loc[1], 'o', color='darkgrey', markersize=5)
     plt.text(exit_loc[0], exit_loc[1], 'exit', fontsize=6)
     # plt.savefig(Cf.LAYOUT_PATH)
@@ -56,7 +55,7 @@ def plot_layout(port_env):
 
 
 if __name__ == '__main__':
-    instance = read_input('train', 0, 'A')
+    instance = read_input('train', 0, 'Z2')
     plot_layout(instance.init_env)
     #     input_data = input_process.read_json_from_file(Cf.OUTPUT_PATH)
     #     stations = input_process.read_lock_stations_info(input_data.get('lock_stations'))

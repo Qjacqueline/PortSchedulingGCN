@@ -14,8 +14,8 @@ import torch
 
 LOGGING_LEVEL = logging.INFO  # logging.WARNING/DEBUG
 
-inst_type = 'C_t'
-MISSION_NUM = 14
+inst_type = 'Z2'
+MISSION_NUM = 18
 # 布局配置
 STAGE_NUM = 3  # lock_station+crossover+yard
 # QUAYCRANE_NUM = 5  # 场桥个数
@@ -23,22 +23,23 @@ STAGE_NUM = 3  # lock_station+crossover+yard
 # LOCK_STATION_NUM = 5  # 锁站个数
 
 QUAY_EXIT = np.array([280, 0])  # 岸桥操作后小车出口坐标（单位：m）
-QUAYCRANE_EXIT_SPACE = 40  # 出口距离最重起重机间距（单位：m）
-QUAYCRANE_CRANE_SPACE = 45  # 起重机与起重机间间距（单位：m）
-S1_STATION_LOCATION = np.array([180, 64])  # 第一个锁站所在位置
-LOCK_STATION_SPACE = 150  # 锁站间距 150
+QUAYCRANE_EXIT_SPACE = -60  # 出口距离最重起重机间距（单位：m）
+QUAYCRANE_CRANE_SPACE = -45  # 起重机与起重机间间距（单位：m）
+S1_STATION_LOCATION = np.array([280 + 2.6 * 25, 1.5 * 25])  # 第一个锁站所在位置
+LOCK_STATION_SPACE = -4.3 * 25  # 锁站间距 150
 LOCK_STATION_BUFFER_SPACE = 5  # 等待区距离锁站的垂直间距
-FIRST_BUFFER_TO_FIRST_LOCK_STATION = 96  # 第一个锁站到第一个缓冲区的距离
-
-A1_LOCATION = np.array([20, 128])  # A1箱区位置
-SLOT_LENGTH = 6.5  # 槽位长度（单位：m）
+SLOT_LENGTH = 5.89  # 槽位长度（单位：m）
 SLOT_WIDTH = 2.44  # 槽位宽度（单位：m）
 SLOT_NUM_X = 30  # x方向槽位数
-SLOT_NUM_Y = 8  # y方向槽位数
-LANE_X = 40  # x方向车道宽度
-LANE_Y = 12  # y方向车道宽度
+SLOT_NUM_Y = 12  # y方向槽位数
+LANE_X = 5.5 * 25  # x方向车道宽度
+LANE_Y = 1.2 * 25  # y方向车道宽度
+LANE_WIDTH = 2 * SLOT_WIDTH
 BLOCK_SPACE_X = SLOT_LENGTH * SLOT_NUM_X + LANE_X  # x方向堆场间距（单位：m）
 BLOCK_SPACE_Y = SLOT_WIDTH * SLOT_NUM_Y + LANE_Y  # y方向堆场间距（单位：m）
+A1_LOCATION = np.array([280 - 13 * 25, 4 * 25]) + np.array([-SLOT_LENGTH * SLOT_NUM_X, SLOT_WIDTH * SLOT_NUM_Y])
+BLOCK_IS_SPACE_X = 2 * 25
+BLOCK_IS_SPACE_Y = 0.4 * 25
 
 # 机器运行参数
 QUAY_CRANE_RELEASE_TIME = 120  # 岸桥释放集装箱任务时间间隔
@@ -52,7 +53,7 @@ YARDCRANE_SPEED_X = 2.17  # 场桥x方向移动速度（单位：m/s）2.17
 YARDCRANE_SPEED_Y = 1.8  # 场桥y方向移动速度（单位：m/s）1.80
 MAX_MOVE_TIME = BLOCK_SPACE_X / YARDCRANE_SPEED_X + BLOCK_SPACE_Y / YARDCRANE_SPEED_Y
 YARDCRANE_HANDLING_TIME = [25, 35]  # 场桥放下并装载集装箱时间服从U(25, 35)分布（单位：秒）
-VEHICLE_SPEED = [0.24, 2.63]  # AGV运行速度服从U(6,9)分布（单位m/s）
+VEHICLE_SPEED = [2.63, 2.63]  # AGV运行速度服从U(6,9)分布（单位m/s）
 
 # 算法参数
 RANDOM_SEED = 10

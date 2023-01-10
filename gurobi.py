@@ -60,11 +60,12 @@ if __name__ == '__main__':
     train_solus = []
     test_solus = []
     # ls = [cf.MISSION_NUM]
-    ls = [10, 12]  # 10, 11, 12, 13, 14, 15, 16
+    m_num_ls = [17]  # 10,16,17,18,19
+    inst_type_ls = ['Z', 'Z'] #'Z', 'Z','Z', 'Z','Z'
 
     makespan_forall = []
     time_forall = []
-    for i in ls:
+    for i in m_num_ls:
         solu = read_input('train', str(i), args.inst_type, i)
         solu.l2a_init()
         model = CongestionPortModel(solu)
@@ -75,10 +76,10 @@ if __name__ == '__main__':
         e_t_g = time.time()
         makespan_forall.append(model.MLP.ObjVal)
         time_forall.append(e_t_g - s_t_g)
-        if model.MLP.ObjVal == float('Inf'):
-            break
+        # if model.MLP.ObjVal == float('Inf'):
+        #     break
 
     for i in range(len(makespan_forall)):
-        print("算例为" + str(ls[i]))
+        print("算例为" + str(m_num_ls[i]))
         print("gurobi后makespan为" + str(makespan_forall[i]))
         print("gurobi算法时间" + str(time_forall[i]))

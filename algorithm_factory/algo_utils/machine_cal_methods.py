@@ -256,46 +256,46 @@ def split_integer(m, n):
 
 # 匹配算例类型
 def generate_instance_type(inst_type):
-    if inst_type == 'A_t':
+    if inst_type == 'A_t' or inst_type == 'A2_t':
         qc_num, ls_num, is_num, yc_num, m_num = 1, 2, 1, 2, cf.MISSION_NUM
-    elif inst_type == 'B_t':
+    elif inst_type == 'B_t' or inst_type == 'B2_t':
         qc_num, ls_num, is_num, yc_num, m_num = 2, 2, 2, 4, cf.MISSION_NUM
-    elif inst_type == 'C_t':
+    elif inst_type == 'C_t' or inst_type == 'C2_t':
         qc_num, ls_num, is_num, yc_num, m_num = 3, 2, 2, 3, cf.MISSION_NUM
-    elif inst_type == 'D_t':
+    elif inst_type == 'D_t' or inst_type == 'D2_t':
         qc_num, ls_num, is_num, yc_num, m_num = 3, 3, 1, 3, cf.MISSION_NUM
-    elif inst_type == 'E_t':
+    elif inst_type == 'E_t' or inst_type == 'E2_t':
         qc_num, ls_num, is_num, yc_num, m_num = 3, 4, 2, 4, cf.MISSION_NUM
-    elif inst_type == 'F_t':
+    elif inst_type == 'F_t' or inst_type == 'F2_t':
         qc_num, ls_num, is_num, yc_num, m_num = 3, 5, 2, 3, cf.MISSION_NUM
-    elif inst_type == 'G_t':
+    elif inst_type == 'G_t' or inst_type == 'G2_t':
         qc_num, ls_num, is_num, yc_num, m_num = 4, 4, 3, 6, cf.MISSION_NUM
-    elif inst_type == 'H_t':
+    elif inst_type == 'H_t' or inst_type == 'H2_t':
         qc_num, ls_num, is_num, yc_num, m_num = 5, 5, 3, 7, cf.MISSION_NUM
-    elif inst_type == 'Z_t':
+    elif inst_type == 'Z_t' or inst_type == 'Z2_t':
         qc_num, ls_num, is_num, yc_num, m_num = 6, 5, 3, 8, cf.MISSION_NUM
-    elif inst_type == 'A':
+    elif inst_type == 'A' or inst_type == 'A2':
         qc_num, ls_num, is_num, yc_num, m_num = 1, 2, 1, 2, 100
-    elif inst_type == 'B':
+    elif inst_type == 'B' or inst_type == 'B2':
         qc_num, ls_num, is_num, yc_num, m_num = 2, 2, 2, 4, 100
-    elif inst_type == 'C':
+    elif inst_type == 'C' or inst_type == 'C2':
         qc_num, ls_num, is_num, yc_num, m_num = 3, 2, 2, 3, 100
-    elif inst_type == 'D':
+    elif inst_type == 'D' or inst_type == 'D2':
         qc_num, ls_num, is_num, yc_num, m_num = 3, 3, 1, 3, 100
-    elif inst_type == 'E':
+    elif inst_type == 'E' or inst_type == 'E2':
         qc_num, ls_num, is_num, yc_num, m_num = 3, 4, 2, 4, 100
-    elif inst_type == 'F':
+    elif inst_type == 'F' or inst_type == 'F2':
         qc_num, ls_num, is_num, yc_num, m_num = 3, 5, 2, 3, 100
-    elif inst_type == 'G':
+    elif inst_type == 'G' or inst_type == 'G2':
         qc_num, ls_num, is_num, yc_num, m_num = 4, 4, 3, 6, 100
-    elif inst_type == 'H':
+    elif inst_type == 'H' or inst_type == 'H2':
         qc_num, ls_num, is_num, yc_num, m_num = 5, 5, 3, 7, 100
-    elif inst_type == 'Z':
+    elif inst_type == 'Z' or inst_type == 'Z2':
         qc_num, ls_num, is_num, yc_num, m_num = 6, 5, 3, 8, 100
     elif inst_type == 'CA':
         qc_num, ls_num, is_num, yc_num, m_num = 6, 5, 3, 8, 382
     else:
-        qc_num, ls_num, is_num, yc_num, m_num = 5, 4, 3, 8, -1
+        qc_num, ls_num, is_num, yc_num, m_num = -1, -1, -1, -1, -1
     return qc_num, ls_num, is_num, yc_num, m_num
 
 
@@ -357,26 +357,16 @@ def buffer_process_one_order(mission: Mission, buffer: Buffer):
 def exit_process_by_order(port_env):
     # 阶段三：抵达岸桥exit
     for mission in port_env.mission_list:
+        qc_loc = port_env.quay_cranes[mission.quay_crane_id].location
+        exit_loc = cf.QUAY_EXIT
         # 从当前buffer行驶到exit所需时间
-        transfer_time_station = (cf.QUAYCRANE_EXIT_SPACE + (
-                int(mission.quay_crane_id[-1]) - 1) * cf.QUAYCRANE_CRANE_SPACE) / mission.vehicle_speed
+        transfer_time_station = (abs(qc_loc[0] - exit_loc[0]) + abs(qc_loc[1] - exit_loc[1])) / mission.vehicle_speed
         # 更新mission信息
         mission.total_process_time += transfer_time_station
         mission.machine_list.append('a_exit')
         mission.machine_process_time.append(0)
         mission.machine_start_time.append(mission.total_process_time + mission.release_time)
         mission.stage = 3
-
-
-def exit_process_one_order(mission: Mission):
-    transfer_time_station = (cf.QUAYCRANE_EXIT_SPACE + (
-            int(mission.quay_crane_id[-1]) - 1) * cf.QUAYCRANE_CRANE_SPACE) / mission.vehicle_speed
-    # 更新mission信息
-    mission.total_process_time += transfer_time_station
-    mission.machine_list.append('a_exit')
-    mission.machine_process_time.append(0)
-    mission.machine_start_time.append(mission.total_process_time + mission.release_time)
-    mission.stage = 3
 
 
 def station_process_by_random_no_sort(port_env, buffer_flag=False):
@@ -615,8 +605,10 @@ def station_process_by_least_distance(port_env, buffer_flag=False):
         for i in range(port_env.ls_num):
             curr_station = list(port_env.lock_stations.values())[i]
             curr_station_loc = curr_station.location
-            distance = (abs(curr_crossover.location[0] - curr_station_loc[0]) +
-                        abs(curr_crossover.location[1] - curr_station_loc[1]))
+            distance = abs(port_env.quay_cranes[mission.quay_crane_id].location[0] - curr_station_loc[0]) + \
+                       abs(port_env.quay_cranes[mission.quay_crane_id].location[1] - curr_station_loc[1]) + \
+                       abs(curr_crossover.location[0] - curr_station_loc[0]) + \
+                       abs(curr_crossover.location[1] - curr_station_loc[1])
             if distance < min_distance:
                 min_distance = distance
                 min_station = curr_station
