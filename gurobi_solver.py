@@ -777,32 +777,31 @@ class CongestionPortModel:
         self.MLP.addConstrs((q_1 >= self.C[3][j] for j in self.J), "obj1")
         self.MLP.addConstr((q_2 == sum(self.C[s + 1][j] - self.o[s + 1][j]
                                        - self.C[s][j] - self.u[s][j] for j in tmp_J for s in range(0, 3))), "obj2")
-        self.MLP.setObjective(q_1 + 0.01 * q_2,
-                              GRB.MINIMIZE)  # fixme+ 0.000001 * sum(self.FT[s][j] for s in self.S for j in self.J)
+        self.MLP.setObjective(q_1 + 0.01 * q_2, GRB.MINIMIZE)  # fixme+ 0.000001 * sum(self.FT[s][j] for s in self.S for j in self.J)
         self.MLP.update()
 
 
-def solve_model(MLP, inst_idx, solved_solu: IterSolution = None, tag='', X_flag=True, Y_flag=True, epsilon=0.9):
+def solve_model(MLP, inst_idx, solved_env: IterSolution = None, tag='', X_flag=True, Y_flag=True, epsilon=0.9):
     vars = MLP.getVars()
-    machine_num = solved_solu.iter_env.machine_num
-    J_num_all = solved_solu.iter_env.J_num_all
+    machine_num = solved_env.iter_env.machine_num
+    J_num_all = solved_env.iter_env.J_num_all
     # ============== 输入解 ================
-    if solved_solu is not None:
-        ls = solved_solu.iter_env.mission_list
+    if solved_env is not None:
+        ls = solved_env.iter_env.mission_list
         # fix v_jk
         if X_flag:
-            for j in range(len(solved_solu.iter_env.mission_list)):
+            for j in range(len(solved_env.iter_env.mission_list)):
                 var_idx = (int(ls[j].idx[1:]) - 1) * machine_num + int(
-                    ls[j].machine_list[4][-1]) + solved_solu.iter_env.qc_num - 1
+                    ls[j].machine_list[4][-1]) + solved_env.iter_env.qc_num - 1
                 MLP.addConstr((vars[var_idx] == 1), "fixed_x" + str(j))
         # fix Y_ijk s=2
         if Y_flag:
-            for i in range(solved_solu.iter_env.ls_num):
-                ls_idx = solved_solu.init_env.machine_name_to_idx['S' + str(i + 1)]
-                for j in range(len(solved_solu.iter_env.lock_stations['S' + str(i + 1)].mission_list)):
+            for i in range(solved_env.iter_env.ls_num):
+                ls_idx = solved_env.init_env.machine_name_to_idx['S' + str(i + 1)]
+                for j in range(len(solved_env.iter_env.lock_stations['S' + str(i + 1)].mission_list)):
                     p_mission_idx = int(
-                        solved_solu.iter_env.lock_stations['S' + str(i + 1)].mission_list[j].idx[1:]) - 1
-                    if j == 0 and j == len(solved_solu.iter_env.lock_stations['S' + str(i + 1)].mission_list) - 1:
+                        solved_env.iter_env.lock_stations['S' + str(i + 1)].mission_list[j].idx[1:]) - 1
+                    if j == 0 and j == len(solved_env.iter_env.lock_stations['S' + str(i + 1)].mission_list) - 1:
                         var_idx = (J_num_all + 2) * machine_num + (J_num_all + 2) * machine_num * J_num_all + \
                                   machine_num * p_mission_idx + ls_idx
                         MLP.addConstr(vars[var_idx] == 1, "fixed_ls_" + str(i))
@@ -814,28 +813,28 @@ def solve_model(MLP, inst_idx, solved_solu: IterSolution = None, tag='', X_flag=
                                   machine_num * p_mission_idx + ls_idx
                         MLP.addConstr(vars[var_idx] == 1, "fixed_ls_" + str(i))
                         l_mission_idx = \
-                            int(solved_solu.iter_env.lock_stations['S' + str(i + 1)].mission_list[j + 1].idx[1:]) - 1
+                            int(solved_env.iter_env.lock_stations['S' + str(i + 1)].mission_list[j + 1].idx[1:]) - 1
                         var_idx = (J_num_all + 2) * machine_num + (J_num_all + 2) * machine_num * p_mission_idx + \
                                   machine_num * l_mission_idx + ls_idx
                         # Y[p_mission_idx][l_mission_idx][3 + i]
                         MLP.addConstr(vars[var_idx] == 1, "fixed_ls_" + str(i))
-                    elif j == len(solved_solu.iter_env.lock_stations['S' + str(i + 1)].mission_list) - 1:
+                    elif j == len(solved_env.iter_env.lock_stations['S' + str(i + 1)].mission_list) - 1:
                         var_idx = (J_num_all + 2) * machine_num + (J_num_all + 2) * machine_num * p_mission_idx + \
                                   machine_num * (J_num_all + 1) + ls_idx
                         MLP.addConstr(vars[var_idx] == 1, "fixed_ls_" + str(i))
                     else:
                         l_mission_idx = int(
-                            solved_solu.iter_env.lock_stations['S' + str(i + 1)].mission_list[j + 1].idx[1:]) - 1
+                            solved_env.iter_env.lock_stations['S' + str(i + 1)].mission_list[j + 1].idx[1:]) - 1
                         var_idx = (J_num_all + 2) * machine_num + (J_num_all + 2) * machine_num * p_mission_idx + \
                                   machine_num * l_mission_idx + ls_idx
                         # Y[p_mission_idx][l_mission_idx][3 + i]
                         MLP.addConstr(vars[var_idx] == 1, "fixed_ls_" + str(i))
                     # print(vars[var_idx])
-            for i in range(len(solved_solu.iter_env.crossovers)):
-                co_idx = solved_solu.init_env.machine_name_to_idx['CO' + str(i + 1)]
-                for j in range(len(solved_solu.iter_env.crossovers['CO' + str(i + 1)].mission_list)):
-                    p_mission_idx = int(solved_solu.iter_env.crossovers['CO' + str(i + 1)].mission_list[j].idx[1:]) - 1
-                    if j == 0 and j == len(solved_solu.iter_env.crossovers['CO' + str(i + 1)].mission_list) - 1:
+            for i in range(len(solved_env.iter_env.crossovers)):
+                co_idx = solved_env.init_env.machine_name_to_idx['CO' + str(i + 1)]
+                for j in range(len(solved_env.iter_env.crossovers['CO' + str(i + 1)].mission_list)):
+                    p_mission_idx = int(solved_env.iter_env.crossovers['CO' + str(i + 1)].mission_list[j].idx[1:]) - 1
+                    if j == 0 and j == len(solved_env.iter_env.crossovers['CO' + str(i + 1)].mission_list) - 1:
                         var_idx = (J_num_all + 2) * machine_num + (J_num_all + 2) * machine_num * J_num_all + \
                                   machine_num * p_mission_idx + co_idx
                         MLP.addConstr(vars[var_idx] == 1, "fixed_co_" + str(i))
@@ -847,28 +846,28 @@ def solve_model(MLP, inst_idx, solved_solu: IterSolution = None, tag='', X_flag=
                                   machine_num * p_mission_idx + co_idx
                         MLP.addConstr(vars[var_idx] == 1, "fixed_co_" + str(i))
                         l_mission_idx = int(
-                            solved_solu.iter_env.crossovers['CO' + str(i + 1)].mission_list[j + 1].idx[1:]) - 1
+                            solved_env.iter_env.crossovers['CO' + str(i + 1)].mission_list[j + 1].idx[1:]) - 1
                         var_idx = (J_num_all + 2) * machine_num + (J_num_all + 2) * machine_num * p_mission_idx + \
                                   machine_num * l_mission_idx + co_idx
                         # Y[p_mission_idx][l_mission_idx][7 + i]
                         MLP.addConstr(vars[var_idx] == 1, "fixed_co_" + str(i))
-                    elif j == len(solved_solu.iter_env.crossovers['CO' + str(i + 1)].mission_list) - 1:
+                    elif j == len(solved_env.iter_env.crossovers['CO' + str(i + 1)].mission_list) - 1:
                         var_idx = (J_num_all + 2) * machine_num + (J_num_all + 2) * machine_num * p_mission_idx + \
                                   machine_num * (J_num_all + 1) + co_idx
                         MLP.addConstr(vars[var_idx] == 1, "fixed_co_" + str(i))
                     else:
                         l_mission_idx = int(
-                            solved_solu.iter_env.crossovers['CO' + str(i + 1)].mission_list[j + 1].idx[1:]) - 1
+                            solved_env.iter_env.crossovers['CO' + str(i + 1)].mission_list[j + 1].idx[1:]) - 1
                         var_idx = (J_num_all + 2) * machine_num + (J_num_all + 2) * machine_num * p_mission_idx + \
                                   machine_num * l_mission_idx + co_idx
                         # Y[p_mission_idx][l_mission_idx][7 + i]
                         MLP.addConstr(vars[var_idx] == 1, "fixed_co_" + str(i))
                     # print(vars[var_idx])
-            for yc in solved_solu.init_env.yard_cranes_set:
-                yc_idx = solved_solu.init_env.machine_name_to_idx['YC' + yc]
-                for j in range(len(solved_solu.iter_env.yard_cranes['YC' + yc].mission_list)):
-                    p_mission_idx = int(solved_solu.iter_env.yard_cranes['YC' + yc].mission_list[j].idx[1:]) - 1
-                    if j == 0 and j == len(solved_solu.iter_env.yard_cranes['YC' + yc].mission_list) - 1:
+            for yc in solved_env.init_env.yard_cranes_set:
+                yc_idx = solved_env.init_env.machine_name_to_idx['YC' + yc]
+                for j in range(len(solved_env.iter_env.yard_cranes['YC' + yc].mission_list)):
+                    p_mission_idx = int(solved_env.iter_env.yard_cranes['YC' + yc].mission_list[j].idx[1:]) - 1
+                    if j == 0 and j == len(solved_env.iter_env.yard_cranes['YC' + yc].mission_list) - 1:
                         var_idx = (J_num_all + 2) * machine_num + (J_num_all + 2) * machine_num * J_num_all + \
                                   machine_num * p_mission_idx + yc_idx
                         MLP.addConstr(vars[var_idx] == 1, "fixed_qc_" + yc)
@@ -879,17 +878,17 @@ def solve_model(MLP, inst_idx, solved_solu: IterSolution = None, tag='', X_flag=
                         var_idx = (J_num_all + 2) * machine_num + (J_num_all + 2) * machine_num * J_num_all + \
                                   machine_num * p_mission_idx + yc_idx
                         MLP.addConstr(vars[var_idx] == 1, "fixed_qc_" + yc)
-                        l_mission_idx = int(solved_solu.iter_env.yard_cranes['YC' + yc].mission_list[j + 1].idx[1:]) - 1
+                        l_mission_idx = int(solved_env.iter_env.yard_cranes['YC' + yc].mission_list[j + 1].idx[1:]) - 1
                         var_idx = (J_num_all + 2) * machine_num + (J_num_all + 2) * machine_num * p_mission_idx + \
                                   machine_num * l_mission_idx + yc_idx
                         # Y[p_mission_idx][l_mission_idx][7 + i]
                         MLP.addConstr(vars[var_idx] == 1, "fixed_qc_" + yc)
-                    elif j == len(solved_solu.iter_env.yard_cranes['YC' + yc].mission_list) - 1:
+                    elif j == len(solved_env.iter_env.yard_cranes['YC' + yc].mission_list) - 1:
                         var_idx = (J_num_all + 2) * machine_num + (J_num_all + 2) * machine_num * p_mission_idx + \
                                   machine_num * (J_num_all + 1) + yc_idx
                         MLP.addConstr(vars[var_idx] == 1, "fixed_qc_" + yc)
                     else:
-                        l_mission_idx = int(solved_solu.iter_env.yard_cranes['YC' + yc].mission_list[j + 1].idx[1:]) - 1
+                        l_mission_idx = int(solved_env.iter_env.yard_cranes['YC' + yc].mission_list[j + 1].idx[1:]) - 1
                         var_idx = (J_num_all + 2) * machine_num + (J_num_all + 2) * machine_num * p_mission_idx + \
                                   machine_num * l_mission_idx + yc_idx
                         # Y[p_mission_idx][l_mission_idx][7 + i]
@@ -924,9 +923,9 @@ def solve_model(MLP, inst_idx, solved_solu: IterSolution = None, tag='', X_flag=
             if int(var.x) is not 0:
                 tmp_str = var.VarName.split('_')
                 # print(var.VarName + ": " + str(var.X))
-                if tmp_str[0] == 'v' and solved_solu.iter_env.ls_num + solved_solu.iter_env.qc_num - 1 >= int(
-                        tmp_str[2]) >= solved_solu.iter_env.qc_num and int(tmp_str[1]) < J_num_all:
-                    ls_ls.append(int(tmp_str[2]) - solved_solu.iter_env.qc_num)
+                if tmp_str[0] == 'v' and solved_env.iter_env.ls_num + solved_env.iter_env.qc_num - 1 >= int(
+                        tmp_str[2]) >= solved_env.iter_env.qc_num and int(tmp_str[1]) < J_num_all:
+                    ls_ls.append(int(tmp_str[2]) - solved_env.iter_env.qc_num)
                 if tmp_str[0] == 'x':
                     if m_ls.get(int(tmp_str[-1])) is None:
                         m_ls.setdefault(int(tmp_str[-1]), [int(tmp_str[1]), int(tmp_str[2]), -1])
@@ -943,13 +942,13 @@ def solve_model(MLP, inst_idx, solved_solu: IterSolution = None, tag='', X_flag=
         m_ls = sorted(m_ls.items(), key=lambda d: d[0], reverse=False)
         for m in m_ls:
             print(m)
-        var_ls = [solved_solu.iter_env.qc_num + i * machine_num + (J_num_all + 2) * machine_num
+        var_ls = [solved_env.iter_env.qc_num + i * machine_num + (J_num_all + 2) * machine_num
                   for i in range(0, (J_num_all + 2) * (J_num_all + 2))]
-        var_ls.extend([solved_solu.iter_env.qc_num + 1 + i * machine_num + (J_num_all + 2) * machine_num
+        var_ls.extend([solved_env.iter_env.qc_num + 1 + i * machine_num + (J_num_all + 2) * machine_num
                        for i in range(0, (J_num_all + 2) * (J_num_all + 2))])
-        var_ls.extend([solved_solu.iter_env.qc_num + 2 + i * machine_num + (J_num_all + 2) * machine_num
+        var_ls.extend([solved_env.iter_env.qc_num + 2 + i * machine_num + (J_num_all + 2) * machine_num
                        for i in range(0, (J_num_all + 2) * (J_num_all + 2))])
-        var_ls.extend([solved_solu.iter_env.qc_num + 3 + i * machine_num + (J_num_all + 2) * machine_num
+        var_ls.extend([solved_env.iter_env.qc_num + 3 + i * machine_num + (J_num_all + 2) * machine_num
                        for i in range(0, (J_num_all + 2) * (J_num_all + 2))])
         print('Solution:', [MLP.getVars()[i].VarName for i in var_ls if
                             MLP.getVars()[i].x != 0])

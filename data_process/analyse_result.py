@@ -11,6 +11,8 @@ import seaborn as sns
 
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MultipleLocator
+
 from algorithm_factory.algo_utils.missions_sort_rules import sort_missions
 from algorithm_factory.algorithm_heuristic_rules import Random_Choice, Least_Mission_Num_Choice
 from common import PortEnv
@@ -94,7 +96,7 @@ def draw_gantt_graph_missions(port_env: PortEnv, save_label):
     patches = [mpatches.Patch(color=color[i % 10], label="{:s}".format(labels[i])) for i in range(len(add[0]))]
     plt.legend(handles=patches, loc=4)
     # XY轴标签
-    plt.xlabel("加工时间/s")
+    plt.xlabel("processing time/s")
     plt.ylabel("集装箱下发顺序")
     # 网格线，此图使用不好看，注释掉
     # plt.grid(linestyle="--",alpha=0.5)
@@ -103,15 +105,12 @@ def draw_gantt_graph_missions(port_env: PortEnv, save_label):
     plt.show()
 
 
-def draw_gantt_graph_missions_exact(port_env, MLP, save_label):
+def draw_gantt_graph_missions_exact(inter_env, MLP, save_label):
     MLP_vars = MLP.getVars()
     MLP_vars_dict = {}
     for var in MLP_vars:
         if var.VarName[0] == 'r' or var.VarName[0] == 'C' or var.VarName[0] == 'u' or var.VarName[0] == 'o':
             MLP_vars_dict[var.VarName] = var.X
-
-    plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签port_env,
-    plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
     add = []
     left = []
     mission_name = []
@@ -119,8 +118,8 @@ def draw_gantt_graph_missions_exact(port_env, MLP, save_label):
     station = []
     crossover = []
     yardcrane = []
-    getattr(sort_missions, 'RELEASE_ORDER')(port_env.mission_list)
-    for mission in port_env.mission_list:
+    getattr(sort_missions, 'CHAR_ORDER')(inter_env.mission_list)
+    for mission in inter_env.mission_list:
         process_time_b = mission.machine_process_time[0:3] + mission.machine_process_time[4:]
         start_time_b = mission.machine_start_time[0:3] + mission.machine_start_time[4:]
         process_time, start_time = process_time_b, start_time_b
@@ -156,53 +155,65 @@ def draw_gantt_graph_missions_exact(port_env, MLP, save_label):
         station.append(mission.machine_list[4])
         crossover.append(mission.machine_list[6])
         yardcrane.append(mission.machine_list[8])
-    m = range(len(add))
-    n = range(len(add[0]))
-    color = ['dodgerblue', 'w', 'lightgrey', 'g', 'grey', 'r', 'grey', 'gold', 'c', 'm', 'k']
+
+    # color
     sc = sns.color_palette("Spectral", 10)
     qcc = sns.color_palette("Reds", 10)
-    lsc = sns.color_palette("YlOrRd", 10)
-    isc = sns.color_palette("YlGn", 10)
-    ycc = sns.color_palette("PuBu", 10)
+    lsc = sns.color_palette("YlOrRd", 15)
+    isc = sns.color_palette("YlGn", 15)
+    ycc = sns.color_palette("PuBu", 20)
     qcc.reverse(), lsc.reverse(), isc.reverse(), ycc.reverse()
     color = [sc[0], 'w', 'lightgrey', sc[3], 'silver', sc[-3], 'darkgrey', sc[-1], 'c', 'm', 'k']
+    # font
+    plt.rcParams['font.sans-serif'] = 'Times New Roman'
+    font = {'family': 'Times New Roman',
+            'weight': 'medium',
+            'color': 'black',
+            'size': 9
+            }
     # 画布设置，大小与分辨率
-    plt.figure()  #
-    # barh-柱状图换向，循坏迭代-层叠效果
-    for i in m:
-        for j in n:
+    plt.figure()
+    for i in range(len(add)):
+        for j in range(len(add[0])):
             if j is 0:
-                plt.text(left[i][j] - 18, m[i] + 0.8, mission_name[i], fontsize=9, color='black')
-                plt.barh(m[i] + 1, add[i][j], left=left[i][j], color=qcc[int(quaycrane[i][2:]) - 1])
+                plt.text(left[i][j] + 4, i + 0.8, quaycrane[i], fontdict=font, color='black')
+                plt.barh(i + 1, add[i][j], left=left[i][j], color=qcc[int(quaycrane[i][2:]) + 2], edgecolor='black')
             elif j is 3:
-                plt.text(left[i][j] + 6, m[i] + 0.8, station[i], fontsize=9, color='black')
-                plt.barh(m[i] + 1, add[i][j], left=left[i][j], color=lsc[int(station[i][1:]) + 3])
+                plt.text(left[i][j] + 6, i + 0.8, station[i], fontdict=font, color='black')
+                plt.barh(i + 1, add[i][j], left=left[i][j], color=lsc[int(station[i][1:])+9], edgecolor='black')
             elif j is 5:
-                plt.text(left[i][j] - 4, m[i] + 0.8, 'IS' + crossover[i][-1], fontsize=9, color='black')
-                plt.barh(m[i] + 1, add[i][j], left=left[i][j], color=isc[int(crossover[i][2:]) * 2 - 1])
+                plt.text(left[i][j] + 4, i + 0.8, 'IS' + crossover[i][-1], fontdict=font, color='black')
+                plt.barh(i + 1, add[i][j], left=left[i][j], color=isc[int(crossover[i][2:]) + 7],
+                         edgecolor='black')
             elif j is 7:
-                plt.text(left[i][j] + 10, m[i] + 0.8, yardcrane[i], fontsize=9, color='black')
-                plt.barh(m[i] + 1, add[i][j], left=left[i][j],
-                         color=ycc[(4 * (ord(yardcrane[i][2]) - 65) + int(yardcrane[i][3])) % 9 + 1])
+                plt.text(left[i][j] + 6, i + 0.8, yardcrane[i], fontdict=font, color='black')
+                plt.barh(i + 1, add[i][j], left=left[i][j],
+                         color=ycc[(4 * (ord(yardcrane[i][2]) - 65) + int(yardcrane[i][3])) % 9 + 6], edgecolor='black')
             else:
-                plt.barh(m[i] + 1, add[i][j], left=left[i][j], color=color[j])
-
-    plt.title("Gantt chart for port scheduling" + save_label)
-    labels = ['QC_process', 'travel', 'LS_wait', 'LS_process', 'IS_wait', 'IS_process', 'YC_wait', 'YC_process']
+                plt.barh(i + 1, add[i][j], left=left[i][j], color=color[j])
 
     # 图例绘制
-    patches = [mpatches.Patch(color=color[i % 10], label="{:s}".format(labels[i])) for i in [0, 2, 3, 4, 5, 6, 7, 1]]
-    plt.legend(handles=patches, loc=4)
+    # labels = ['QC_process', 'travel', 'LS_wait', 'LS_process', 'IS_wait', 'IS_process', 'YC_wait', 'YC_process']
+    # patches = [mpatches.Patch(color=color[i % 10], label="{:s}".format(labels[i])) for i in [0, 2, 3, 4, 5, 6, 7, 1]]
+    # plt.legend(handles=patches, loc=4)
+
     # XY轴标签
-    plt.xlabel("time/s")
+    font_label = {'family': 'Times New Roman',
+                  'weight': 'medium',
+                  'color': 'black',
+                  'size': 10
+                  }
+    plt.xlabel("Processing time/s", fontdict=font_label)
+    y_major_locator = MultipleLocator(1)  # 把y轴的刻度间隔设置为10，并存在变量里
     ax = plt.gca()
-    ax.axes.yaxis.set_visible(False)
-    plt.xlim(0, 2600)
-    # plt.ylabel("集装箱下发顺序")
+    ax.yaxis.set_major_locator(y_major_locator)
+    plt.xlim(0, 1200)
+    plt.ylim(0, 17)
+    plt.ylabel("Machine ID", fontdict=font)
     # 网格线，此图使用不好看，注释掉
     # plt.grid(linestyle="--",alpha=0.5)
     plt.savefig(
-        os.path.join(cf.OUTPUT_RESULT_PATH, save_label + '_gantt_' + str(port_env.J_num_all) + '.png'))
+        os.path.join(cf.OUTPUT_RESULT_PATH, save_label + '_gantt_' + str(inter_env.J_num_all) + '.png'))
     plt.show()
 
 
@@ -291,13 +302,22 @@ def calculate_statistics(port_env: PortEnv):
 
 
 if __name__ == '__main__':
-    port_env = read_input('train', cf.MISSION_NUM, cf.inst_type)
-    _, solu, _ = Least_Mission_Num_Choice(port_env.init_env)
-    port_env.init_env, port_env.iter_env = solu, solu
-    model = CongestionPortModel(port_env)
-    model.construct()
-    solve_model(MLP=model.MLP, inst_idx=cf.inst_type, solved_solu=port_env, tag='_fix_all')
-    draw_gantt_graph_missions_exact(solu, model.MLP, 'w')
+    # port_env = read_input('train', cf.MISSION_NUM, cf.inst_type)
+    # _, solu, _ = Least_Mission_Num_Choice(port_env.init_env)
+    # port_env.init_env, port_env.iter_env = solu, solu
+    # model = CongestionPortModel(port_env)
+    # model.construct()
+    # solve_model(MLP=model.MLP, inst_idx=cf.inst_type, solved_solu=port_env, tag='_fix_all')
+    # draw_gantt_graph_missions_exact(solu, model.MLP, 'w')
+
     # analyse_result(solu, '1')
     # calculate_statistics_all(['A_t', 'B_t', 'C_t', 'D_t', 'E_t', 'F_t', 'G_t', 'H_t', 'Z_t'])
-    a = 1
+
+    port_env = read_input('train', cf.MISSION_NUM, cf.inst_type)
+    _, solu, _ = Least_Mission_Num_Choice(port_env.init_env)
+    port_env.l2a_init()
+    model = CongestionPortModel(port_env)
+    model.construct()
+    solve_model(MLP=model.MLP, inst_idx=cf.inst_type, solved_env=port_env, tag='_exact', X_flag=False,
+                Y_flag=False)
+    draw_gantt_graph_missions_exact(solu, model.MLP, 'w')
