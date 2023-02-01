@@ -256,17 +256,17 @@ def split_integer(m, n):
 
 # 匹配算例类型
 def generate_instance_type(inst_type):
-    if inst_type == 'A_t' or inst_type == 'A2_t':
+    if inst_type == 'A_t' or inst_type == 'A2_t' or inst_type == 'A2_1000':
         qc_num, ls_num, is_num, yc_num, m_num = 1, 2, 1, 2, cf.MISSION_NUM
-    elif inst_type == 'B_t' or inst_type == 'B2_t':
+    elif inst_type == 'B_t' or inst_type == 'B2_t' or inst_type == 'B2_1000':
         qc_num, ls_num, is_num, yc_num, m_num = 2, 2, 2, 4, cf.MISSION_NUM
-    elif inst_type == 'C_t' or inst_type == 'C2_t':
+    elif inst_type == 'C_t' or inst_type == 'C2_t' or inst_type == 'C2_1000':
         qc_num, ls_num, is_num, yc_num, m_num = 3, 2, 2, 3, cf.MISSION_NUM
-    elif inst_type == 'D_t' or inst_type == 'D2_t':
+    elif inst_type == 'D_t' or inst_type == 'D2_t' or inst_type == 'D2_1000':
         qc_num, ls_num, is_num, yc_num, m_num = 3, 3, 1, 3, cf.MISSION_NUM
-    elif inst_type == 'E_t' or inst_type == 'E2_t':
+    elif inst_type == 'E_t' or inst_type == 'E2_t' or inst_type == 'E2_1000':
         qc_num, ls_num, is_num, yc_num, m_num = 3, 4, 2, 4, cf.MISSION_NUM
-    elif inst_type == 'F_t' or inst_type == 'F2_t':
+    elif inst_type == 'F_t' or inst_type == 'F2_t' or inst_type == 'F2_1000':
         qc_num, ls_num, is_num, yc_num, m_num = 3, 5, 2, 3, cf.MISSION_NUM
     elif inst_type == 'G_t' or inst_type == 'G2_t':
         qc_num, ls_num, is_num, yc_num, m_num = 4, 4, 3, 6, cf.MISSION_NUM

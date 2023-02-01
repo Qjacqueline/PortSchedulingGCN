@@ -37,9 +37,9 @@ def get_args(**kwargs):
     parser.add_argument('--hidden', type=int, default=64)
     parser.add_argument('--device', type=str, default='cuda:0' if torch.cuda.is_available() else 'cpu')
     parser.add_argument('--gamma', type=float, default=0.99)  # 0.9
-    parser.add_argument('--epsilon', type=float, default=0.8)
+    parser.add_argument('--epsilon', type=float, default=0.1)
     parser.add_argument('--lr', type=float, default=1e-4)
-    parser.add_argument('--epoch_num', type=int, default=5)
+    parser.add_argument('--epoch_num', type=int, default=2)
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--buffer_size', type=int, default=128000)
     parser.add_argument('-save_path', type=str, default=cf.MODEL_PATH)
@@ -67,7 +67,7 @@ if __name__ == '__main__':
     # env
     train_solus = []
     test_solus = []
-    for i in range(0, 40):
+    for i in range(0, 40):  # todo epison要改
         train_solus.append(read_input('train', str(i), args.inst_type))
     for i in range(0, 50):
         test_solus.append(read_input('train', str(i), args.inst_type))
