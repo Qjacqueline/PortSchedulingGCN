@@ -564,6 +564,8 @@ class CongestionPortModel:
         self.u = None  # u^s_j
         self.alpha = None
         self.beta = None
+        self.gamma = 0.1
+        self.theta = None
 
     def init_model(self):
         self.K_num = self.env.machine_num
@@ -758,7 +760,7 @@ class CongestionPortModel:
             # self.MLP.addConstr(self.r[jj] - self.r[j] == 120, "con00" + str(j) + str(jj))  # FIXME: match RL
         self.MLP.addConstr(self.r[-2] == 0, "con00")
         # for i in range(self.env.qc_num):
-            # self.MLP.addConstr(self.r[sum(self.J_num[0:i])] == 0, "con00")  # FIXME: match RL
+        #     self.MLP.addConstr(self.r[sum(self.J_num[0:i])] == 0, "con00")  # FIXME: match RL
         self.MLP.addConstrs((self.o[s][j] == self.pt[s][j] for s in range(0, 3) for j in self.J[0:-2]), "con200")
         self.MLP.addConstrs((self.o[3][j] == self.pt[3][j] + sum(
             self.x[jj][j][k] * self.st[jj][j] for jj in self.J for k in self.K_s[3]) for j in self.J[0:-2]), "con201")
@@ -777,7 +779,10 @@ class CongestionPortModel:
         self.MLP.addConstrs((q_1 >= self.C[3][j] for j in self.J), "obj1")
         self.MLP.addConstr((q_2 == sum(self.C[s + 1][j] - self.o[s + 1][j]
                                        - self.C[s][j] - self.u[s][j] for j in tmp_J for s in range(0, 3))), "obj2")
-        self.MLP.setObjective(q_1 + 0.01 * q_2, GRB.MINIMIZE)  # fixme+ 0.000001 * sum(self.FT[s][j] for s in self.S for j in self.J)
+        self.MLP.addConstr(q_1 <= self.gamma, "obj1")
+        self.MLP.addConstr(q_2 <= self.theta, "obj2")
+        self.MLP.setObjective(q_2,
+                              GRB.MINIMIZE)  # + 0.01 * q_2 # FIXME: match RL + 0.01 * q_2 + 0.01 * sum(self.C[s][j] for s in self.S for j in self.J)
         self.MLP.update()
 
 
@@ -918,11 +923,14 @@ def solve_model(MLP, inst_idx, solved_env: IterSolution = None, tag='', X_flag=T
         # 非0变量及LS选择
         ls_ls = []
         m_ls = {}
+        var_ls = {}
         f_2 = 0
         for var in MLP.getVars():
             if int(var.x) is not 0:
                 tmp_str = var.VarName.split('_')
                 # print(var.VarName + ": " + str(var.X))
+                if tmp_str[0] != 'x' and tmp_str[0] != 'v':
+                    var_ls[var.VarName] = var.x
                 if tmp_str[0] == 'v' and solved_env.iter_env.ls_num + solved_env.iter_env.qc_num - 1 >= int(
                         tmp_str[2]) >= solved_env.iter_env.qc_num and int(tmp_str[1]) < J_num_all:
                     ls_ls.append(int(tmp_str[2]) - solved_env.iter_env.qc_num)
@@ -937,11 +945,13 @@ def solve_model(MLP, inst_idx, solved_env: IterSolution = None, tag='', X_flag=T
                             tmp.insert(tmp.index(int(tmp_str[2])), int(tmp_str[1]))
                         else:
                             tmp.extend([int(tmp_str[1]), int(tmp_str[2])])
-
+        # MLP.write("output_result/gurobi/sol_" + str(inst_idx) + tag + ".sol")
         print(ls_ls)
         m_ls = sorted(m_ls.items(), key=lambda d: d[0], reverse=False)
         for m in m_ls:
             print(m)
+        for var in var_ls.items():
+            print(var)
         var_ls = [solved_env.iter_env.qc_num + i * machine_num + (J_num_all + 2) * machine_num
                   for i in range(0, (J_num_all + 2) * (J_num_all + 2))]
         var_ls.extend([solved_env.iter_env.qc_num + 1 + i * machine_num + (J_num_all + 2) * machine_num

@@ -109,7 +109,8 @@ def draw_gantt_graph_missions_exact(inter_env, MLP, save_label):
     MLP_vars = MLP.getVars()
     MLP_vars_dict = {}
     for var in MLP_vars:
-        if var.VarName[0] == 'r' or var.VarName[0] == 'C' or var.VarName[0] == 'u' or var.VarName[0] == 'o':
+        if var.VarName[0] == 'r' or var.VarName[0] == 'C' or var.VarName[0] == 'u' \
+                or var.VarName[0] == 'o' or var.X != 0:
             MLP_vars_dict[var.VarName] = var.X
     add = []
     left = []
@@ -119,13 +120,15 @@ def draw_gantt_graph_missions_exact(inter_env, MLP, save_label):
     crossover = []
     yardcrane = []
     getattr(sort_missions, 'CHAR_ORDER')(inter_env.mission_list)
+    idx_to_machine_name = {str(v): k for k, v in inter_env.machine_name_to_idx.items()}
     for mission in inter_env.mission_list:
         process_time_b = mission.machine_process_time[0:3] + mission.machine_process_time[4:]
         start_time_b = mission.machine_start_time[0:3] + mission.machine_start_time[4:]
         process_time, start_time = process_time_b, start_time_b
         # qc
         start_time[0] = MLP_vars_dict['r_' + str(int(mission.idx[1:]) - 1)]
-        start_time[1] = start_time_b[1] - start_time_b[0] + start_time[0]
+        start_time[1] = inter_env.quay_cranes[mission.quay_crane_id].time_to_exit \
+                        + MLP_vars_dict['C_0_' + str(int(mission.idx[1:]) - 1)]
         # ls
         start_time[2] = MLP_vars_dict['C_0_' + str(int(mission.idx[1:]) - 1)] + \
                         MLP_vars_dict['u_0_' + str(int(mission.idx[1:]) - 1)]
@@ -152,16 +155,16 @@ def draw_gantt_graph_missions_exact(inter_env, MLP, save_label):
         left.append(start_time)
         mission_name.append(mission.idx)
         quaycrane.append(mission.quay_crane_id)
-        station.append(mission.machine_list[4])
-        crossover.append(mission.machine_list[6])
-        yardcrane.append(mission.machine_list[8])
+        station.append(idx_to_machine_name[list(MLP_vars_dict)[(int(mission.idx[1:]) - 1) * 4 + 1].split('_')[-1]])
+        crossover.append(idx_to_machine_name[list(MLP_vars_dict)[(int(mission.idx[1:]) - 1) * 4 + 2].split('_')[-1]])
+        yardcrane.append(idx_to_machine_name[list(MLP_vars_dict)[(int(mission.idx[1:]) - 1) * 4 + 3].split('_')[-1]])
 
     # color
     sc = sns.color_palette("Spectral", 10)
     qcc = sns.color_palette("Reds", 10)
     lsc = sns.color_palette("YlOrRd", 15)
     isc = sns.color_palette("YlGn", 15)
-    ycc = sns.color_palette("PuBu", 20)
+    ycc = sns.color_palette("PuBu", 20)  # royalblue
     qcc.reverse(), lsc.reverse(), isc.reverse(), ycc.reverse()
     color = [sc[0], 'w', 'lightgrey', sc[3], 'silver', sc[-3], 'darkgrey', sc[-1], 'c', 'm', 'k']
     # font
@@ -169,28 +172,32 @@ def draw_gantt_graph_missions_exact(inter_env, MLP, save_label):
     font = {'family': 'Times New Roman',
             'weight': 'medium',
             'color': 'black',
-            'size': 9
+            'size': 8
             }
+    edge_color, linewidth = 'black', 0.7
     # 画布设置，大小与分辨率
     plt.figure()
     for i in range(len(add)):
         for j in range(len(add[0])):
             if j is 0:
                 plt.text(left[i][j] + 4, i + 0.8, quaycrane[i], fontdict=font, color='black')
-                plt.barh(i + 1, add[i][j], left=left[i][j], color=qcc[int(quaycrane[i][2:]) + 2], edgecolor='black')
+                plt.barh(i + 1, add[i][j], left=left[i][j], color=qcc[int(quaycrane[i][2:]) + 2], edgecolor=edge_color,
+                         linewidth=linewidth)
             elif j is 3:
                 plt.text(left[i][j] + 6, i + 0.8, station[i], fontdict=font, color='black')
-                plt.barh(i + 1, add[i][j], left=left[i][j], color=lsc[int(station[i][1:])+9], edgecolor='black')
+                plt.barh(i + 1, add[i][j], left=left[i][j], color=lsc[int(station[i][1:]) + 9], edgecolor=edge_color,
+                         linewidth=linewidth)
             elif j is 5:
                 plt.text(left[i][j] + 4, i + 0.8, 'IS' + crossover[i][-1], fontdict=font, color='black')
                 plt.barh(i + 1, add[i][j], left=left[i][j], color=isc[int(crossover[i][2:]) + 7],
-                         edgecolor='black')
+                         edgecolor=edge_color, linewidth=linewidth)
             elif j is 7:
                 plt.text(left[i][j] + 6, i + 0.8, yardcrane[i], fontdict=font, color='black')
                 plt.barh(i + 1, add[i][j], left=left[i][j],
-                         color=ycc[(4 * (ord(yardcrane[i][2]) - 65) + int(yardcrane[i][3])) % 9 + 6], edgecolor='black')
+                         color=ycc[(4 * (ord(yardcrane[i][2]) - 65) + int(yardcrane[i][3])) % 9 + 6],
+                         edgecolor=edge_color, linewidth=linewidth)
             else:
-                plt.barh(i + 1, add[i][j], left=left[i][j], color=color[j])
+                plt.barh(i + 1, add[i][j], left=left[i][j], color='darkgrey')
 
     # 图例绘制
     # labels = ['QC_process', 'travel', 'LS_wait', 'LS_process', 'IS_wait', 'IS_process', 'YC_wait', 'YC_process']
@@ -201,15 +208,19 @@ def draw_gantt_graph_missions_exact(inter_env, MLP, save_label):
     font_label = {'family': 'Times New Roman',
                   'weight': 'medium',
                   'color': 'black',
-                  'size': 10
+                  'size': 12
                   }
     plt.xlabel("Processing time/s", fontdict=font_label)
     y_major_locator = MultipleLocator(1)  # 把y轴的刻度间隔设置为10，并存在变量里
     ax = plt.gca()
     ax.yaxis.set_major_locator(y_major_locator)
-    plt.xlim(0, 1200)
-    plt.ylim(0, 17)
-    plt.ylabel("Machine ID", fontdict=font)
+    # ax.spines['bottom'].set_linewidth(2)  # 设置底部坐标轴的粗细
+    # ax.spines['left'].set_linewidth(2)  # 设置左边坐标轴的粗细
+    # ax.spines['right'].set_linewidth(2)  # 设置右边坐标轴的粗细
+    # ax.spines['top'].set_linewidth(2)  # 设置上部坐标轴的粗细
+    plt.xlim(0, 1000)
+    plt.ylim(0, 18)
+    plt.ylabel("Machine ID", fontdict=font_label)
     # 网格线，此图使用不好看，注释掉
     # plt.grid(linestyle="--",alpha=0.5)
     plt.savefig(
@@ -302,22 +313,24 @@ def calculate_statistics(port_env: PortEnv):
 
 
 if __name__ == '__main__':
-    # port_env = read_input('train', cf.MISSION_NUM, cf.inst_type)
-    # _, solu, _ = Least_Mission_Num_Choice(port_env.init_env)
-    # port_env.init_env, port_env.iter_env = solu, solu
-    # model = CongestionPortModel(port_env)
-    # model.construct()
-    # solve_model(MLP=model.MLP, inst_idx=cf.inst_type, solved_solu=port_env, tag='_fix_all')
-    # draw_gantt_graph_missions_exact(solu, model.MLP, 'w')
+    port_env = read_input('train', str(cf.MISSION_NUM), cf.inst_type, cf.MISSION_NUM)
+    _, solu, _ = Least_Mission_Num_Choice(port_env.init_env)
+    port_env.l2a_init()
+    model = CongestionPortModel(port_env)
+    # model.gamma = gammas[i]
+    model.construct()
+    solve_model(MLP=model.MLP, inst_idx=cf.inst_type + '_' + str(cf.MISSION_NUM), solved_env=port_env, tag='_exact',
+                X_flag=False, Y_flag=False)
+    draw_gantt_graph_missions_exact(solu, model.MLP, 'w')
 
     # analyse_result(solu, '1')
     # calculate_statistics_all(['A_t', 'B_t', 'C_t', 'D_t', 'E_t', 'F_t', 'G_t', 'H_t', 'Z_t'])
 
-    port_env = read_input('train', cf.MISSION_NUM, cf.inst_type)
-    _, solu, _ = Least_Mission_Num_Choice(port_env.init_env)
-    port_env.l2a_init()
-    model = CongestionPortModel(port_env)
-    model.construct()
-    solve_model(MLP=model.MLP, inst_idx=cf.inst_type, solved_env=port_env, tag='_exact', X_flag=False,
-                Y_flag=False)
-    draw_gantt_graph_missions_exact(solu, model.MLP, 'w')
+    # port_env = read_input('train', cf.MISSION_NUM, cf.inst_type)
+    # _, solu, _ = Least_Mission_Num_Choice(port_env.init_env)
+    # port_env.l2a_init()
+    # model = CongestionPortModel(port_env)
+    # model.construct()
+    # solve_model(MLP=model.MLP, inst_idx=cf.inst_type, solved_env=port_env, tag='_exact', X_flag=False,
+    #             Y_flag=False)
+    # draw_gantt_graph_missions_exact(solu, model.MLP, 'w')

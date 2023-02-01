@@ -12,6 +12,7 @@ from copy import deepcopy
 
 import numpy as np
 import torch
+from gurobipy import GRB
 from tensorboardX import SummaryWriter
 
 import conf.configs as cf
@@ -37,7 +38,7 @@ def get_args(**kwargs):
     parser.add_argument('--hidden', type=int, default=64)
     parser.add_argument('--device', type=str, default='cuda:0' if torch.cuda.is_available() else 'cpu')
     parser.add_argument('--gamma', type=float, default=0.9)  # 0.9
-    parser.add_argument('--epsilon', type=float, default=0.5)
+    parser.add_argument('--epsilon', type=float, default=0.1)
     parser.add_argument('--lr', type=float, default=1e-5)
     parser.add_argument('--epoch_num', type=int, default=60)
     parser.add_argument('--batch_size', type=int, default=128)
@@ -59,27 +60,57 @@ if __name__ == '__main__':
     # env
     train_solus = []
     test_solus = []
-    # ls = [cf.MISSION_NUM]
-    m_num_ls = [17]  # 10,16,17,18,19
-    inst_type_ls = ['Z', 'Z'] #'Z', 'Z','Z', 'Z','Z'
+
+    ''' 单个测试'''
+    m_num_ls = [15]
+    inst_type_ls = ['B2_t']
+    gammas = [1316.52679188132]
+    thetas = [5398.49894685804]
+
+    ''' 所有统一求'''
+    # m_num_ls = [10 for _ in range(4)]
+    # inst_type_ls = [chr(i + 65) + '2_t' for i in range(8)]
+
+    ''' PM(0)'''
+    # m_num_ls = [10, 13, 10, 15, 10, 11,
+    #             11, 10, 14, 10, 11,
+    #             10, 17, 10, 14, 10, 16]
+    # inst_type_ls = ['A2_t', 'A2_t', 'B2_t', 'B2_t', 'C2_t', 'C2_t',
+    #                 'D2_t', 'E2_t', 'E2_t', 'F2_t', 'F2_t',
+    #                 'G2_t', 'G2_t', 'H2_t', 'H2_t', 'Z2_t', 'Z2_t']
+    # gammas = [1183.97772688462, 1223.43166168913, 1048.76179632512,1316.52679188132,991.789726187869,1028.54129185621,
+    #           928.892480514753,808.975563654737,914.062174210405,834.011686777709,871.938898423007,
+    #           845.047666484882,1029.00345317571,823.93362806332,910.556489215056,780.521551937144,876.271496288637]
+
+    ''' 求不出的'''
+    # m_num_ls = [15, 10, 10, 14, 16]
+    # inst_type_ls = ['B2_t', 'C2_t', 'D2_t', 'H2_t', 'Z2_t']
+    # gammas = [1316.52679188132, 991.789726187869, 907.132467274069, 910.556489215056, 876.271496288637]
 
     makespan_forall = []
+    congestion_forall = []
     time_forall = []
-    for i in m_num_ls:
-        solu = read_input('train', str(i), args.inst_type, i)
+    for i in range(len(m_num_ls)):
+        solu = read_input('train', str(m_num_ls[i]), inst_type_ls[i], m_num_ls[i])
         solu.l2a_init()
         model = CongestionPortModel(solu)
+        model.gamma = gammas[i]
+        model.theta = thetas[i]
         model.construct()
         s_t_g = time.time()
-        solve_model(MLP=model.MLP, inst_idx=cf.inst_type + '_' + str(i), solved_env=solu, tag='_exact',
+        solve_model(MLP=model.MLP, inst_idx=inst_type_ls[i] + '_' + str(m_num_ls[i]), solved_env=solu, tag='_exact',
                     X_flag=False, Y_flag=False)
         e_t_g = time.time()
-        makespan_forall.append(model.MLP.ObjVal)
+        if model.MLP.status != GRB.Status.OPTIMAL:
+            makespan_forall.append('inf')
+            congestion_forall.append('inf')
+        else:
+            makespan_forall.append(model.MLP.getVars()[-2].x)
+            congestion_forall.append(model.MLP.getVars()[-1].x)
         time_forall.append(e_t_g - s_t_g)
         # if model.MLP.ObjVal == float('Inf'):
         #     break
 
     for i in range(len(makespan_forall)):
-        print("算例为" + str(m_num_ls[i]))
-        print("gurobi后makespan为" + str(makespan_forall[i]))
-        print("gurobi算法时间" + str(time_forall[i]))
+        print("算例为\t" + str(m_num_ls[i]) + "\tmakespan为\t" + str(makespan_forall[i]) +
+              "\tcongestion为\t" + str(congestion_forall[i]) + "\t时间为\t" + str(time_forall[i]))
