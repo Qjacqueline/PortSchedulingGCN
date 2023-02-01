@@ -90,6 +90,7 @@ class DDQN(BaseAgent):
         self.device = device
         self.loss_func = loss_fn
         self.train_count = 0
+        self.deteriote = 0.9 / (40 * 100 * 10 * 0.9 / 100)
 
     def forward(self, state, eval_tag=True):
         if eval_tag:
@@ -118,6 +119,7 @@ class DDQN(BaseAgent):
         self.optimizer.step()
         if self.train_count % 100 == 0:
             self.sync_weight()
+            self.epsilon = self.epsilon + self.deteriote
         # if self.train_count % 200 == 0 and self.epsilon < 0.9:
         #     self.epsilon = self.epsilon + 0.005  # 1600次train就加到0.9了
         self.train_count += 1
@@ -224,6 +226,7 @@ class LACollector:
                     self.rl_logger.add_scalar(tag=f'l_train_r/reward' + str(i + 1),
                                               scalar_value=reward_forall[i],
                                               global_step=int(self.train_time / 20))
+                print_result(field_name=field_name, value=value)
 
     def eval(self, update_flag=True):
         with torch.no_grad():
