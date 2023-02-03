@@ -14,8 +14,8 @@ import torch
 
 LOGGING_LEVEL = logging.INFO  # logging.WARNING/DEBUG
 
-inst_type = 'Z2'
-MISSION_NUM = 18
+inst_type = 'Z2'  # RLtrain:epsilon要改
+MISSION_NUM = 100
 # 布局配置
 STAGE_NUM = 3  # lock_station+crossover+yard
 # QUAYCRANE_NUM = 5  # 场桥个数
@@ -73,9 +73,9 @@ MODEL_PATH = os.path.join(OUTPUT_RESULT_PATH, 'model')
 LOSS_PLOT_PATH = os.path.join(OUTPUT_RESULT_PATH, 'loss_')
 OUTPUT_SOLUTION_PATH = os.path.join(OUTPUT_RESULT_PATH, 'solution_' + inst_type + '/')
 
-# SA
+# SA 4000*pow(0.995,3000)=0.001
 T0 = 4000
-TEND = 1e-3
+TEND = 1e-10
 RATE = 0.995
 
 # RL_LA1

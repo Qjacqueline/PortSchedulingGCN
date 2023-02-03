@@ -302,7 +302,7 @@ def missions_dict_to_obj(machine, flag):
 
 # 生成模拟数据
 def generate_data_for_test(inst_idx, inst_type='A'):
-    logger.info("生成数据.")
+    # logger.info("生成数据.")
     global mission_count
     mission_count = 1
     qc_num, ls_num, is_num, yc_num, m_num = generate_instance_type(inst_type)
@@ -602,7 +602,7 @@ if __name__ == '__main__':
     np.random.seed(0)
     random.seed(0)
 
-    # # 生成单独测试算例
+    # 生成单独测试算例
     # for i in range(cf.MISSION_NUM, cf.MISSION_NUM + 1):
     #     env = generate_data_for_test(i, cf.inst_type)
     #     if len(env.yard_cranes_set) < env.yc_num:

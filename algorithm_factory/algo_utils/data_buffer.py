@@ -22,7 +22,7 @@ logger = Logger().get_logger()
 class LABuffer(Dataset, ABC):
     def __init__(self, buffer_size: int = 30000) -> None:
         super(LABuffer, self).__init__()
-        logger.info("创建data buffer")
+        # logger.info("创建data buffer")
         self.state = []
         self.action = []
         self.state_ = []

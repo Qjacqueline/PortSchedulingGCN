@@ -16,9 +16,10 @@ logger = Logger().get_logger()
 
 
 def inter_relocate_random_station_random_mission_to_random_machine(iter_env: PortEnv, buffer_flag: bool = True) -> str:
-    s_a = machine_cal_methods.find_random_machine(iter_env.lock_stations)
-    if not s_a.mission_list:
-        return 'end'
+    while True:
+        s_a = machine_cal_methods.find_random_machine(iter_env.lock_stations)
+        if s_a.mission_list:
+            break
     s_b = machine_cal_methods.find_random_machine(iter_env.lock_stations, s_a)
     if s_a == s_b:
         return 'not end'
