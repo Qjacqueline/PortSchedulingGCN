@@ -112,7 +112,7 @@ def get_least_wait_station(port_env: PortEnv, mission: Mission) -> int:
     for i in range(port_env.ls_num):
         curr_station = list(port_env.lock_stations.values())[i]
         transfer_time_station = curr_station.distance_to_exit / mission.vehicle_speed
-        arrive_time_station = mission.total_process_time + mission.release_time + transfer_time_station
+        arrive_time_station = mission.total_process_time + mission.machine_start_time[0] + transfer_time_station
         if any(curr_station.process_time):
             wait_time = max(curr_station.process_time[-1][-1] - arrive_time_station, 0)
         else:
@@ -203,7 +203,7 @@ def get_cur_time_status(port_env: PortEnv, cur_time: float):
             co_ls[mission.machine_list[6]].append(mission)
         elif mission.machine_start_time[7] > cur_time:
             co_yc_ls.append(mission)
-        elif mission.total_process_time + mission.release_time > cur_time:
+        elif mission.total_process_time + mission.machine_start_time[0] > cur_time:
             yc_ls[mission.machine_list[8][2:]].append(mission)
         else:
             f_ls.append(mission)
@@ -340,7 +340,7 @@ def buffer_process_by_order(port_env):
 
 
 def buffer_process_one_order(mission: Mission, buffer: Buffer):
-    start_time_buffer = mission.release_time
+    start_time_buffer = mission.release_time/2   # todo
     process_time_buffer = buffer.handling_time
     end_time_buffer = start_time_buffer + process_time_buffer
     # 更新buffer信息
@@ -365,7 +365,7 @@ def exit_process_by_order(port_env):
         mission.total_process_time += transfer_time_station
         mission.machine_list.append('a_exit')
         mission.machine_process_time.append(0)
-        mission.machine_start_time.append(mission.total_process_time + mission.release_time)
+        mission.machine_start_time.append(mission.total_process_time + mission.machine_start_time[0])
         mission.stage = 3
 
 
@@ -433,7 +433,7 @@ def find_min_wait_station(port_env: PortEnv, mission: Mission):
     for i in range(port_env.ls_num):
         curr_station = list(port_env.lock_stations.values())[i]
         transfer_time_station = curr_station.distance_to_exit / mission.vehicle_speed
-        arrive_time_station = mission.total_process_time + mission.release_time + transfer_time_station
+        arrive_time_station = mission.total_process_time + mission.machine_start_time[0] + transfer_time_station
         if any(curr_station.process_time):
             wait_time = max(curr_station.process_time[-1][-1] - arrive_time_station, 0)
         else:
@@ -531,7 +531,7 @@ def del_machine(machine, buffer_flag=False):
                 station_buffer.process_time = []
                 station_buffer.mission_list = []
         for mission in machine.mission_list:
-            mission.total_process_time = mission.machine_start_time[stage - 1] - mission.release_time
+            mission.total_process_time = mission.machine_start_time[stage - 1] - mission.machine_start_time[0]
             del mission.machine_list[stage:]
             del mission.machine_process_time[stage:]
             del mission.machine_start_time[stage:]
@@ -542,7 +542,7 @@ def del_machine(machine, buffer_flag=False):
     if machine.idx[0] is 'C':
         stage = 5
         for mission in machine.mission_list:
-            mission.total_process_time = mission.machine_start_time[stage - 1] - mission.release_time
+            mission.total_process_time = mission.machine_start_time[stage - 1] - mission.machine_start_time[0]
             del mission.machine_list[stage:]
             del mission.machine_process_time[stage:]
             del mission.machine_start_time[stage:]
@@ -553,7 +553,7 @@ def del_machine(machine, buffer_flag=False):
         stage = 7
         for mission in machine.mission_list:
             mission.total_process_time = mission.machine_start_time[stage - 1] + mission.machine_process_time[
-                stage - 1] - mission.release_time
+                stage - 1] - mission.machine_start_time[0]
             del mission.machine_list[stage:]
             del mission.machine_process_time[stage:]
             del mission.machine_start_time[stage:]
@@ -645,7 +645,7 @@ def assign_mission_to_least_wait_station_buffer(curr_station):
 def assign_mission_to_station(mission, curr_station, buffer_flag=False):
     if buffer_flag:
         transfer_time_to_station = curr_station.distance_to_exit / mission.vehicle_speed
-        mission_arrive_time_station = mission.total_process_time + mission.release_time + transfer_time_to_station
+        mission_arrive_time_station = mission.total_process_time + mission.machine_start_time[0] + transfer_time_to_station
         if any(curr_station.whole_occupy_time) and curr_station.whole_occupy_time[-1][-1] > mission_arrive_time_station:
             # 锁站当前有任务，说明主锁站正在工作，挑等待最短的锁站buffer，且有优先前面的buffer
             min_wait_station_buffer = assign_mission_to_least_wait_station_buffer(curr_station)
@@ -712,7 +712,7 @@ def assign_mission_to_station(mission, curr_station, buffer_flag=False):
     else:
         transfer_time_to_station = (abs(curr_station.location[0] - cf.QUAY_EXIT[0]) + abs(
             curr_station.location[1] - cf.QUAY_EXIT[1])) / mission.vehicle_speed
-        mission_arrive_time_station = mission.total_process_time + mission.release_time + transfer_time_to_station
+        mission_arrive_time_station = mission.total_process_time + mission.machine_start_time[0] + transfer_time_to_station
         mission_handling_time_station = mission.station_process_time
         if any(curr_station.process_time):
             mission_start_time_station = max(mission_arrive_time_station, curr_station.process_time[-1][-1])
@@ -769,7 +769,7 @@ def assign_mission_to_crossover(lock_stations, crossovers, mission, buffer_flag=
     temp_station_loc = lock_stations[mission.machine_list[mission.stage - 1]].location
     transfer_time_crossover = (abs(curr_crossover.location[0] - temp_station_loc[0]) + abs(
         curr_crossover.location[1] - temp_station_loc[1])) / mission.vehicle_speed
-    arrive_time_crossover = mission.total_process_time + mission.release_time + transfer_time_crossover
+    arrive_time_crossover = mission.total_process_time + mission.machine_start_time[0] + transfer_time_crossover
     handling_time_crossover = mission.intersection_process_time
     if any(curr_crossover.process_time):
         start_time_crossover = max(arrive_time_crossover, curr_crossover.process_time[-1][-1])
@@ -831,7 +831,7 @@ def assign_mission_to_yard(yard_cranes, mission, buffer_flag=False):
         curr_yard_crane.location[0] - curr_yard_loc[1]) * cf.SLOT_LENGTH / cf.YARDCRANE_SPEED_X + abs(
         cf.SLOT_NUM_Y - curr_yard_loc[2]) * cf.SLOT_WIDTH / cf.YARDCRANE_SPEED_Y * 2
     handling_time_yard_crane = mission.yard_crane_process_time
-    arrive_time_yard = mission.total_process_time + mission.release_time + transfer_time_yard
+    arrive_time_yard = mission.total_process_time + mission.machine_start_time[0] + transfer_time_yard
     if any(curr_yard_crane.process_time):
         start_time_yard_crane = max(arrive_time_yard, curr_yard_crane.process_time[-1][-1])
     else:

@@ -779,9 +779,9 @@ class CongestionPortModel:
         self.MLP.addConstrs((q_1 >= self.C[3][j] for j in self.J), "obj1")
         self.MLP.addConstr((q_2 == sum(self.C[s + 1][j] - self.o[s + 1][j]
                                        - self.C[s][j] - self.u[s][j] for j in tmp_J for s in range(0, 3))), "obj2")
-        self.MLP.addConstr(q_1 <= self.gamma, "obj1")
-        self.MLP.addConstr(q_2 <= self.theta, "obj2")
-        self.MLP.setObjective(q_2,
+        # self.MLP.addConstr(q_1 <= self.gamma, "obj1")
+        # self.MLP.addConstr(q_2 <= self.theta, "obj2")
+        self.MLP.setObjective(q_1,
                               GRB.MINIMIZE)  # + 0.01 * q_2 # FIXME: match RL + 0.01 * q_2 + 0.01 * sum(self.C[s][j] for s in self.S for j in self.J)
         self.MLP.update()
 
@@ -799,10 +799,11 @@ def solve_model(MLP, inst_idx, solved_env: IterSolution = None, tag='', X_flag=T
                 var_idx = (int(ls[j].idx[1:]) - 1) * machine_num + int(
                     ls[j].machine_list[4][-1]) + solved_env.iter_env.qc_num - 1
                 MLP.addConstr((vars[var_idx] == 1), "fixed_x" + str(j))
-        # fix Y_ijk s=2
+        # fix x_ijk s=2
         if Y_flag:
             for i in range(solved_env.iter_env.ls_num):
                 ls_idx = solved_env.init_env.machine_name_to_idx['S' + str(i + 1)]
+                getattr(sort_missions, "A_STATION_NB")(solved_env.iter_env.lock_stations['S' + str(i + 1)].mission_list)
                 for j in range(len(solved_env.iter_env.lock_stations['S' + str(i + 1)].mission_list)):
                     p_mission_idx = int(
                         solved_env.iter_env.lock_stations['S' + str(i + 1)].mission_list[j].idx[1:]) - 1
@@ -837,6 +838,7 @@ def solve_model(MLP, inst_idx, solved_env: IterSolution = None, tag='', X_flag=T
                     # print(vars[var_idx])
             for i in range(len(solved_env.iter_env.crossovers)):
                 co_idx = solved_env.init_env.machine_name_to_idx['CO' + str(i + 1)]
+                getattr(sort_missions, "A_CROSSOVER_NB")(solved_env.iter_env.crossovers['CO' + str(i + 1)].mission_list)
                 for j in range(len(solved_env.iter_env.crossovers['CO' + str(i + 1)].mission_list)):
                     p_mission_idx = int(solved_env.iter_env.crossovers['CO' + str(i + 1)].mission_list[j].idx[1:]) - 1
                     if j == 0 and j == len(solved_env.iter_env.crossovers['CO' + str(i + 1)].mission_list) - 1:
@@ -870,6 +872,7 @@ def solve_model(MLP, inst_idx, solved_env: IterSolution = None, tag='', X_flag=T
                     # print(vars[var_idx])
             for yc in solved_env.init_env.yard_cranes_set:
                 yc_idx = solved_env.init_env.machine_name_to_idx['YC' + yc]
+                getattr(sort_missions, "A_YARD_NB")(solved_env.iter_env.yard_cranes['YC' + yc].mission_list)
                 for j in range(len(solved_env.iter_env.yard_cranes['YC' + yc].mission_list)):
                     p_mission_idx = int(solved_env.iter_env.yard_cranes['YC' + yc].mission_list[j].idx[1:]) - 1
                     if j == 0 and j == len(solved_env.iter_env.yard_cranes['YC' + yc].mission_list) - 1:
@@ -899,12 +902,14 @@ def solve_model(MLP, inst_idx, solved_env: IterSolution = None, tag='', X_flag=T
                         # Y[p_mission_idx][l_mission_idx][7 + i]
                         MLP.addConstr(vars[var_idx] == 1, "fixed_qc_" + yc)
                     # print(vars[var_idx])
+                    if vars[var_idx].VarName == 'x_16_17_4':
+                        a = 1
 
     # max_q_2 = 53348.4599303192
     # min_q_2 = 2401.81184668972
     # MLP.addConstr((vars[-1] <= epsilon * (max_q_2 - min_q_2) + min_q_2), "multi-objectives")
     MLP.update()
-    # MLP.setParam('OutputFlag', 0)
+    MLP.setParam('OutputFlag', 0)
     # ============== 求解模型 ================
     # MLP.write("output_result/gurobi/mod_" + str(inst_idx) + "_" + tag + ".lp")
     MLP.Params.timelimit = 7200
@@ -926,7 +931,7 @@ def solve_model(MLP, inst_idx, solved_env: IterSolution = None, tag='', X_flag=T
         var_ls = {}
         f_2 = 0
         for var in MLP.getVars():
-            if int(var.x) is not 0:
+            if int(var.x) != 0:
                 tmp_str = var.VarName.split('_')
                 # print(var.VarName + ": " + str(var.X))
                 if tmp_str[0] != 'x' and tmp_str[0] != 'v':
@@ -939,19 +944,19 @@ def solve_model(MLP, inst_idx, solved_env: IterSolution = None, tag='', X_flag=T
                         m_ls.setdefault(int(tmp_str[-1]), [int(tmp_str[1]), int(tmp_str[2]), -1])
                     else:
                         tmp: list = m_ls.get(int(tmp_str[-1]))
-                        if tmp.count(int(tmp_str[1])) is not 0:
+                        if tmp.count(int(tmp_str[1])) != 0:
                             tmp.insert(tmp.index(int(tmp_str[1])) + 1, int(tmp_str[2]))
-                        elif tmp.count(int(tmp_str[2])) is not 0:
+                        elif tmp.count(int(tmp_str[2])) != 0:
                             tmp.insert(tmp.index(int(tmp_str[2])), int(tmp_str[1]))
                         else:
                             tmp.extend([int(tmp_str[1]), int(tmp_str[2])])
         # MLP.write("output_result/gurobi/sol_" + str(inst_idx) + tag + ".sol")
-        print(ls_ls)
+        # print(ls_ls)
         m_ls = sorted(m_ls.items(), key=lambda d: d[0], reverse=False)
-        for m in m_ls:
-            print(m)
-        for var in var_ls.items():
-            print(var)
+        # for m in m_ls:
+        #     print(m)
+        # for var in var_ls.items():
+        #     print(var)
         var_ls = [solved_env.iter_env.qc_num + i * machine_num + (J_num_all + 2) * machine_num
                   for i in range(0, (J_num_all + 2) * (J_num_all + 2))]
         var_ls.extend([solved_env.iter_env.qc_num + 1 + i * machine_num + (J_num_all + 2) * machine_num
@@ -960,10 +965,10 @@ def solve_model(MLP, inst_idx, solved_env: IterSolution = None, tag='', X_flag=T
                        for i in range(0, (J_num_all + 2) * (J_num_all + 2))])
         var_ls.extend([solved_env.iter_env.qc_num + 3 + i * machine_num + (J_num_all + 2) * machine_num
                        for i in range(0, (J_num_all + 2) * (J_num_all + 2))])
-        print('Solution:', [MLP.getVars()[i].VarName for i in var_ls if
-                            MLP.getVars()[i].x != 0])
-        print('Makespan: ', MLP.getVars()[-2].x)
-        print('Congestion time: ', MLP.getVars()[-1].x)
+        # print('Solution:', [MLP.getVars()[i].VarName for i in var_ls if
+        #                     MLP.getVars()[i].x != 0])
+        # print('Makespan: ', MLP.getVars()[-2].x)
+        # print('Congestion time: ', MLP.getVars()[-1].x)
     else:
         print("NO optimal solution" + str(MLP.status))
     return MLP

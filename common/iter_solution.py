@@ -72,6 +72,8 @@ class IterSolution:
             # flag = inner_relocate_latest_station_longest_mission(self.iter_env)
         elif action == 3:
             flag = inter_swap_latest_station_longest_mission_earliest_machine(self.iter_env)
+        if flag == 'end':
+            print('end action ' + str(action))
 
         new_makespan = self.iter_env.cal_finish_time()
         for mission in self.iter_env.mission_list:

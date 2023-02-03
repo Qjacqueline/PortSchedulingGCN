@@ -60,7 +60,7 @@ class SA(object):
         # 记录最优解
         best_solution: IterSolution = deepcopy(self.iter_solu)
         best_makespan: float = self.iter_solu.last_step_makespan
-        while self.T0 > self.Tend and time.time() - T1 < stop_time:
+        while (tf1 or tf2 or tf3):  # self.T0 > self.Tend and
             count += 1
             # 产生在这个温度下的随机解
             tmp_solution, flag = self.get_new_solution(deepcopy(self.iter_solu))
@@ -93,7 +93,7 @@ class SA(object):
                 print("best_makespan为: " + str(best_makespan), end=" ")
                 tf3 = False
         self.iter_solu.reset()
-        print("best_makespan为: " + str(best_makespan) + " time: " + str(time.time() - T1))
+        print(" ")
         return best_makespan, best_solution
 
     # 产生一个新解：随机交换两个元素的位置

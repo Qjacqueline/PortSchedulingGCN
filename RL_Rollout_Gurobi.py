@@ -31,6 +31,7 @@ logger = Logger().get_logger()
 def get_args(**kwargs):
     parser = argparse.ArgumentParser()
     parser.add_argument('--inst_type', type=str, default=cf.inst_type)
+    parser.add_argument('--mission_num', type=int, default=cf.MISSION_NUM)
     parser.add_argument('--max_num', type=int, default=5)
 
     parser.add_argument('--seed', type=int, default=0)
@@ -57,12 +58,15 @@ if __name__ == '__main__':
     # env
     train_solus = []
     test_solus = []
-    ls = [cf.MISSION_NUM]
-    # ls = [i for i in range(50)]
-    for i in ls:
-        train_solus.append(read_input('train', str(i), args.inst_type))
-    for i in ls:
-        test_solus.append(read_input('train', str(i), args.inst_type))
+
+    '''同instance 环境批量输入'''
+    ls = [i for i in range(2)]
+    profiles = [args.inst_type for _ in range(2)]
+
+    for i in range(len(ls)):
+        train_solus.append(read_input('train', str(ls[i]), profiles[i], args.mission_num))
+    for i in range(len(ls)):
+        test_solus.append(read_input('train', str(ls[i]), profiles[i], args.mission_num))
     for solu in train_solus:
         solu.l2a_init()
     for solu in test_solus:
@@ -93,11 +97,11 @@ if __name__ == '__main__':
                             rl_logger=None, save_path=args.save_path, max_num=args.max_num)
 
     # init eval
-    # agent.qf = torch.load(args.save_path + '/eval_' + args.inst_type[0] + '.pkl')
-    # agent.qf_target = torch.load(args.save_path + '/target_' + args.inst_type[0] + '.pkl')
+    agent.qf = torch.load(args.save_path + '/eval_' + profiles[0][0:2] + '.pkl')
+    agent.qf_target = torch.load(args.save_path + '/target_' + profiles[0][0:2] + '.pkl')
 
     # ========================= mode =========================
-    RL_flag, rollout_flag, exact_flag, fix_xjm, fix_all = True, False, False, False, False
+    RL_flag, rollout_flag, exact_flag, fix_xjm, fix_all = True, True, False, False, False
 
     # ========================= RL =========================
     if RL_flag:
@@ -105,7 +109,7 @@ if __name__ == '__main__':
 
     # ========================= Rollout =========================
     if rollout_flag:
-        makespan_forall_rollout, solus, time_forall_rollout = collector.rollout()
+        makespan_forall_rollout, solus, time_forall_rollout = collector.rollout_10()
     # write_env_to_file(solu.iter_env, 0, cf.MISSION_NUM_ONE_QUAY_CRANE)
 
     # ========================= Gurobi =========================
@@ -128,15 +132,15 @@ if __name__ == '__main__':
     if exact_flag:
         print("exact", end='\t')
         for i in range(len(ls)):
-            print("算例为:" + str(ls[i]), end='\t')
-            print("makespan:" + str(makespan_forall_gurobi[i]), end='\t')
+            print("instance:" + str(ls[i]), end='\t')
+            print("instance:" + str(makespan_forall_gurobi[i]), end='\t')
             print("t:" + str(time_g[i]), end='\t')
         print()
 
     if RL_flag:
         print("RL", end='\t')
         for i in range(len(ls)):
-            print("算例为:" + str(ls[i]), end='\t')
+            print("instance:" + str(ls[i]), end='\t')
             print("makespan:" + str(makespan_forall_RL[i]), end='\t')
             print("t:" + str(time_forall_RL[i]), end='\t')
         print()
@@ -144,7 +148,7 @@ if __name__ == '__main__':
     if rollout_flag:
         print("rollout", end='\t')
         for i in range(len(ls)):
-            print("算例为:" + str(ls[i]), end='\t')
+            print("instance:" + str(ls[i]), end='\t')
             print("makespan:" + str(makespan_forall_rollout[i]), end='\t')
             print("t:" + str(time_forall_rollout[i]), end='\t')
         print()
@@ -152,7 +156,7 @@ if __name__ == '__main__':
     if fix_xjm:
         print("fix Xjm", end='\t')
         for i in range(len(ls)):
-            print("算例为:" + str(ls[i]), end='\t')
+            print("instance:" + str(ls[i]), end='\t')
             print("makespan:" + str(makespan_forall_gurobi2[i]), end='\t')
             print("t:" + str(time_g2[i]), end='\t')
         print()
@@ -160,7 +164,7 @@ if __name__ == '__main__':
     if fix_all:
         print("fix all", end='\t')
         for i in range(len(ls)):
-            print("算例为:" + str(ls[i]), end='\t')
+            print("instance:" + str(ls[i]), end='\t')
             print("makespan:" + str(makespan_forall_gurobi3[i]), end='\t')
             print("t:" + str(time_g3[i]), end='\t')
         print()
