@@ -8,55 +8,68 @@
 """
 import matplotlib.pyplot as plt
 import pandas as pd
+import numpy as np
 
-figure, axes = plt.subplots(2, 2, figsize=(12, 10))
-
-datafile = u"/home/ei/workspace/wangqi/Port_Scheduling_New_Version/data_process/3实验结果.xlsx"
-# 任务10
-mission_num = 10
-data = pd.read_excel(datafile, sheet_name=str(mission_num))
-
-axes[0][0].set_title(str(mission_num) + " containers", fontsize=9)  # 标题，并设定字号大小
-axes[0][0].set_ylabel('makespan')
-data = data[:][0:5]
+plt.figure(figsize=(8, 6))
+# plt.style.use('classic')  # seaborn-dark-palette
+plt.rcParams['font.sans-serif'] = ['Times New Roman']
+plt.grid(linestyle='--')
+plt.tick_params(labelsize=12)
+datafile = u"/Users/jacq/Desktop/PortScheduling/实验结果.xlsx"
 color = dict(boxes='DarkGreen', whiskers='DarkOrange', medians='DarkBlue', caps='Gray')
-data.plot.box(grid=True,
-              color=color,
-              ax=axes[0][0])
+font_label = {'family': 'Times New Roman',
+              'weight': 'medium',
+              'color': 'black',
+              'size': 13
+              }
 # 任务10
 mission_num = 100
-data = pd.read_excel(datafile, sheet_name=str(mission_num))
-
-axes[0][1].set_title(str(mission_num) + " containers", fontsize=9)  # 标题，并设定字号大小
-axes[0][1].set_ylabel('makespan')
-data = data[:][0:5]
-color = dict(boxes='DarkGreen', whiskers='DarkOrange', medians='DarkBlue', caps='Gray')
-data.plot.box(grid=True,
-              color=color,
-              ax=axes[0][1])
-
+data = pd.read_excel(datafile, sheet_name='Z2_' + str(mission_num) + 'p')
+plt.ylabel('Makespan', fontdict=font_label)
+# .plot.box(grid=True, flierprops=fliers)
+f = data.boxplot(patch_artist=True, return_type='dict')
+for box in f['boxes']:
+    # 箱体边框颜色
+    box.set(color='#7570b3', linewidth=2)
+    # 箱体内部填充颜色
+    box.set(facecolor='#1b9e77', alpha=0.8)  # '#1b9e77'
+for whisker in f['whiskers']:
+    whisker.set(color='r', linestyle='--', linewidth=1.8)
+for cap in f['caps']:
+    cap.set(color='darkgreen', linewidth=2)
+for median in f['medians']:
+    median.set(color='DarkBlue', linewidth=2)
+for flier in f['fliers']:
+    flier.set(marker='o', color='b', markeredgecolor='black', alpha=0.5, markersize=2.0)
+plt.show()
 # 任务10
-mission_num = 500
-data = pd.read_excel(datafile, sheet_name=str(mission_num))
+# mission_num = 100
+# data = pd.read_excel(datafile, sheet_name='Z2_' + str(mission_num) + 'p')
+# axes[1].set_ylabel('Makespan')
+# data.plot.box(grid=True, ax=axes[1], flierprops=fliers)
 
-axes[1][0].set_title(str(mission_num) + " containers", fontsize=9)  # 标题，并设定字号大小
-axes[1][0].set_ylabel('makespan')
-data = data[:][0:5]
-color = dict(boxes='DarkGreen', whiskers='DarkOrange', medians='DarkBlue', caps='Gray')
-data.plot.box(grid=True,
-              color=color,
-              ax=axes[1][0])
-# 任务10
-mission_num = 1000
-data = pd.read_excel(datafile, sheet_name=str(mission_num))
+# # 任务10
+# mission_num = 500
+# data = pd.read_excel(datafile, sheet_name=str(mission_num))
+#
+# axes[1][0].set_title(str(mission_num) + " containers", fontsize=9)  # 标题，并设定字号大小
+# axes[1][0].set_ylabel('makespan')
+# data = data[:][0:5]
+# color = dict(boxes='DarkGreen', whiskers='DarkOrange', medians='DarkBlue', caps='Gray')
+# data.plot.box(grid=True,
+#               color=color,
+#               ax=axes[1][0])
+# # 任务10
+# mission_num = 1000
+# data = pd.read_excel(datafile, sheet_name=str(mission_num))
 
-axes[1][1].set_title(str(mission_num) + " containers", fontsize=9)  # 标题，并设定字号大小
-axes[1][1].set_ylabel('makespan')
-data = data[:][0:5]
-color = dict(boxes='DarkGreen', whiskers='DarkOrange', medians='DarkBlue', caps='Gray')
-data.plot.box(grid=True,
-              color=color,
-              ax=axes[1][1])
+# axes[1][1].set_title(str(mission_num) + " containers", fontsize=9)  # 标题，并设定字号大小
+# axes[1][1].set_ylabel('makespan')
+# data = data[:][0:5]
+# color = dict(boxes='DarkGreen', whiskers='DarkOrange', medians='DarkBlue', caps='Gray')
+# data.plot.box(grid=True,
+#               color=color,
+#               ax=axes[1][1])
 # # 任务10
 # mission_num = 100
 # data = pd.read_excel(datafile, sheet_name=str(mission_num))
@@ -118,4 +131,3 @@ data.plot.box(grid=True,
 #                  scatter_kws={'s': 60, 'color': '#016392', },  # 设置散点属性，参考plt.scatter
 #                  line_kws={'linestyle': '--', 'color': '#c72e29'}  # 设置线属性，参考 plt.plot
 #                  )
-plt.show()  # 显示图像

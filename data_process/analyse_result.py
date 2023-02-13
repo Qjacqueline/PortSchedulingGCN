@@ -169,7 +169,6 @@ def draw_gantt_graph_missions_exact(inter_env, MLP, save_label):
            [109 / 255, 168 / 255, 227 / 255], [160 / 255, 209 / 255, 247 / 255], [177 / 255, 210 / 255, 234 / 255],
            [201 / 255, 240 / 255, 251 / 255], [219 / 255, 246 / 255, 248 / 255]]  # royalblue
     qcc.reverse(), lsc.reverse(), isc.reverse(), ycc.reverse()
-    color = [sc[0], 'w', 'lightgrey', sc[3], 'silver', sc[-3], 'darkgrey', sc[-1], 'c', 'm', 'k']
     # font
     plt.rcParams['font.sans-serif'] = 'Times New Roman'
     font = {'family': 'Times New Roman',
@@ -184,7 +183,7 @@ def draw_gantt_graph_missions_exact(inter_env, MLP, save_label):
         for j in range(len(add[0])):
             if j is 0:
                 plt.text(left[i][j] + 4, i + 0.8, quaycrane[i], fontdict=font, color='black')
-                plt.barh(i + 1, add[i][j], left=left[i][j], color=qcc[int(quaycrane[i][2:]) -1], edgecolor=edge_color,
+                plt.barh(i + 1, add[i][j], left=left[i][j], color=qcc[int(quaycrane[i][2:]) - 1], edgecolor=edge_color,
                          linewidth=linewidth)
             elif j is 3:
                 plt.text(left[i][j] + 6, i + 0.8, station[i], fontdict=font, color='black')
@@ -223,6 +222,9 @@ def draw_gantt_graph_missions_exact(inter_env, MLP, save_label):
     # ax.spines['top'].set_linewidth(2)  # 设置上部坐标轴的粗细
     plt.xlim(0, 1000)
     plt.ylim(0, 18)
+    makespan = 898.034116453539
+    plt.axvline(makespan, ls='--', color='black', linewidth=linewidth)
+    plt.text(makespan-10, -0.7, 'Makespan: '+str(898.0), fontdict=font, color='r',weight='semibold')
     plt.ylabel("Machine ID", fontdict=font_label)
     # 网格线，此图使用不好看，注释掉
     # plt.grid(linestyle="--",alpha=0.5)
@@ -320,7 +322,7 @@ if __name__ == '__main__':
     _, solu, _ = Least_Mission_Num_Choice(port_env.init_env)
     port_env.l2a_init()
     model = CongestionPortModel(port_env)
-    # model.gamma = gammas[i]
+    model.theta = 0
     model.construct()
     solve_model(MLP=model.MLP, inst_idx=cf.inst_type + '_' + str(cf.MISSION_NUM), solved_env=port_env, tag='_exact',
                 X_flag=False, Y_flag=False)

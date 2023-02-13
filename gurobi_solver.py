@@ -564,8 +564,10 @@ class CongestionPortModel:
         self.u = None  # u^s_j
         self.alpha = None
         self.beta = None
-        self.gamma = 0.1
+        self.gamma = None
+        self.gamma2 = None
         self.theta = None
+        self.theta2 = None
 
     def init_model(self):
         self.K_num = self.env.machine_num
@@ -757,7 +759,7 @@ class CongestionPortModel:
             self.MLP.addConstr(self.r[jj] - self.C[0][j] >= 0, "con10" + str(j) + str(jj))
             k = int(tmp_mission_ls[j].quay_crane_id[-1]) - 1
             self.MLP.addConstr(self.x[j][jj][k] == 1, "con11" + str(j) + str(jj))
-            # self.MLP.addConstr(self.r[jj] - self.r[j] == 120, "con00" + str(j) + str(jj))  # FIXME: match RL
+            # self.MLP.addConstr(self.r[jj] - self.r[j] == 60, "con00" + str(j) + str(jj))  # FIXME: match RL
         self.MLP.addConstr(self.r[-2] == 0, "con00")
         # for i in range(self.env.qc_num):
         #     self.MLP.addConstr(self.r[sum(self.J_num[0:i])] == 0, "con00")  # FIXME: match RL
@@ -780,6 +782,7 @@ class CongestionPortModel:
         self.MLP.addConstr((q_2 == sum(self.C[s + 1][j] - self.o[s + 1][j]
                                        - self.C[s][j] - self.u[s][j] for j in tmp_J for s in range(0, 3))), "obj2")
         # self.MLP.addConstr(q_1 <= self.gamma, "obj1")
+        # self.MLP.addConstr(q_1 >= self.gamma2, "obj1")
         # self.MLP.addConstr(q_2 <= self.theta, "obj2")
         self.MLP.setObjective(q_1,
                               GRB.MINIMIZE)  # + 0.01 * q_2 # FIXME: match RL + 0.01 * q_2 + 0.01 * sum(self.C[s][j] for s in self.S for j in self.J)
@@ -909,7 +912,7 @@ def solve_model(MLP, inst_idx, solved_env: IterSolution = None, tag='', X_flag=T
     # min_q_2 = 2401.81184668972
     # MLP.addConstr((vars[-1] <= epsilon * (max_q_2 - min_q_2) + min_q_2), "multi-objectives")
     MLP.update()
-    MLP.setParam('OutputFlag', 0)
+    # MLP.setParam('OutputFlag', 0)
     # ============== 求解模型 ================
     # MLP.write("output_result/gurobi/mod_" + str(inst_idx) + "_" + tag + ".lp")
     MLP.Params.timelimit = 7200
