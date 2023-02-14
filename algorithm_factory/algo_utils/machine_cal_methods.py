@@ -323,6 +323,117 @@ def generate_yard_blocks_set(is_num, yc_num):
     return cur_yar_blocks
 
 
+def cal_LB1(port_env: PortEnv):
+    m_m, m_qc, m_ls, m_co, m_yc = float('inf'), float('inf'), float('inf'), float('inf'), float('inf')
+    lb_qc, lb_ls, lb_co, lb_yc = 0, 0, 0, 0
+    for mission in port_env.mission_list:
+        _, min_distance = find_least_distance_station(port_env, mission)
+        lb_ls += mission.station_process_time
+        t_m_qc = mission.station_process_time + mission.intersection_process_time + \
+                 mission.yard_crane_process_time + \
+                 abs(cf.SLOT_NUM_Y - mission.yard_block_loc[2]) * cf.SLOT_WIDTH / cf.YARDCRANE_SPEED_Y * 2 + \
+                 min_distance / mission.vehicle_speed + mission.transfer_time_c2y
+        t_m_ls = mission.release_time / 2.0 + cf.BUFFER_PROCESS_TIME + mission.intersection_process_time + \
+                 mission.yard_crane_process_time + \
+                 abs(cf.SLOT_NUM_Y - mission.yard_block_loc[2]) * cf.SLOT_WIDTH / cf.YARDCRANE_SPEED_Y * 2 + \
+                 min_distance / mission.vehicle_speed + mission.transfer_time_c2y
+        t_m_co = mission.release_time / 2.0 + cf.BUFFER_PROCESS_TIME + mission.station_process_time + \
+                 mission.yard_crane_process_time + \
+                 abs(cf.SLOT_NUM_Y - mission.yard_block_loc[2]) * cf.SLOT_WIDTH / cf.YARDCRANE_SPEED_Y * 2 + \
+                 min_distance / mission.vehicle_speed + mission.transfer_time_c2y
+        t_m_yc = mission.release_time / 2.0 + cf.BUFFER_PROCESS_TIME + mission.station_process_time + \
+                 mission.intersection_process_time + \
+                 min_distance / mission.vehicle_speed + mission.transfer_time_c2y
+        if t_m_qc < m_qc:
+            m_qc = t_m_qc
+        if t_m_ls < m_ls:
+            m_ls = t_m_ls
+        if t_m_co < m_co:
+            m_co = t_m_co
+        if t_m_yc < m_yc:
+            m_yc = t_m_yc
+        if mission.release_time / 2.0 + cf.BUFFER_PROCESS_TIME > lb_qc:
+            lb_qc = mission.release_time / 2.0 + cf.BUFFER_PROCESS_TIME
+    lb_ls = lb_ls / len(port_env.lock_stations)
+    for co in port_env.crossovers.values():
+        t_lb_co = 0
+        for mission in co.mission_list:
+            t_lb_co += mission.intersection_process_time
+        if t_lb_co > lb_co:
+            lb_co = t_lb_co
+    for yc_idx in port_env.yard_cranes_set:
+        yc = port_env.yard_cranes['YC' + yc_idx]
+        max_x_ls = [mission.yard_block_loc[1] for mission in yc.mission_list]
+        yc_pt_ls = [mission.yard_crane_process_time + abs(cf.SLOT_NUM_Y - mission.yard_block_loc[2])
+                    * cf.SLOT_WIDTH / cf.YARDCRANE_SPEED_Y * 2 for mission in yc.mission_list]
+        t_lb_yc = sum(yc_pt_ls) + max(max_x_ls) * cf.SLOT_LENGTH / cf.YARDCRANE_SPEED_X
+        if t_lb_yc > lb_yc:
+            lb_yc = t_lb_yc
+    lb1 = max((lb_qc + m_qc), (lb_ls + m_ls), (m_co + lb_co), (m_yc + lb_yc))
+    print("lB1:" + str(lb1))
+    return lb1
+
+
+def cal_LB2(port_env: PortEnv):
+    lb2 = 0
+    r_lb2 = {}
+    for mission in port_env.mission_list:
+        _, min_distance = find_least_distance_station(port_env, mission)
+        t_lb2 = mission.release_time / 2.0 \
+                + cf.BUFFER_PROCESS_TIME \
+                + mission.station_process_time \
+                + mission.intersection_process_time \
+                + mission.yard_crane_process_time \
+                + abs(cf.SLOT_NUM_Y - mission.yard_block_loc[2]) * cf.SLOT_WIDTH / cf.YARDCRANE_SPEED_Y * 2 \
+                + mission.transfer_time_c2y \
+                + min_distance / mission.vehicle_speed
+        if t_lb2 > lb2:
+            lb2 = t_lb2
+        r_lb2[mission.idx] = t_lb2
+    print("lB2:" + str(lb2))
+    return lb2, r_lb2
+
+
+def cal_LB3(port_env: PortEnv, r_lb: dict):
+    r_lb2 = copy.deepcopy(r_lb)
+    yc_dict = {}
+    for yc_idx in port_env.yard_cranes_set:
+        yc_dict.setdefault(yc_idx, [])
+    for qc in port_env.quay_cranes.values():
+        t_yc_ls = copy.deepcopy(yc_dict)
+        mission_ls = list(qc.missions.values())
+        getattr(sort_missions, "A_EXIT")(mission_ls)
+        for mission in mission_ls:
+            ls = t_yc_ls.get(mission.yard_block_loc[0])
+            if any(ls):
+                p_mission = ls[-1]
+                r_lb2[mission.idx] = max(r_lb2[mission.idx], r_lb2[p_mission] + mission.yard_crane_process_time + abs(
+                    cf.SLOT_NUM_Y - mission.yard_block_loc[2]) * cf.SLOT_WIDTH / cf.YARDCRANE_SPEED_Y * 2)
+            ls.append(mission.idx)
+            t_yc_ls[mission.yard_block_loc[0]] = ls
+    print("LB3:" + str(max(list(r_lb2.values()))))
+    return max(list(r_lb2.values()))
+
+
+def cal_LB4(port_env: PortEnv, r_lb: dict):
+    r_lb2 = copy.deepcopy(r_lb)
+    yc_dict = {}
+    for yc_idx in port_env.yard_cranes_set:
+        yc_dict.setdefault(yc_idx, [])
+    t_yc_ls = copy.deepcopy(yc_dict)
+    getattr(sort_missions, "A_EXIT")(port_env.mission_list)
+    for mission in port_env.mission_list:
+        ls = t_yc_ls.get(mission.yard_block_loc[0])
+        if any(ls):
+            p_mission = ls[-1]
+            r_lb2[mission.idx] = max(r_lb2[mission.idx], r_lb2[p_mission] + mission.yard_crane_process_time + abs(
+                cf.SLOT_NUM_Y - mission.yard_block_loc[2]) * cf.SLOT_WIDTH / cf.YARDCRANE_SPEED_Y * 2)
+        ls.append(mission.idx)
+        t_yc_ls[mission.yard_block_loc[0]] = ls
+    print("LB4:" + str(max(list(r_lb2.values()))))
+    return max(list(r_lb2.values()))
+
+
 # ==================== machine process missions  ====================
 def quay_crane_process_by_order(port_env):
     # 阶段一：岸桥
@@ -592,6 +703,23 @@ def quay_crane_release_mission(port_env: PortEnv, mission: Mission):
     port_env.quay_cranes[mission.quay_crane_id].mission_list.append(mission)
 
 
+def find_least_distance_station(port_env, mission):
+    min_distance = 10000
+    min_station = list(port_env.lock_stations.items())[0][1]
+    curr_crossover = port_env.crossovers[mission.crossover_id]
+    for i in range(port_env.ls_num):
+        curr_station = list(port_env.lock_stations.values())[i]
+        curr_station_loc = curr_station.location
+        distance = abs(port_env.quay_cranes[mission.quay_crane_id].location[0] - curr_station_loc[0]) + \
+                   abs(port_env.quay_cranes[mission.quay_crane_id].location[1] - curr_station_loc[1]) + \
+                   abs(curr_crossover.location[0] - curr_station_loc[0]) + \
+                   abs(curr_crossover.location[1] - curr_station_loc[1])
+        if distance < min_distance:
+            min_distance = distance
+            min_station = curr_station
+    return min_station, min_distance
+
+
 def station_process_by_least_distance(port_env, buffer_flag=False):
     station_assign_dict = {}
     # 阶段四：锁站
@@ -599,19 +727,7 @@ def station_process_by_least_distance(port_env, buffer_flag=False):
         station_idx = list(port_env.lock_stations)[i]
         station_assign_dict.setdefault(station_idx, [])
     for mission in port_env.mission_list:
-        min_distance = 10000
-        min_station = list(port_env.lock_stations.items())[0][1]
-        curr_crossover = port_env.crossovers[mission.crossover_id]
-        for i in range(port_env.ls_num):
-            curr_station = list(port_env.lock_stations.values())[i]
-            curr_station_loc = curr_station.location
-            distance = abs(port_env.quay_cranes[mission.quay_crane_id].location[0] - curr_station_loc[0]) + \
-                       abs(port_env.quay_cranes[mission.quay_crane_id].location[1] - curr_station_loc[1]) + \
-                       abs(curr_crossover.location[0] - curr_station_loc[0]) + \
-                       abs(curr_crossover.location[1] - curr_station_loc[1])
-            if distance < min_distance:
-                min_distance = distance
-                min_station = curr_station
+        min_station, min_distance = find_least_distance_station(port_env, mission)
         station_assign_dict[min_station.idx].append(mission)
     for station_idx in station_assign_dict.keys():
         getattr(sort_missions, "A_STATION")(station_assign_dict[station_idx],
