@@ -62,14 +62,15 @@ if __name__ == '__main__':
     # profiles = ['A2_t' for _ in range(50)]
 
     '''test 环境输入'''
-    # ls = [10, 13, 27, 10, 15, 21, 10, 11, 21,
-    #       10, 11, 10, 14, 14, 10, 11, 12,
-    #       10, 17, 21, 10, 14, 18, 10, 16, 23]
-    # profiles = ['A2_t', 'A2_t', 'A2_t', 'B2_t', 'B2_t', 'B2_t', 'C2_t', 'C2_t', 'C2_t',
-    #             'D2_t', 'D2_t', 'E2_t', 'E2_t', 'E2_t', 'F2_t', 'F2_t', 'F2_t',
-    #             'G2_t', 'G2_t', 'G2_t', 'H2_t', 'H2_t', 'H2_t', 'Z2_t', 'Z2_t', 'Z2_t']
-    ls = [13, 27]
-    profiles = ['A2_t', 'A2_t']
+    ls = [10, 13, 27, 10, 15, 21, 10, 11, 21,
+          10, 11, 10, 14, 14, 10, 11, 12,
+          10, 17, 21, 10, 14, 18, 10, 16, 23]
+    profiles = ['A2_t', 'A2_t', 'A2_t', 'B2_t', 'B2_t', 'B2_t', 'C2_t', 'C2_t', 'C2_t',
+                'D2_t', 'D2_t', 'E2_t', 'E2_t', 'E2_t', 'F2_t', 'F2_t', 'F2_t',
+                'G2_t', 'G2_t', 'G2_t', 'H2_t', 'H2_t', 'H2_t', 'Z2_t', 'Z2_t', 'Z2_t']
+    # ls = [10, 16, 23]
+    # profiles = ['Z2_t', 'Z2_t', 'Z2_t']
+
     '''模式选择 Fixme'''
     RL_flag, rollout_flag, exact_flag, fix_xjm, fix_all = True, True, False, False, True
 
@@ -98,8 +99,8 @@ if __name__ == '__main__':
                                 mission_num=train_solu.init_env.J_num_all, agent=agent,
                                 rl_logger=None, save_path=args.save_path, max_num=args.max_num)
         # 初始化网络 Fixme
-        agent.qf = torch.load(args.save_path + '/eval_' + profiles[i][:2] + '.pkl')
-        agent.qf_target = torch.load(args.save_path + '/target_' + profiles[i][:2] + '.pkl')
+        agent.qf = torch.load(args.save_path + '/eval_' + profiles[i][0:2] + '.pkl')  # profiles[i][:2]
+        agent.qf_target = torch.load(args.save_path + '/target_' + profiles[i][0:2] + '.pkl')
 
         # 开始跑算法
         print("算例为\t" + profiles[i] + " " + str(ls[i]), end="\t")

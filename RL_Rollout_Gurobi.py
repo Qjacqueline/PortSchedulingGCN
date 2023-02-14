@@ -60,8 +60,8 @@ if __name__ == '__main__':
     test_solus = []
 
     '''同instance 环境批量输入'''
-    ls = [i for i in range(2)]
-    profiles = [args.inst_type for _ in range(2)]
+    ls = [i for i in range(50)]
+    profiles = [args.inst_type for _ in range(50)]
 
     for i in range(len(ls)):
         train_solus.append(read_input('train', str(ls[i]), profiles[i], args.mission_num))
@@ -101,7 +101,8 @@ if __name__ == '__main__':
     agent.qf_target = torch.load(args.save_path + '/target_' + profiles[0][0:2] + '.pkl')
 
     # ========================= mode =========================
-    RL_flag, rollout_flag, exact_flag, fix_xjm, fix_all = True, True, False, False, False
+    RL_flag, rollout_flag, rollout_flag_100, rollout_flag_10, rollout_flag_5, rollout_flag_2, exact_flag, fix_xjm, fix_all = \
+        True, False, True, False, False, False, False, False, False
 
     # ========================= RL =========================
     if RL_flag:
@@ -109,7 +110,15 @@ if __name__ == '__main__':
 
     # ========================= Rollout =========================
     if rollout_flag:
-        makespan_forall_rollout, solus, time_forall_rollout = collector.rollout_10()
+        makespan_forall_rollout, _, time_forall_rollout = collector.rollout()
+    if rollout_flag_100:
+        makespan_forall_rollout_100, _, time_forall_rollout_100 = collector.rollout_100()
+    if rollout_flag_10:
+        makespan_forall_rollout_10, _, time_forall_rollout_10 = collector.rollout_10()
+    if rollout_flag_5:
+        makespan_forall_rollout_5, _, time_forall_rollout_5 = collector.rollout_5()
+    if rollout_flag_2:
+        makespan_forall_rollout_2, _, time_forall_rollout_2 = collector.rollout_2()
     # write_env_to_file(solu.iter_env, 0, cf.MISSION_NUM_ONE_QUAY_CRANE)
 
     # ========================= Gurobi =========================
@@ -129,42 +138,33 @@ if __name__ == '__main__':
     # makespan_forall_gurobi4, time_g4 = collector.bb_depth_wide(solu, global_UB=makespan_forall_gurobi3[0] + 1e-5)
 
     # ========================= Print Result =========================
-    if exact_flag:
-        print("exact", end='\t')
-        for i in range(len(ls)):
-            print("instance:" + str(ls[i]), end='\t')
-            print("instance:" + str(makespan_forall_gurobi[i]), end='\t')
-            print("t:" + str(time_g[i]), end='\t')
-        print()
-
-    if RL_flag:
-        print("RL", end='\t')
-        for i in range(len(ls)):
-            print("instance:" + str(ls[i]), end='\t')
-            print("makespan:" + str(makespan_forall_RL[i]), end='\t')
-            print("t:" + str(time_forall_RL[i]), end='\t')
-        print()
-
-    if rollout_flag:
-        print("rollout", end='\t')
-        for i in range(len(ls)):
-            print("instance:" + str(ls[i]), end='\t')
-            print("makespan:" + str(makespan_forall_rollout[i]), end='\t')
-            print("t:" + str(time_forall_rollout[i]), end='\t')
-        print()
-
-    if fix_xjm:
-        print("fix Xjm", end='\t')
-        for i in range(len(ls)):
-            print("instance:" + str(ls[i]), end='\t')
-            print("makespan:" + str(makespan_forall_gurobi2[i]), end='\t')
-            print("t:" + str(time_g2[i]), end='\t')
-        print()
-
-    if fix_all:
-        print("fix all", end='\t')
-        for i in range(len(ls)):
-            print("instance:" + str(ls[i]), end='\t')
-            print("makespan:" + str(makespan_forall_gurobi3[i]), end='\t')
-            print("t:" + str(time_g3[i]), end='\t')
+    for i in range(len(ls)):
+        print("instance:\t" + profiles[i] + " " + str(ls[i]), end='\t')
+        if exact_flag:
+            print(str(makespan_forall_gurobi[i]), end='\t')
+            print(str(time_g[i]), end='\t')
+        if RL_flag:
+            print(str(makespan_forall_RL[i]), end='\t')
+            print(str(time_forall_RL[i]), end='\t')
+        if rollout_flag:
+            print(str(makespan_forall_rollout[i]), end='\t')
+            print(str(time_forall_rollout[i]), end='\t')
+        if rollout_flag_100:
+            print(str(makespan_forall_rollout_100[i]), end='\t')
+            print(str(time_forall_rollout_100[i]), end='\t')
+        if rollout_flag_10:
+            print(str(makespan_forall_rollout_10[i]), end='\t')
+            print(str(time_forall_rollout_10[i]), end='\t')
+        if rollout_flag_5:
+            print(str(makespan_forall_rollout_5[i]), end='\t')
+            print(str(time_forall_rollout_5[i]), end='\t')
+        if rollout_flag_2:
+            print(str(makespan_forall_rollout_2[i]), end='\t')
+            print(str(time_forall_rollout_2[i]), end='\t')
+        if fix_xjm:
+            print(str(makespan_forall_gurobi2[i]), end='\t')
+            print(str(time_g2[i]), end='\t')
+        if fix_all:
+            print(str(makespan_forall_gurobi3[i]), end='\t')
+            print(str(time_g3[i]), end='\t')
         print()

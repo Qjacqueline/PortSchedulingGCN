@@ -20,24 +20,26 @@ if __name__ == '__main__':
     random.seed(cf.RANDOM_SEED)
     np.random.seed(cf.RANDOM_SEED)
 
-    ls = [10, 13, 27, 10, 15, 21, 10, 11, 21,
-          10, 11, 10, 14, 14, 10, 11, 12,
-          10, 17, 21, 10, 14, 18, 10, 16, 23]
-    profiles = ['A2_t', 'A2_t', 'A2_t', 'B2_t', 'B2_t', 'B2_t', 'C2_t', 'C2_t', 'C2_t',
-                'D2_t', 'D2_t', 'E2_t', 'E2_t', 'E2_t', 'F2_t', 'F2_t', 'F2_t',
-                'G2_t', 'G2_t', 'G2_t', 'H2_t', 'H2_t', 'H2_t', 'Z2_t', 'Z2_t', 'Z2_t']
+    # ls = [10, 12, 27, 10, 15, 21, 10, 11, 21,
+    #       10, 11, 10, 14, 15, 10, 11, 12,
+    #       10, 17, 21, 10, 14, 18, 10, 16, 23]
+    # profiles = ['A2_t', 'A2_t', 'A2_t', 'B2_t', 'B2_t', 'B2_t', 'C2_t', 'C2_t', 'C2_t',
+    #             'D2_t', 'D2_t', 'E2_t', 'E2_t', 'E2_t', 'F2_t', 'F2_t', 'F2_t',
+    #             'G2_t', 'G2_t', 'G2_t', 'H2_t', 'H2_t', 'H2_t', 'Z2_t', 'Z2_t', 'Z2_t']
 
-    # ls = [i for i in range(50)]
+    ls = [i for i in range(50)]
+    lss = [1000 for _ in range(50)]
+    profiles = ['H2_1000' for _ in range(50)]
 
-    # print("Fixed order")
-    env = read_input('train', 10, 'A2_t', 10)
-    makespan, _, _ = Fixed_order(env.init_env, [0, 1, 0, 1, 0, 1, 0, 0, 1, 1])
-    print("total_makespan:" + str(makespan))
+    # # print("Fixed order")
+    # env = read_input('train', 10, 'A2_t', 10)
+    # makespan, _, _ = Fixed_order(env.init_env, [0, 1, 0, 1, 0, 1, 0, 0, 1, 1])
+    # print("total_makespan:" + str(makespan))
 
     total_makespan = 0
     print("Random_Choice")
     for i in range(len(ls)):
-        env = read_input('train', str(ls[i]), profiles[i], mission_num=ls[i])
+        env = read_input('train', str(ls[i]), profiles[i], mission_num=lss[i])
         makespan, _, _ = Random_Choice(env.init_env)
         total_makespan += makespan
     print("total_makespan:" + str(total_makespan))
@@ -45,7 +47,7 @@ if __name__ == '__main__':
     total_makespan = 0
     print("Least_Wait_Time_Choice")
     for i in range(len(ls)):
-        env = read_input('train', str(ls[i]), profiles[i], mission_num=ls[i])
+        env = read_input('train', str(ls[i]), profiles[i], mission_num=lss[i])
         makespan, _, _ = Least_Wait_Time_Choice(env.init_env)
         total_makespan += makespan
     print("total_makespan:" + str(total_makespan))
@@ -53,7 +55,7 @@ if __name__ == '__main__':
     total_makespan = 0
     print("Least_Mission_Num_Choice")
     for i in range(len(ls)):
-        env = read_input('train', str(ls[i]), profiles[i], mission_num=ls[i])
+        env = read_input('train', str(ls[i]), profiles[i], mission_num=lss[i])
         makespan, _, _ = Least_Mission_Num_Choice(env.init_env)
         total_makespan += makespan
     print("total_makespan:" + str(total_makespan))
@@ -61,7 +63,7 @@ if __name__ == '__main__':
     total_makespan = 0
     print("Least_Distance_Choice")
     for i in range(len(ls)):
-        env = read_input('train', str(ls[i]), profiles[i], mission_num=ls[i])
+        env = read_input('train', str(ls[i]), profiles[i], mission_num=lss[i])
         makespan, _, _ = Least_Distance_Choice(env.init_env)
         total_makespan += makespan
     print("total_makespan:" + str(total_makespan))
@@ -69,7 +71,7 @@ if __name__ == '__main__':
     total_makespan = 0
     print("sa")
     for i in range(len(ls)):
-        env = read_input('train', str(ls[i]), profiles[i], mission_num=ls[i])
+        env = read_input('train', str(ls[i]), profiles[i], mission_num=lss[i])
         sa = SA(env)
         sa.iter_solu.l2i_init()
         # print(env.last_step_makespan)

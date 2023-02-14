@@ -268,11 +268,11 @@ def generate_instance_type(inst_type):
         qc_num, ls_num, is_num, yc_num, m_num = 3, 4, 2, 4, cf.MISSION_NUM
     elif inst_type == 'F_t' or inst_type == 'F2_t' or inst_type == 'F2_1000':
         qc_num, ls_num, is_num, yc_num, m_num = 3, 5, 2, 3, cf.MISSION_NUM
-    elif inst_type == 'G_t' or inst_type == 'G2_t':
+    elif inst_type == 'G_t' or inst_type == 'G2_t' or inst_type == 'G2_1000':
         qc_num, ls_num, is_num, yc_num, m_num = 4, 4, 3, 6, cf.MISSION_NUM
-    elif inst_type == 'H_t' or inst_type == 'H2_t':
+    elif inst_type == 'H_t' or inst_type == 'H2_t' or inst_type == 'H2_1000':
         qc_num, ls_num, is_num, yc_num, m_num = 5, 5, 3, 7, cf.MISSION_NUM
-    elif inst_type == 'Z_t' or inst_type == 'Z2_t':
+    elif inst_type == 'Z_t' or inst_type == 'Z2_t' or inst_type == 'Z2_1000':
         qc_num, ls_num, is_num, yc_num, m_num = 6, 5, 3, 8, cf.MISSION_NUM
     elif inst_type == 'A' or inst_type == 'A2':
         qc_num, ls_num, is_num, yc_num, m_num = 1, 2, 1, 2, 100
@@ -340,7 +340,7 @@ def buffer_process_by_order(port_env):
 
 
 def buffer_process_one_order(mission: Mission, buffer: Buffer):
-    start_time_buffer = mission.release_time/2   # todo
+    start_time_buffer = mission.release_time / 2  # todo
     process_time_buffer = buffer.handling_time
     end_time_buffer = start_time_buffer + process_time_buffer
     # 更新buffer信息
@@ -522,7 +522,7 @@ def del_station_afterwards(port_env: PortEnv, buffer_flag, step_number=None, rel
 
 
 def del_machine(machine, buffer_flag=False):
-    if machine.idx[0] is 'S':
+    if machine.idx[0] == 'S':
         stage = 2
         machine.process_time = []
         if buffer_flag:
@@ -539,7 +539,7 @@ def del_machine(machine, buffer_flag=False):
                 mission.stage = 5
             else:
                 mission.stage = 4
-    if machine.idx[0] is 'C':
+    if machine.idx[0] == 'C':
         stage = 5
         for mission in machine.mission_list:
             mission.total_process_time = mission.machine_start_time[stage - 1] - mission.machine_start_time[0]
@@ -549,7 +549,7 @@ def del_machine(machine, buffer_flag=False):
         machine.process_time = []
         machine.mission_list = []
 
-    if machine.idx[0] is 'Y':
+    if machine.idx[0] == 'Y':
         stage = 7
         for mission in machine.mission_list:
             mission.total_process_time = mission.machine_start_time[stage - 1] + mission.machine_process_time[
@@ -645,7 +645,8 @@ def assign_mission_to_least_wait_station_buffer(curr_station):
 def assign_mission_to_station(mission, curr_station, buffer_flag=False):
     if buffer_flag:
         transfer_time_to_station = curr_station.distance_to_exit / mission.vehicle_speed
-        mission_arrive_time_station = mission.total_process_time + mission.machine_start_time[0] + transfer_time_to_station
+        mission_arrive_time_station = mission.total_process_time + mission.machine_start_time[
+            0] + transfer_time_to_station
         if any(curr_station.whole_occupy_time) and curr_station.whole_occupy_time[-1][-1] > mission_arrive_time_station:
             # 锁站当前有任务，说明主锁站正在工作，挑等待最短的锁站buffer，且有优先前面的buffer
             min_wait_station_buffer = assign_mission_to_least_wait_station_buffer(curr_station)
@@ -712,7 +713,8 @@ def assign_mission_to_station(mission, curr_station, buffer_flag=False):
     else:
         transfer_time_to_station = (abs(curr_station.location[0] - cf.QUAY_EXIT[0]) + abs(
             curr_station.location[1] - cf.QUAY_EXIT[1])) / mission.vehicle_speed
-        mission_arrive_time_station = mission.total_process_time + mission.machine_start_time[0] + transfer_time_to_station
+        mission_arrive_time_station = mission.total_process_time + mission.machine_start_time[
+            0] + transfer_time_to_station
         mission_handling_time_station = mission.station_process_time
         if any(curr_station.process_time):
             mission_start_time_station = max(mission_arrive_time_station, curr_station.process_time[-1][-1])

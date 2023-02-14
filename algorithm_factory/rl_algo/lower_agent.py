@@ -269,8 +269,8 @@ class LACollector:
                         self.best_result[-1] = makespan_forall[-1]
                         # torch.save(self.agent.qf, self.save_path + '/eval_' + self.task + '.pkl')
                         # torch.save(self.agent.qf_target, self.save_path + '/target_' + self.task + '.pkl')
-                        torch.save(self.agent.qf, self.save_path + '/eval_' + 'Z0' + '.pkl')
-                        torch.save(self.agent.qf_target, self.save_path + '/target_' + 'Z0' + '.pkl')
+                        torch.save(self.agent.qf, self.save_path + '/eval_' + self.task + '.pkl')
+                        torch.save(self.agent.qf_target, self.save_path + '/target_' + self.task + '.pkl')
                         print("更新了1")
             else:
                 makespan_forall.append(sum(makespan_forall[0:len(self.test_solus)]))
@@ -315,6 +315,43 @@ class LACollector:
             makespan_forall.append(sum(makespan_forall[0:-1]) - sum(makespan_forall[0:len(self.train_solus)]))
             return makespan_forall, self.test_solus, time_forall
 
+    def rollout_100(self):
+        with torch.no_grad():
+            makespan_forall = []
+            time_forall = []
+            for i in range(len(self.test_solus)):
+                torch.manual_seed(42)
+                solu = self.test_solus[i]
+                s_t_g = time.time()
+                for step in range(solu.init_env.J_num_all):
+                    cur_mission = solu.iter_env.mission_list[step]
+                    min_pos = 5
+                    min_makespan = float('Inf')
+                    for j in range(solu.init_env.ls_num):
+                        temp_solu = deepcopy(solu)
+                        temp_cur_mission = temp_solu.iter_env.mission_list[step]
+                        temp_makespan = temp_solu.step_v2(j, temp_cur_mission, step)
+                        if solu.init_env.J_num_all - step - 1 < 100:
+                            end_step = solu.init_env.J_num_all
+                        else:
+                            end_step = step + 100
+                        for v_step in range(step + 1, end_step):
+                            temp_cur_mission = temp_solu.iter_env.mission_list[v_step]
+                            state = get_state_n(env=temp_solu.iter_env, step_number=v_step, max_num=self.max_num)
+                            action = self.agent.forward(state, False)
+                            temp_makespan = temp_solu.step_v2(action, temp_cur_mission, v_step)
+                        if temp_makespan <= min_makespan:
+                            min_makespan = temp_makespan
+                            min_pos = j
+                    makespan = solu.step_v2(min_pos, cur_mission, step)
+                e_t_g = time.time()
+                makespan_forall.append(makespan)
+                time_forall.append(e_t_g - s_t_g)
+                # solu.reset()
+            makespan_forall.append(sum(makespan_forall[0:len(self.train_solus)]))
+            makespan_forall.append(sum(makespan_forall[0:-1]) - sum(makespan_forall[0:len(self.train_solus)]))
+            return makespan_forall, self.test_solus, time_forall
+
     def rollout_10(self):
         with torch.no_grad():
             makespan_forall = []
@@ -335,6 +372,80 @@ class LACollector:
                             end_step = solu.init_env.J_num_all
                         else:
                             end_step = step + 10
+                        for v_step in range(step + 1, end_step):
+                            temp_cur_mission = temp_solu.iter_env.mission_list[v_step]
+                            state = get_state_n(env=temp_solu.iter_env, step_number=v_step, max_num=self.max_num)
+                            action = self.agent.forward(state, False)
+                            temp_makespan = temp_solu.step_v2(action, temp_cur_mission, v_step)
+                        if temp_makespan <= min_makespan:
+                            min_makespan = temp_makespan
+                            min_pos = j
+                    makespan = solu.step_v2(min_pos, cur_mission, step)
+                e_t_g = time.time()
+                makespan_forall.append(makespan)
+                time_forall.append(e_t_g - s_t_g)
+                # solu.reset()
+            makespan_forall.append(sum(makespan_forall[0:len(self.train_solus)]))
+            makespan_forall.append(sum(makespan_forall[0:-1]) - sum(makespan_forall[0:len(self.train_solus)]))
+            return makespan_forall, self.test_solus, time_forall
+
+    def rollout_5(self):
+        with torch.no_grad():
+            makespan_forall = []
+            time_forall = []
+            for i in range(len(self.test_solus)):
+                torch.manual_seed(42)
+                solu = self.test_solus[i]
+                s_t_g = time.time()
+                for step in range(solu.init_env.J_num_all):
+                    cur_mission = solu.iter_env.mission_list[step]
+                    min_pos = 5
+                    min_makespan = float('Inf')
+                    for j in range(solu.init_env.ls_num):
+                        temp_solu = deepcopy(solu)
+                        temp_cur_mission = temp_solu.iter_env.mission_list[step]
+                        temp_makespan = temp_solu.step_v2(j, temp_cur_mission, step)
+                        if solu.init_env.J_num_all - step - 1 < 5:
+                            end_step = solu.init_env.J_num_all
+                        else:
+                            end_step = step + 5
+                        for v_step in range(step + 1, end_step):
+                            temp_cur_mission = temp_solu.iter_env.mission_list[v_step]
+                            state = get_state_n(env=temp_solu.iter_env, step_number=v_step, max_num=self.max_num)
+                            action = self.agent.forward(state, False)
+                            temp_makespan = temp_solu.step_v2(action, temp_cur_mission, v_step)
+                        if temp_makespan <= min_makespan:
+                            min_makespan = temp_makespan
+                            min_pos = j
+                    makespan = solu.step_v2(min_pos, cur_mission, step)
+                e_t_g = time.time()
+                makespan_forall.append(makespan)
+                time_forall.append(e_t_g - s_t_g)
+                # solu.reset()
+            makespan_forall.append(sum(makespan_forall[0:len(self.train_solus)]))
+            makespan_forall.append(sum(makespan_forall[0:-1]) - sum(makespan_forall[0:len(self.train_solus)]))
+            return makespan_forall, self.test_solus, time_forall
+
+    def rollout_2(self):
+        with torch.no_grad():
+            makespan_forall = []
+            time_forall = []
+            for i in range(len(self.test_solus)):
+                torch.manual_seed(42)
+                solu = self.test_solus[i]
+                s_t_g = time.time()
+                for step in range(solu.init_env.J_num_all):
+                    cur_mission = solu.iter_env.mission_list[step]
+                    min_pos = 5
+                    min_makespan = float('Inf')
+                    for j in range(solu.init_env.ls_num):
+                        temp_solu = deepcopy(solu)
+                        temp_cur_mission = temp_solu.iter_env.mission_list[step]
+                        temp_makespan = temp_solu.step_v2(j, temp_cur_mission, step)
+                        if solu.init_env.J_num_all - step - 1 < 2:
+                            end_step = solu.init_env.J_num_all
+                        else:
+                            end_step = step + 2
                         for v_step in range(step + 1, end_step):
                             temp_cur_mission = temp_solu.iter_env.mission_list[v_step]
                             state = get_state_n(env=temp_solu.iter_env, step_number=v_step, max_num=self.max_num)

@@ -53,8 +53,7 @@ def get_args(**kwargs):
 if __name__ == '__main__':
     # ==============  Create environment  =============
     args = get_args()
-    test = 'Z0'
-    exp_dir = exp_dir(desc=f'{test}')
+    exp_dir = exp_dir(desc=f'{args.inst_type}')
     rl_logger = SummaryWriter(exp_dir)
     rl_logger.add_text(tag='parameters', text_string=str(args))
     rl_logger.add_text(tag='characteristic', text_string='init')  # 'debug'
