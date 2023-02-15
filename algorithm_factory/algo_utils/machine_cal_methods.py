@@ -370,7 +370,7 @@ def cal_LB1(port_env: PortEnv):
         if t_lb_yc > lb_yc:
             lb_yc = t_lb_yc
     lb1 = max((lb_qc + m_qc), (lb_ls + m_ls), (m_co + lb_co), (m_yc + lb_yc))
-    print("lB1:" + str(lb1))
+    # print("lB1:" + str(lb1))
     return lb1
 
 
@@ -390,7 +390,7 @@ def cal_LB2(port_env: PortEnv):
         if t_lb2 > lb2:
             lb2 = t_lb2
         r_lb2[mission.idx] = t_lb2
-    print("lB2:" + str(lb2))
+    # print("lB2:" + str(lb2))
     return lb2, r_lb2
 
 
@@ -430,7 +430,7 @@ def cal_LB4(port_env: PortEnv, r_lb: dict):
                 cf.SLOT_NUM_Y - mission.yard_block_loc[2]) * cf.SLOT_WIDTH / cf.YARDCRANE_SPEED_Y * 2)
         ls.append(mission.idx)
         t_yc_ls[mission.yard_block_loc[0]] = ls
-    print("LB4:" + str(max(list(r_lb2.values()))))
+    # print("LB4:" + str(max(list(r_lb2.values()))))
     return max(list(r_lb2.values()))
 
 

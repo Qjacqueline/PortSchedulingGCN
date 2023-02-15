@@ -134,7 +134,7 @@ def Least_Mission_Num_Choice(port_env, buffer_flag=True):
     for mission in solution.mission_list:
         mission.cal_mission_attributes(buffer_flag)
     solution.last_step_makespan = solution.cal_finish_time()
-    print("makespan为:" + str(solution.last_step_makespan) + " time:" + str(time.time() - T1))
+    # print("makespan为:" + str(solution.last_step_makespan) + " time:" + str(time.time() - T1))
     return solution.last_step_makespan, solution, output_solution(solution)
 
 

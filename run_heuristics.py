@@ -19,20 +19,21 @@ from data_process.input_process import read_input
 if __name__ == '__main__':
     random.seed(cf.RANDOM_SEED)
     np.random.seed(cf.RANDOM_SEED)
-
-    ls = [10, 13, 27, 10, 15, 21, 10, 11, 21,
-          10, 11, 10, 14, 14, 10, 11, 12,
-          10, 17, 21, 10, 14, 18, 10, 16, 23]
-    profiles = ['A2_t', 'A2_t', 'A2_t', 'B2_t', 'B2_t', 'B2_t', 'C2_t', 'C2_t', 'C2_t',
-                'D2_t', 'D2_t', 'E2_t', 'E2_t', 'E2_t', 'F2_t', 'F2_t', 'F2_t',
-                'G2_t', 'G2_t', 'G2_t', 'H2_t', 'H2_t', 'H2_t', 'Z2_t', 'Z2_t', 'Z2_t']
+    ls = [17]
+    profiles = ['Z2_t']
+    # ls = [10, 12, 27, 10, 15, 21, 10, 11, 21,
+    #       10, 11, 10, 14, 15, 10, 11, 12,
+    #       10, 17, 21, 10, 14, 18, 10, 16, 23]
+    # profiles = ['A2_t', 'A2_t', 'A2_t', 'B2_t', 'B2_t', 'B2_t', 'C2_t', 'C2_t', 'C2_t',
+    #             'D2_t', 'D2_t', 'E2_t', 'E2_t', 'E2_t', 'F2_t', 'F2_t', 'F2_t',
+    #             'G2_t', 'G2_t', 'G2_t', 'H2_t', 'H2_t', 'H2_t', 'Z2_t', 'Z2_t', 'Z2_t']
 
     # ls = [i for i in range(50)]
 
     # print("Fixed order")
-    env = read_input('train', 10, 'A2_t', 10)
-    makespan, _, _ = Fixed_order(env.init_env, [0, 1, 0, 1, 0, 1, 0, 0, 1, 1])
-    print("total_makespan:" + str(makespan))
+    # env = read_input('train', 10, 'A2_t', 10)
+    # makespan, _, _ = Fixed_order(env.init_env, [0, 1, 0, 1, 0, 1, 0, 0, 1, 1])
+    # print("total_makespan:" + str(makespan))
 
     total_makespan = 0
     print("Random_Choice")
