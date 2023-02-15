@@ -268,11 +268,11 @@ def generate_instance_type(inst_type):
         qc_num, ls_num, is_num, yc_num, m_num = 3, 4, 2, 4, cf.MISSION_NUM
     elif inst_type == 'F_t' or inst_type == 'F2_t' or inst_type == 'F2_1000':
         qc_num, ls_num, is_num, yc_num, m_num = 3, 5, 2, 3, cf.MISSION_NUM
-    elif inst_type == 'G_t' or inst_type == 'G2_t':
+    elif inst_type == 'G_t' or inst_type == 'G2_t' or inst_type == 'G2_1000':
         qc_num, ls_num, is_num, yc_num, m_num = 4, 4, 3, 6, cf.MISSION_NUM
-    elif inst_type == 'H_t' or inst_type == 'H2_t':
+    elif inst_type == 'H_t' or inst_type == 'H2_t' or inst_type == 'H2_1000':
         qc_num, ls_num, is_num, yc_num, m_num = 5, 5, 3, 7, cf.MISSION_NUM
-    elif inst_type == 'Z_t' or inst_type == 'Z2_t':
+    elif inst_type == 'Z_t' or inst_type == 'Z2_t' or inst_type == 'Z2_1000':
         qc_num, ls_num, is_num, yc_num, m_num = 6, 5, 3, 8, cf.MISSION_NUM
     elif inst_type == 'A' or inst_type == 'A2':
         qc_num, ls_num, is_num, yc_num, m_num = 1, 2, 1, 2, 100
@@ -633,7 +633,7 @@ def del_station_afterwards(port_env: PortEnv, buffer_flag, step_number=None, rel
 
 
 def del_machine(machine, buffer_flag=False):
-    if machine.idx[0] is 'S':
+    if machine.idx[0] == 'S':
         stage = 2
         machine.process_time = []
         if buffer_flag:
@@ -650,7 +650,7 @@ def del_machine(machine, buffer_flag=False):
                 mission.stage = 5
             else:
                 mission.stage = 4
-    if machine.idx[0] is 'C':
+    if machine.idx[0] == 'C':
         stage = 5
         for mission in machine.mission_list:
             mission.total_process_time = mission.machine_start_time[stage - 1] - mission.machine_start_time[0]
@@ -660,7 +660,7 @@ def del_machine(machine, buffer_flag=False):
         machine.process_time = []
         machine.mission_list = []
 
-    if machine.idx[0] is 'Y':
+    if machine.idx[0] == 'Y':
         stage = 7
         for mission in machine.mission_list:
             mission.total_process_time = mission.machine_start_time[stage - 1] + mission.machine_process_time[
