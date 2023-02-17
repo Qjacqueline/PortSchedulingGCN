@@ -255,7 +255,7 @@ def split_integer(m, n):
 
 
 # 匹配算例类型
-def generate_instance_type(inst_type):
+def generate_instance_type(inst_type, mission_num=-1):
     if inst_type == 'A_t' or inst_type == 'A2_t' or inst_type == 'A2_1000':
         qc_num, ls_num, is_num, yc_num, m_num = 1, 2, 1, 2, cf.MISSION_NUM
     elif inst_type == 'B_t' or inst_type == 'B2_t' or inst_type == 'B2_1000':
@@ -274,6 +274,10 @@ def generate_instance_type(inst_type):
         qc_num, ls_num, is_num, yc_num, m_num = 5, 5, 3, 7, cf.MISSION_NUM
     elif inst_type == 'Z_t' or inst_type == 'Z2_t' or inst_type == 'Z2_1000':
         qc_num, ls_num, is_num, yc_num, m_num = 6, 5, 3, 8, cf.MISSION_NUM
+    elif inst_type == 'I_t' or inst_type == 'I2_t' or inst_type == 'I2_1000':
+        qc_num, ls_num, is_num, yc_num, m_num = 12, 9, 3, 12, cf.MISSION_NUM
+    elif inst_type == 'Z0_t':
+        qc_num, ls_num, is_num, yc_num, m_num = 6, 5, 3, 8, mission_num
     elif inst_type == 'A' or inst_type == 'A2':
         qc_num, ls_num, is_num, yc_num, m_num = 1, 2, 1, 2, 100
     elif inst_type == 'B' or inst_type == 'B2':

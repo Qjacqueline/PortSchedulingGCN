@@ -301,11 +301,11 @@ def missions_dict_to_obj(machine, flag):
 
 
 # 生成模拟数据
-def generate_data_for_test(inst_idx, inst_type='A'):
+def generate_data_for_test(inst_idx, inst_type='A', mission_num=-1):
     # logger.info("生成数据.")
     global mission_count
     mission_count = 1
-    qc_num, ls_num, is_num, yc_num, m_num = generate_instance_type(inst_type)
+    qc_num, ls_num, is_num, yc_num, m_num = generate_instance_type(inst_type, mission_num)
 
     # 生成场桥信息
     quay_crane_to_location = cal_quay_crane_to_location(qc_num)
@@ -609,9 +609,16 @@ if __name__ == '__main__':
     #         print(i)  # 检查分配场桥数是否一致
     #         print(env.yard_cranes_set)
 
-    # # 生成训练标准算例，任务数100
-    for i in range(0, 50):
-        env = generate_data_for_test(i, cf.inst_type)
+    #  生成训练标准算例，任务数100
+    # for i in range(0, 50):
+    #     env = generate_data_for_test(i, cf.inst_type)
+    #     if len(env.yard_cranes_set) < env.yc_num:
+    #         print(i)  # 检查分配场桥数是否一致
+    #         print(env.yard_cranes_set)
+
+    #  生成训练标准算例，任务数100
+    for i in [40, 50, 60, 100, 200, 300, 400, 500, 1000]:
+        env = generate_data_for_test(i, cf.inst_type, i)
         if len(env.yard_cranes_set) < env.yc_num:
             print(i)  # 检查分配场桥数是否一致
             print(env.yard_cranes_set)
