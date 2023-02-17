@@ -637,8 +637,6 @@ def solve_model(MLP, inst_idx, solved_env: IterSolution = None, tag='', X_flag=T
                         # Y[p_mission_idx][l_mission_idx][7 + i]
                         MLP.addConstr(vars[var_idx] == 1, "fixed_qc_" + yc)
                     # print(vars[var_idx])
-                    if vars[var_idx].VarName == 'x_16_17_4':
-                        a = 1
 
     # max_q_2 = 53348.4599303192
     # min_q_2 = 2401.81184668972

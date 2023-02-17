@@ -10,11 +10,11 @@ from data_process.input_process import read_input
 from gurobi_solver import RelaxedCongestionPortModel, solve_model
 
 if __name__ == '__main__':
-    m_num_ls = [1000]  # , 500, 1000
-    inst_type_ls = ['Z0_t' for _ in range(len(m_num_ls))]
+    m_num_ls = [i for i in range(50)]  # , 500, 1000
+    inst_type_ls = ['A2' for _ in range(len(m_num_ls))]
     lb1s, lb2s, lb3s, ms = [], [], [], []
     for i in range(len(m_num_ls)):
-        solu = read_input('train', str(m_num_ls[i]), inst_type_ls[i], m_num_ls[i])
+        solu = read_input('train', str(m_num_ls[i]), inst_type_ls[i], 100)
         # 计算下界
         _, lb_env, _ = Least_Mission_Num_Choice(deepcopy(solu.init_env))
         lb1 = cal_LB1(lb_env)
