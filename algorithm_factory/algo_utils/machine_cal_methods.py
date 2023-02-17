@@ -255,7 +255,7 @@ def split_integer(m, n):
 
 
 # 匹配算例类型
-def generate_instance_type(inst_type):
+def generate_instance_type(inst_type, mission_num=-1):
     if inst_type == 'A_t' or inst_type == 'A2_t' or inst_type == 'A2_1000':
         qc_num, ls_num, is_num, yc_num, m_num = 1, 2, 1, 2, cf.MISSION_NUM
     elif inst_type == 'B_t' or inst_type == 'B2_t' or inst_type == 'B2_1000':
@@ -274,6 +274,10 @@ def generate_instance_type(inst_type):
         qc_num, ls_num, is_num, yc_num, m_num = 5, 5, 3, 7, cf.MISSION_NUM
     elif inst_type == 'Z_t' or inst_type == 'Z2_t' or inst_type == 'Z2_1000':
         qc_num, ls_num, is_num, yc_num, m_num = 6, 5, 3, 8, cf.MISSION_NUM
+    elif inst_type == 'I_t' or inst_type == 'I2_t' or inst_type == 'I2_1000':
+        qc_num, ls_num, is_num, yc_num, m_num = 12, 9, 3, 12, cf.MISSION_NUM
+    elif inst_type == 'Z0_t':
+        qc_num, ls_num, is_num, yc_num, m_num = 6, 5, 3, 8, mission_num
     elif inst_type == 'A' or inst_type == 'A2':
         qc_num, ls_num, is_num, yc_num, m_num = 1, 2, 1, 2, 100
     elif inst_type == 'B' or inst_type == 'B2':
@@ -370,7 +374,7 @@ def cal_LB1(port_env: PortEnv):
         if t_lb_yc > lb_yc:
             lb_yc = t_lb_yc
     lb1 = max((lb_qc + m_qc), (lb_ls + m_ls), (m_co + lb_co), (m_yc + lb_yc))
-    print("lB1:" + str(lb1))
+    # print("lB1:" + str(lb1))
     return lb1
 
 
@@ -390,7 +394,7 @@ def cal_LB2(port_env: PortEnv):
         if t_lb2 > lb2:
             lb2 = t_lb2
         r_lb2[mission.idx] = t_lb2
-    print("lB2:" + str(lb2))
+    # print("lB2:" + str(lb2))
     return lb2, r_lb2
 
 
@@ -430,7 +434,7 @@ def cal_LB4(port_env: PortEnv, r_lb: dict):
                 cf.SLOT_NUM_Y - mission.yard_block_loc[2]) * cf.SLOT_WIDTH / cf.YARDCRANE_SPEED_Y * 2)
         ls.append(mission.idx)
         t_yc_ls[mission.yard_block_loc[0]] = ls
-    print("LB4:" + str(max(list(r_lb2.values()))))
+    # print("LB4:" + str(max(list(r_lb2.values()))))
     return max(list(r_lb2.values()))
 
 
