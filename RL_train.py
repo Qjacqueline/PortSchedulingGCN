@@ -56,7 +56,7 @@ if __name__ == '__main__':
     exp_dir = exp_dir(desc=f'{args.inst_type}')
     rl_logger = SummaryWriter(exp_dir)
     rl_logger.add_text(tag='parameters', text_string=str(args))
-    rl_logger.add_text(tag='characteristic', text_string='init')  # 'debug'
+    rl_logger.add_text(tag='characteristic', text_string='N500')  # 'debug'
     s_t = time.time()
 
     # seed
@@ -67,10 +67,11 @@ if __name__ == '__main__':
     # env
     train_solus = []
     test_solus = []
-    for i in range(0, 40):  # todo epison要改
+    for i in range(0, 490):  # todo epison要改
         train_solus.append(read_input('train', str(i), args.inst_type))
-    for i in range(0, 50):
+    for i in range(0, 500):
         test_solus.append(read_input('train', str(i), args.inst_type))
+    test_solus = test_solus[0:40] + test_solus[50:500] + test_solus[40:50]
     for solu in train_solus:
         solu.l2a_init()
     for solu in test_solus:
@@ -90,11 +91,11 @@ if __name__ == '__main__':
 
     # ======================== Data ==========================
     data_buffer = LABuffer(buffer_size=args.buffer_size)
-    collector = LACollector(inst_type=args.inst_type, train_solus=train_solus, test_solus=test_solus,
+    collector = LACollector(inst_type='Z2N', train_solus=train_solus, test_solus=test_solus,
                             data_buffer=data_buffer, batch_size=args.batch_size,
                             mission_num=train_solus[0].init_env.J_num_all, agent=agent,
                             rl_logger=rl_logger, save_path=args.save_path, max_num=args.max_num)
-
+    # args.inst_type
     # =================== heuristic l_train ==================
     # collector.get_transition(
     #     read_json_from_file(cf.OUTPUT_SOLUTION_PATH + 'train_1_SA_10_1868.875721615327.json'), test_solus[0])

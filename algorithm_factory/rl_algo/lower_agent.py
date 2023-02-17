@@ -90,7 +90,7 @@ class DDQN(BaseAgent):
         self.device = device
         self.loss_func = loss_fn
         self.train_count = 0
-        self.deteriote = 0.9 / (40 * 100 * 10 * 0.9 / 100)
+        self.deteriote = 0.9 / (490 * 100 * 10 * 0.9 / 100)
 
     def forward(self, state, eval_tag=True):
         if eval_tag:
@@ -180,7 +180,7 @@ class LACollector:
                 # train & eval
                 if self.train_time == 0:
                     self.dl_train = DataLoader(dataset=self.data_buffer, batch_size=self.batch_size, shuffle=True)
-                if self.train_time > 1 and self.train_time % 2 == 0:
+                if self.train_time > 1 and self.train_time % 20 == 0:  # todo
                     self.train()
                 self.train_time = self.train_time + 1
 
@@ -303,6 +303,8 @@ class LACollector:
                             state = get_state_n(env=temp_solu.iter_env, step_number=v_step, max_num=self.max_num)
                             action = self.agent.forward(state, False)
                             temp_makespan = temp_solu.step_v2(action, temp_cur_mission, v_step)
+                            if temp_makespan > min_makespan:
+                                break
                         if temp_makespan <= min_makespan:
                             min_makespan = temp_makespan
                             min_pos = j
@@ -340,6 +342,8 @@ class LACollector:
                             state = get_state_n(env=temp_solu.iter_env, step_number=v_step, max_num=self.max_num)
                             action = self.agent.forward(state, False)
                             temp_makespan = temp_solu.step_v2(action, temp_cur_mission, v_step)
+                            # if temp_makespan > min_makespan:
+                            #     break
                         if temp_makespan <= min_makespan:
                             min_makespan = temp_makespan
                             min_pos = j
@@ -377,6 +381,8 @@ class LACollector:
                             state = get_state_n(env=temp_solu.iter_env, step_number=v_step, max_num=self.max_num)
                             action = self.agent.forward(state, False)
                             temp_makespan = temp_solu.step_v2(action, temp_cur_mission, v_step)
+                            if temp_makespan > min_makespan:
+                                break
                         if temp_makespan <= min_makespan:
                             min_makespan = temp_makespan
                             min_pos = j
@@ -414,6 +420,8 @@ class LACollector:
                             state = get_state_n(env=temp_solu.iter_env, step_number=v_step, max_num=self.max_num)
                             action = self.agent.forward(state, False)
                             temp_makespan = temp_solu.step_v2(action, temp_cur_mission, v_step)
+                            if temp_makespan > min_makespan:
+                                break
                         if temp_makespan <= min_makespan:
                             min_makespan = temp_makespan
                             min_pos = j
@@ -451,6 +459,8 @@ class LACollector:
                             state = get_state_n(env=temp_solu.iter_env, step_number=v_step, max_num=self.max_num)
                             action = self.agent.forward(state, False)
                             temp_makespan = temp_solu.step_v2(action, temp_cur_mission, v_step)
+                            if temp_makespan > min_makespan:
+                                break
                         if temp_makespan <= min_makespan:
                             min_makespan = temp_makespan
                             min_pos = j

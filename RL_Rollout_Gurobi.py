@@ -60,7 +60,7 @@ if __name__ == '__main__':
     test_solus = []
 
     '''同instance 环境批量输入'''
-    ls = [i for i in range(50)]
+    ls = [i for i in range(1)]
     profiles = [args.inst_type for _ in range(50)]
 
     for i in range(len(ls)):
