@@ -610,7 +610,7 @@ if __name__ == '__main__':
     #         print(env.yard_cranes_set)
 
     # # 生成训练标准算例，任务数100
-    for i in range(0, 50):
+    for i in range(50, 500):
         env = generate_data_for_test(i, cf.inst_type)
         if len(env.yard_cranes_set) < env.yc_num:
             print(i)  # 检查分配场桥数是否一致

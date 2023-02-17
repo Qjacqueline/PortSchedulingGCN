@@ -22,12 +22,12 @@ def draw_plt(vals, val_names):
     for i in range(len(vals)):
         val = vals[i]
         val_name = val_names[i]
-        plt.plot([i.step for i in val[0:5000]], [j.value for j in val[0:5000]], linewidth=0.4,
+        plt.plot([i.step for i in val], [j.value for j in val], linewidth=0.4,
                  label=val_name)
     """横坐标是step，迭代次数 纵坐标是变量值"""
     fs = 13
     plt.ylim(0, 2)
-    plt.xlim(0, 8000)
+    plt.xlim(0, 20000)
     plt.xlabel('Step', fontsize=fs)
     plt.ylabel('Loss', fontsize=fs)
     plt.legend(val_names, fontsize=11)
@@ -48,13 +48,14 @@ if __name__ == "__main__":
     tensorboard_path_F = 'D:\\wangqi\\PortSchedulingGCN\\runss\\F2\\01_15_17_45\\events.out.tfevents.1673775907.DESKTOP-LUMKFTK'
     tensorboard_path_G = 'D:\\wangqi\\PortSchedulingGCN\\runss\\G2\\01_15_13_27\\events.out.tfevents.1673760440.DESKTOP-LUMKFTK'
     tensorboard_path_H = 'D:\\wangqi\\PortSchedulingGCN\\runss\\H2\\01_14_07_51\\events.out.tfevents.1673653888.DESKTOP-LUMKFTK'
-    tensorboard_path_Z = 'D:\\wangqi\\PortSchedulingGCN\\runss\\Z2\\01_12_19_40\\events.out.tfevents.1673523629.DESKTOP-LUMKFTK'
+    tensorboard_path_Z = 'D:\\wangqi\\PortSchedulingGCN\\runss\\Z2_02_14_09_32\\events.out.tfevents.1676338360.DESKTOP-LUMKFTK'
     profiles = [chr(i + 65) for i in range(8)]
     profiles.append('Z')
-    # profiles = ['A']
+    profiles = ['Z']
     vars = []
     for profile in profiles:
         vars.append(read_tensorboard_data(locals()[f'tensorboard_path_{profile}'], 'l_train/loss'))
-    profiles = ['Profile '+chr(i + 65) for i in range(8)]
-    profiles.append('Profile '+'Z')
+    # profiles = ['Profile ' + chr(i + 65) for i in range(8)]
+    # profiles.append('Profile ' + 'Z')
+    profiles = ['Profile ' + 'Z']
     draw_plt(vars, profiles)
