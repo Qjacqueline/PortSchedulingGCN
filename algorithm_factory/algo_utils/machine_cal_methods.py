@@ -327,6 +327,13 @@ def generate_yard_blocks_set(is_num, yc_num):
     return cur_yar_blocks
 
 
+def cal_congestion(port_env: PortEnv):
+    congestion_time = 0
+    for mission in port_env.mission_list:
+        congestion_time += sum(mission.waiting_time[0:3])
+    return congestion_time
+
+
 def cal_LB1(port_env: PortEnv):
     m_m, m_qc, m_ls, m_co, m_yc = float('inf'), float('inf'), float('inf'), float('inf'), float('inf')
     lb_qc, lb_ls, lb_co, lb_yc = 0, 0, 0, 0
