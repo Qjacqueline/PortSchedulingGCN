@@ -603,11 +603,11 @@ if __name__ == '__main__':
     random.seed(0)
 
     # 生成单独测试算例
-    # for i in range(cf.MISSION_NUM, cf.MISSION_NUM + 1):
-    #     env = generate_data_for_test(i, cf.inst_type)
-    #     if len(env.yard_cranes_set) < env.yc_num:
-    #         print(i)  # 检查分配场桥数是否一致
-    #         print(env.yard_cranes_set)
+    for i in range(cf.MISSION_NUM, cf.MISSION_NUM + 1):
+        env = generate_data_for_test(i, cf.inst_type)
+        if len(env.yard_cranes_set) < env.yc_num:
+            print(i)  # 检查分配场桥数是否一致
+            print(env.yard_cranes_set)
 
     #  生成训练标准算例，任务数100
     # for i in range(0, 50):
@@ -617,8 +617,8 @@ if __name__ == '__main__':
     #         print(env.yard_cranes_set)
 
     #  生成训练标准算例，任务数100
-    for i in [40, 50, 60, 100, 200, 300, 400, 500, 1000]:
-        env = generate_data_for_test(i, cf.inst_type, i)
-        if len(env.yard_cranes_set) < env.yc_num:
-            print(i)  # 检查分配场桥数是否一致
-            print(env.yard_cranes_set)
+    # for i in [40, 50, 60, 100, 200, 300, 400, 500, 1000]:
+    #     env = generate_data_for_test(i, cf.inst_type, i)
+    #     if len(env.yard_cranes_set) < env.yc_num:
+    #         print(i)  # 检查分配场桥数是否一致
+    #         print(env.yard_cranes_set)

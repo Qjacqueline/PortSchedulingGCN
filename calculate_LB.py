@@ -10,17 +10,18 @@ from data_process.input_process import read_input
 from gurobi_solver import RelaxedCongestionPortModel, solve_model
 
 if __name__ == '__main__':
-    f = open("output_result/lb_t.txt", "a")
+    f = open("lb_RS.txt", "a")
     for j in range(1):
-        # m_num_ls = [i for i in range(50)]  # , 500, 1000
-        # inst_type_ls = ['Z2_1000' for _ in range(len(m_num_ls))]  # chr(65 + j)
+        m_num_ls = [1000 for i in range(9)]  # , 500, 1000
+        inst_type_ls = [chr(65 + j) + '2_t' for _ in range(8)]  # chr(65 + j) len(m_num_ls)
+        inst_type_ls.append('Z2_t')
         # lb1s, lb2s, lb3s, ms = [], [], [], []
-        m_num_ls = [10, 12, 100, 500, 10, 15, 100, 500, 10, 11, 100, 500,
-                    10, 11, 100, 500, 10, 14, 100, 500, 10, 11, 100, 500,
-                    10, 17, 100, 500, 10, 14, 100, 500, 10, 16, 100, 500]
-        inst_type_ls = ['A2_t', 'A2_t', 'A2_t', 'A2_t', 'B2_t', 'B2_t', 'B2_t', 'B2_t', 'C2_t', 'C2_t', 'C2_t', 'C2_t',
-                        'D2_t', 'D2_t', 'D2_t', 'D2_t', 'E2_t', 'E2_t', 'E2_t', 'E2_t', 'F2_t', 'F2_t', 'F2_t', 'F2_t',
-                        'G2_t', 'G2_t', 'G2_t', 'G2_t', 'H2_t', 'H2_t', 'H2_t', 'H2_t', 'Z2_t', 'Z2_t', 'Z2_t', 'Z2_t']
+        # m_num_ls = [10, 12, 100, 500, 10, 15, 100, 500, 10, 11, 100, 500,
+        #             10, 11, 100, 500, 10, 14, 100, 500, 10, 11, 100, 500,
+        #             10, 17, 100, 500, 10, 14, 100, 500, 10, 16, 100, 500]
+        # inst_type_ls = ['A2_t', 'A2_t', 'A2_t', 'A2_t', 'B2_t', 'B2_t', 'B2_t', 'B2_t', 'C2_t', 'C2_t', 'C2_t', 'C2_t',
+        #                 'D2_t', 'D2_t', 'D2_t', 'D2_t', 'E2_t', 'E2_t', 'E2_t', 'E2_t', 'F2_t', 'F2_t', 'F2_t', 'F2_t',
+        #                 'G2_t', 'G2_t', 'G2_t', 'G2_t', 'H2_t', 'H2_t', 'H2_t', 'H2_t', 'Z2_t', 'Z2_t', 'Z2_t', 'Z2_t']
         lb1s, lb2s, lb3s, ms = [], [], [], []
         for i in range(len(m_num_ls)):
             solu = read_input('train', str(m_num_ls[i]), inst_type_ls[i], m_num_ls[i])
@@ -37,16 +38,20 @@ if __name__ == '__main__':
             lb1s.append(lb1)
             lb2s.append(lb2)
             lb3s.append(lb3)
+            # lb1s.append(-1)
+            # lb2s.append(-1)
+            # lb3s.append(-1)
             if model.MLP.status != 1:
                 ms.append(model.MLP.getVars()[-2].x)
             else:
                 ms.append(-1)
-        f.write(chr(65 + j) + "_LB\n")
+        # f.write(chr(65 + j) + "_LB\n")
         for i in range(len(m_num_ls)):
             f.write("算例为\t" + inst_type_ls[i] + str(m_num_ls[i]) +
                     "\t松弛解为\t" + str(ms[i]) +
                     "\tlb1为\t" + str(lb1s[i]) +
-                    "\tlb2为\t" + str(lb2s[i]) + "\tlb3为\t" + str(lb3s[i]) + '\tmin\t' + str(max(lb1s[i], lb3s[i])))
+                    "\tlb2为\t" + str(lb2s[i]) + "\tlb3为\t" + str(lb3s[i]) + '\tmin\t' + str(
+                max(lb1s[i], lb3s[i])) + "\n")
 
             # f.write(str(max(lb1s[i], lb3s[i])) + "\n")
     f.close()
