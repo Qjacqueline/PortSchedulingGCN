@@ -642,12 +642,12 @@ def solve_model(MLP, inst_idx, solved_env: IterSolution = None, tag='', X_flag=T
     # min_q_2 = 2401.81184668972
     # MLP.addConstr((vars[-1] <= epsilon * (max_q_2 - min_q_2) + min_q_2), "multi-objectives")
     MLP.update()
-    # MLP.setParam('OutputFlag', 0)
+    MLP.setParam('OutputFlag', 0)
     # ============== 求解模型 ================
     # MLP.write("output_result/gurobi/mod_" + str(inst_idx) + "_" + tag + ".lp")
     # MLP.Params.timelimit = 7200
     T1 = time.time()
-    # MLP.optimize()
+    MLP.optimize()
     print("time: " + str(time.time() - T1))
     if MLP.status == GRB.Status.INFEASIBLE:
         print('Optimization was stopped with status %d' % MLP.status)
