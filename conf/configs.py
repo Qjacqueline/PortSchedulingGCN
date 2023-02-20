@@ -14,8 +14,8 @@ import torch
 
 LOGGING_LEVEL = logging.INFO  # logging.WARNING/DEBUG
 
-inst_type = 'Z0_t'  # RLtrain:epsilon要改
-MISSION_NUM = 16
+inst_type = 'C2_1000'  # RLtrain:epsilon要改 Z
+MISSION_NUM = 100
 # 布局配置
 STAGE_NUM = 3  # lock_station+crossover+yard
 # QUAYCRANE_NUM = 5  # 场桥个数

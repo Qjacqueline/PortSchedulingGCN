@@ -10,7 +10,7 @@ from data_process.input_process import read_input
 from gurobi_solver import RelaxedCongestionPortModel, solve_model
 
 if __name__ == '__main__':
-    f = open("lb_1000.txt", "a")
+    f = open("output_result/lb_t.txt", "a")
     for j in range(1):
         # m_num_ls = [i for i in range(50)]  # , 500, 1000
         # inst_type_ls = ['Z2_1000' for _ in range(len(m_num_ls))]  # chr(65 + j)

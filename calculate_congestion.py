@@ -16,18 +16,17 @@ if __name__ == '__main__':
     random.seed(cf.RANDOM_SEED)
     np.random.seed(cf.RANDOM_SEED)
     total_makespan = 0
-    f = open("output_result/congestion.txt", "a")
+    f = open("output_result/congestion_1000.txt", "a")  # _1000 chr(65 + j)
     for j in range(1):
         ls = [i for i in range(50)]
-        profiles = [chr(65 + j) + '2' for _ in range(len(ls))]
+        profiles = ['Z' + '2_1000' for _ in range(len(ls))]
         congestion_time = []
         for i in range(len(ls)):
-            env = read_input('train', str(ls[i]), profiles[i], mission_num=100)
+            env = read_input('train', str(ls[i]), profiles[i], mission_num=1000)
             _, solution, _ = Least_Mission_Num_Choice(env.init_env)
             congestion_time.append(cal_congestion(solution))
         f.write(chr(65 + j) + "_congestion\n")
         for i in range(len(ls)):
             f.write(str(congestion_time[i]) + "\n")
-
             # f.write(str(max(lb1s[i], lb3s[i])) + "\n")
     f.close()
