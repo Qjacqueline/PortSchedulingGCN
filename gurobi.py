@@ -63,8 +63,8 @@ if __name__ == '__main__':
     test_solus = []
 
     ''' 单目标 '''
-    m_num_ls = [100]
-    inst_type_ls = ['Z2_t']
+    # m_num_ls = [10]
+    # inst_type_ls = ['A2_t']
     # gammas = [898.034116453539]
     # # thetas = [1500]
 
@@ -100,15 +100,14 @@ if __name__ == '__main__':
     #           845.047666484882,1029.00345317571,823.93362806332,910.556489215056,780.521551937144,876.271496288637]
 
     ''' PM_N2'''
-    # m_num_ls = [27, 21, 21, 15, 12, 21, 18, 23]
-    # inst_type_ls = ['A2_t', 'B2_t', 'C2_t', 'E2_t', 'F2_t', 'G2_t', 'H2_t', 'Z2_t']
+    m_num_ls = [27, 21, 21, 15, 12, 21, 18, 23]
+    inst_type_ls = ['A2_t', 'B2_t', 'C2_t', 'E2_t', 'F2_t', 'G2_t', 'H2_t', 'Z2_t']
 
     ''' 求不出的'''
     # m_num_ls = [15, 10, 10, 14, 16]
     # inst_type_ls = ['B2_t', 'C2_t', 'D2_t', 'H2_t', 'Z2_t']
     # gammas = [1316.52679188132, 991.789726187869, 907.132467274069, 910.556489215056, 876.271496288637]
 
-    lb1_flag, lb2_flag, lb3_flag = True, True, True
     makespan_forall = []
     congestion_forall = []
     time_forall = []
@@ -116,9 +115,9 @@ if __name__ == '__main__':
         solu = read_input('train', str(m_num_ls[i]), inst_type_ls[i], m_num_ls[i])
         # 计算下界
         _, lb_env, _ = Least_Mission_Num_Choice(deepcopy(solu.init_env))
-        lb1 = cal_LB1(lb_env)
-        lb2, r_lb2 = cal_LB2(lb_env)
-        lb3 = cal_LB4(lb_env, r_lb2)
+        # lb1 = cal_LB1(lb_env)
+        # lb2, r_lb2 = cal_LB2(lb_env)
+        # lb3 = cal_LB4(lb_env, r_lb2)
         solu.l2a_init()
         model = CongestionPortModel(solu)
         # model.gamma2 = max(lb1, lb2, lb3)
@@ -140,7 +139,6 @@ if __name__ == '__main__':
         # if model.MLP.ObjVal == float('Inf'):
         #     break
 
-    for i in range(len(makespan_forall)):
         print("算例为\t" + str(m_num_ls[i]) + "\tmakespan为\t" + str(makespan_forall[i]) +
               "\tcongestion为\t" + str(congestion_forall[i]) + "\t时间为\t" + str(time_forall[i]))
 
