@@ -335,7 +335,8 @@ def cal_congestion(port_env: PortEnv):
 
 
 def cal_LB1(port_env: PortEnv):
-    m_m, m_qc, m_ls, m_co, m_yc = float('inf'), float('inf'), float('inf'), float('inf'), float('inf')
+    m_m, m_2_3_4, m_ls, m_co, m_1_2_3, m_1, m_3_4, m_1_2, m_4 = float('inf'), float('inf'), float('inf'), float(
+        'inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf')
     lb_qc, lb_ls, lb_co, lb_yc = 0, 0, 0, 0
     for mission in port_env.mission_list:
         _, min_distance = find_least_distance_station(port_env, mission)
@@ -344,25 +345,31 @@ def cal_LB1(port_env: PortEnv):
                  mission.yard_crane_process_time + \
                  abs(cf.SLOT_NUM_Y - mission.yard_block_loc[2]) * cf.SLOT_WIDTH / cf.YARDCRANE_SPEED_Y * 2 + \
                  min_distance / mission.vehicle_speed + mission.transfer_time_c2y
-        t_m_ls = mission.release_time / 2.0 + cf.BUFFER_PROCESS_TIME + mission.intersection_process_time + \
-                 mission.yard_crane_process_time + \
-                 abs(cf.SLOT_NUM_Y - mission.yard_block_loc[2]) * cf.SLOT_WIDTH / cf.YARDCRANE_SPEED_Y * 2 + \
-                 min_distance / mission.vehicle_speed + mission.transfer_time_c2y
-        t_m_co = mission.release_time / 2.0 + cf.BUFFER_PROCESS_TIME + mission.station_process_time + \
-                 mission.yard_crane_process_time + \
-                 abs(cf.SLOT_NUM_Y - mission.yard_block_loc[2]) * cf.SLOT_WIDTH / cf.YARDCRANE_SPEED_Y * 2 + \
-                 min_distance / mission.vehicle_speed + mission.transfer_time_c2y
         t_m_yc = mission.release_time / 2.0 + cf.BUFFER_PROCESS_TIME + mission.station_process_time + \
-                 mission.intersection_process_time + \
-                 min_distance / mission.vehicle_speed + mission.transfer_time_c2y
-        if t_m_qc < m_qc:
-            m_qc = t_m_qc
-        if t_m_ls < m_ls:
-            m_ls = t_m_ls
-        if t_m_co < m_co:
-            m_co = t_m_co
-        if t_m_yc < m_yc:
-            m_yc = t_m_yc
+                 mission.intersection_process_time + min_distance / mission.vehicle_speed + mission.transfer_time_c2y
+        t_m_1 = mission.release_time / 2.0 + cf.BUFFER_PROCESS_TIME + \
+                port_env.quay_cranes[mission.quay_crane_id].time_to_exit + mission.transfer_time_e2s_min
+        t_m_3_4 = mission.intersection_process_time + \
+                  mission.yard_crane_process_time + \
+                  abs(cf.SLOT_NUM_Y - mission.yard_block_loc[2]) * cf.SLOT_WIDTH / cf.YARDCRANE_SPEED_Y * 2 + \
+                  mission.transfer_time_s2c_min + mission.transfer_time_c2y
+        t_m_1_2 = mission.release_time / 2.0 + cf.BUFFER_PROCESS_TIME + mission.station_process_time + \
+                  min_distance
+        t_m_4 = mission.yard_crane_process_time + \
+                abs(cf.SLOT_NUM_Y - mission.yard_block_loc[2]) * cf.SLOT_WIDTH / cf.YARDCRANE_SPEED_Y * 2 + \
+                mission.transfer_time_c2y
+        if t_m_qc < m_2_3_4:
+            m_2_3_4 = t_m_qc
+        if t_m_yc < m_1_2_3:
+            m_1_2_3 = t_m_yc
+        if t_m_1 < m_1:
+            m_1 = t_m_1
+        if t_m_3_4 < m_3_4:
+            m_3_4 = t_m_3_4
+        if t_m_1_2 < m_1_2:
+            m_1_2 = t_m_1_2
+        if t_m_4 < m_4:
+            m_4 = t_m_4
         if mission.release_time / 2.0 + cf.BUFFER_PROCESS_TIME > lb_qc:
             lb_qc = mission.release_time / 2.0 + cf.BUFFER_PROCESS_TIME
     lb_ls = lb_ls / len(port_env.lock_stations)
@@ -380,7 +387,7 @@ def cal_LB1(port_env: PortEnv):
         t_lb_yc = sum(yc_pt_ls) + max(max_x_ls) * cf.SLOT_LENGTH / cf.YARDCRANE_SPEED_X
         if t_lb_yc > lb_yc:
             lb_yc = t_lb_yc
-    lb1 = max((lb_qc + m_qc), (lb_ls + m_ls), (m_co + lb_co), (m_yc + lb_yc))
+    lb1 = max((lb_qc + m_2_3_4), (lb_ls + m_1 + m_3_4), (m_co + m_1_2 + m_4), (m_1_2_3 + lb_yc))
     # print("lB1:" + str(lb1))
     return lb1
 
