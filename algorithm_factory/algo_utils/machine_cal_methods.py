@@ -387,7 +387,7 @@ def cal_LB1(port_env: PortEnv):
         t_lb_yc = sum(yc_pt_ls) + max(max_x_ls) * cf.SLOT_LENGTH / cf.YARDCRANE_SPEED_X
         if t_lb_yc > lb_yc:
             lb_yc = t_lb_yc
-    lb1 = max((lb_qc + m_2_3_4), (lb_ls + m_1 + m_3_4), (m_co + m_1_2 + m_4), (m_1_2_3 + lb_yc))
+    lb1 = max((lb_qc + m_2_3_4), (lb_ls + m_1 + m_3_4), (lb_co + m_1_2 + m_4), (m_1_2_3 + lb_yc))
     # print("lB1:" + str(lb1))
     return lb1
 
@@ -1683,3 +1683,23 @@ def get_state_n(env: PortEnv, step_number: int = None, cur_mission: Mission = No
     x = x.view(env.machine_num, -1) * norm
     data = Data(x=x, edge_index=edge_index, edge_weight=edge_weight)
     return data
+
+
+def get_state_l(env: PortEnv, step_number: int = None, cur_mission: Mission = None, max_num=5):
+    if cur_mission is None:
+        cur_mission: Mission = env.mission_list[step_number]
+    # =========== 添加点 ===========
+    cur_time = cur_mission.machine_start_time[1]
+    qc_ls, qc_ls_ls, ls_ls, ls_co_ls, co_ls, co_yc_ls, yc_ls, f_ls = get_cur_time_status_v2(env, cur_time)
+    node_attr_list = []
+    node_attr_list.extend(get_quay_release_state(qc_ls, max_num))
+    node_attr_list.extend(get_stations_release_state(ls_ls, max_num))
+    node_attr_list.extend(get_crossovers_release_state(co_ls, max_num))
+    node_attr_list.extend(get_yards_release_state(yc_ls, max_num))
+    x = torch.tensor(node_attr_list, dtype=torch.float32)
+    norm = []
+    for i in range(max_num):
+        norm.extend([0, 0, 1 / 100, 0, 1, 0])
+    norm = torch.tensor(norm)
+    x = x.view(env.machine_num, -1) * norm
+    return x

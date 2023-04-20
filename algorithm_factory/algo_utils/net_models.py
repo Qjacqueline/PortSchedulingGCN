@@ -109,6 +109,22 @@ class PQNet(nn.Module):
         return x  # 输出
 
 
+class QLNet(nn.Module):
+    def __init__(self, device: torch.device, in_dim_max=10, attr_dim=6, hidden=256, out_dim=4, ma_num=22):
+        super(QLNet, self).__init__()
+        self.device = device
+        self.ma_num = ma_num
+        self.fea_dim = in_dim_max * attr_dim
+        self.linear = FlattenMlp(ma_num * self.fea_dim, out_dim, (hidden, hidden, hidden)).to(self.device)
+        # self.resnet = models.resnet50(pretrained=False, num_classes=4)
+        # self.linear = nn.Linear(machine_num * (hidden + fea_dim), 4)
+
+    def forward(self, state) -> torch.Tensor:
+        # print("q")
+        x = state.to(self.device)
+        x = self.linear(x.reshape(-1, self.ma_num * self.fea_dim))
+        x = F.leaky_relu_(x)
+        return x  # F.log_softmax(x, dim=1)  # 将经过两层卷积得到的特征输入log_softmax函数得到概率分布
 # class Dueling_DQN(nn.Module):
 #     def __init__(self, m_max_num: int, dim_mission_fea: int, dim_mach_fea: int, dim_yard_fea: int, hidden_size: int,
 #                  n_layers: int, device: torch.device):

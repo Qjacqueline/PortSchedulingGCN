@@ -14,7 +14,7 @@ import torch
 
 LOGGING_LEVEL = logging.INFO  # logging.WARNING/DEBUG
 
-inst_type = 'C2_1000'  # RLtrain:epsilon要改 Z
+inst_type = 'A2'  # RL train:epsilon要改 Z
 MISSION_NUM = 100
 # 布局配置
 STAGE_NUM = 3  # lock_station+crossover+yard

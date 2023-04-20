@@ -31,7 +31,7 @@ if __name__ == '__main__':
         congestion_time_a = []
         time_forall = []
         for i in range(len(ls)):
-            f = open("output_result/congestion_large_instance.txt", "a")
+            f = open("output_result/congestion_all.txt", "a")
             env = read_input('train', str(ls[i]), profiles[i], mission_num=ls[i])  # mission_num=100
             makespan, env, _ = Least_Mission_Num_Choice(env.init_env)
             congestion_time.append(cal_congestion(env))

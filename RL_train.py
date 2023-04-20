@@ -19,7 +19,7 @@ from tensorboardX import SummaryWriter
 
 import conf.configs as cf
 from algorithm_factory.algo_utils.data_buffer import LABuffer
-from algorithm_factory.algo_utils.net_models import QNet, PQNet
+from algorithm_factory.algo_utils.net_models import QNet, PQNet, QLNet
 from algorithm_factory.rl_algo.lower_agent import DDQN, LACollector
 from data_process.input_process import read_input, read_json_from_file
 from utils.log import exp_dir, Logger
@@ -53,10 +53,11 @@ def get_args(**kwargs):
 if __name__ == '__main__':
     # ==============  Create environment  =============
     args = get_args()
-    exp_dir = exp_dir(desc=f'{args.inst_type}')
+    pt = args.inst_type + 'N'
+    exp_dir = exp_dir(desc=f'{pt}')
     rl_logger = SummaryWriter(exp_dir)
     rl_logger.add_text(tag='parameters', text_string=str(args))
-    rl_logger.add_text(tag='characteristic', text_string='N500')  # 'debug'
+    rl_logger.add_text(tag='characteristic', text_string='original')  # 'debug'
     s_t = time.time()
 
     # seed
@@ -67,22 +68,32 @@ if __name__ == '__main__':
     # env
     train_solus = []
     test_solus = []
-    for i in range(0, 490):  # todo epison要改
+    for i in range(0, 40):  # todo epison要改
         train_solus.append(read_input('train', str(i), args.inst_type))
-    for i in range(0, 500):
+    for i in range(0, 50):
         test_solus.append(read_input('train', str(i), args.inst_type))
-    test_solus = test_solus[0:40] + test_solus[50:500] + test_solus[40:50]
+    # test_solus = test_solus[0:40] + test_solus[50:500] + test_solus[40:50]
     for solu in train_solus:
         solu.l2a_init()
     for solu in test_solus:
         solu.l2a_init()
 
     # ========================= Policy ======================
+    # agent = DDQN(
+    #     eval_net=QNet(device=args.device, in_dim_max=args.max_num, hidden=args.hidden,
+    #                   out_dim=train_solus[0].init_env.ls_num, ma_num=train_solus[0].init_env.machine_num),
+    #     target_net=QNet(device=args.device, in_dim_max=args.max_num, hidden=args.hidden,
+    #                     out_dim=train_solus[0].init_env.ls_num, ma_num=train_solus[0].init_env.machine_num),
+    #     dim_action=train_solus[0].init_env.ls_num,
+    #     device=args.device,
+    #     gamma=args.gamma,
+    #     epsilon=args.epsilon,
+    #     lr=args.lr)
     agent = DDQN(
-        eval_net=QNet(device=args.device, in_dim_max=args.max_num, hidden=args.hidden,
-                      out_dim=train_solus[0].init_env.ls_num, ma_num=train_solus[0].init_env.machine_num),
-        target_net=QNet(device=args.device, in_dim_max=args.max_num, hidden=args.hidden,
-                        out_dim=train_solus[0].init_env.ls_num, ma_num=train_solus[0].init_env.machine_num),
+        eval_net=QLNet(device=args.device, in_dim_max=args.max_num, hidden=args.hidden,
+                       out_dim=train_solus[0].init_env.ls_num, ma_num=train_solus[0].init_env.machine_num),
+        target_net=QLNet(device=args.device, in_dim_max=args.max_num, hidden=args.hidden,
+                         out_dim=train_solus[0].init_env.ls_num, ma_num=train_solus[0].init_env.machine_num),
         dim_action=train_solus[0].init_env.ls_num,
         device=args.device,
         gamma=args.gamma,
@@ -91,7 +102,7 @@ if __name__ == '__main__':
 
     # ======================== Data ==========================
     data_buffer = LABuffer(buffer_size=args.buffer_size)
-    collector = LACollector(inst_type='Z2N', train_solus=train_solus, test_solus=test_solus,
+    collector = LACollector(inst_type=args.inst_type, train_solus=train_solus, test_solus=test_solus,
                             data_buffer=data_buffer, batch_size=args.batch_size,
                             mission_num=train_solus[0].init_env.J_num_all, agent=agent,
                             rl_logger=rl_logger, save_path=args.save_path, max_num=args.max_num)
@@ -105,7 +116,7 @@ if __name__ == '__main__':
 
     # ======================= train =======================
     for i in range(1, args.epoch_num):
-        collector.collect_rl()
+        collector.collect_rl_l()
     e_t = time.time()
     print("training time" + str(e_t - s_t))
 
