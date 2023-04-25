@@ -15,7 +15,7 @@ plt.figure(figsize=(8, 6))
 plt.rcParams['font.sans-serif'] = ['Times New Roman']
 plt.grid(linestyle='--')
 plt.tick_params(labelsize=12)
-datafile = u"/Users/jacq/Desktop/PortScheduling/实验结果.xlsx"
+datafile = u"/Users/jacq/Desktop/PortScheduling/实验结果(已自动还原).xlsx"
 color = dict(boxes='DarkGreen', whiskers='DarkOrange', medians='DarkBlue', caps='Gray')
 font_label = {'family': 'Times New Roman',
               'weight': 'medium',
@@ -23,7 +23,7 @@ font_label = {'family': 'Times New Roman',
               'size': 13
               }
 # 任务10
-mission_num = 100
+mission_num = 1000
 data = pd.read_excel(datafile, sheet_name='Z2_' + str(mission_num) + 'p')
 plt.ylabel('Makespan', fontdict=font_label)
 # .plot.box(grid=True, flierprops=fliers)
