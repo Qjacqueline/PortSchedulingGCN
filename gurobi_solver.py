@@ -255,13 +255,22 @@ class CongestionPortModel:
         # ============== 构造目标 ================
         q_1 = self.MLP.addVar(lb=0, ub=GRB.INFINITY, vtype=GRB.CONTINUOUS, name='q_1')  # 线性化模型变量
         q_2 = self.MLP.addVar(lb=0, ub=GRB.INFINITY, vtype=GRB.CONTINUOUS, name='q_2')  # 线性化模型变量
+        q_3 = self.MLP.addVar(lb=0, ub=GRB.INFINITY, vtype=GRB.CONTINUOUS, name='q_3')  # 除去LS拥堵
+        q_4 = self.MLP.addVar(lb=0, ub=GRB.INFINITY, vtype=GRB.CONTINUOUS, name='q_4')  # 除去IS拥堵
+        q_5 = self.MLP.addVar(lb=0, ub=GRB.INFINITY, vtype=GRB.CONTINUOUS, name='q_5')  # 除去YC拥堵
         self.MLP.addConstrs((q_1 >= self.C[3][j] for j in self.J), "obj1")
         self.MLP.addConstr((q_2 == sum(self.C[s + 1][j] - self.o[s + 1][j]
                                        - self.C[s][j] - self.u[s][j] for j in tmp_J for s in range(0, 3))), "obj2")
-        # self.MLP.addConstr(q_1 <= self.gamma, "obj1")
+        self.MLP.addConstr((q_3 == sum(self.C[s + 1][j] - self.o[s + 1][j]
+                                       - self.C[s][j] - self.u[s][j] for j in tmp_J for s in [1, 2])), "obj3")
+        self.MLP.addConstr((q_4 == sum(self.C[s + 1][j] - self.o[s + 1][j]
+                                       - self.C[s][j] - self.u[s][j] for j in tmp_J for s in [0, 2])), "obj4")
+        self.MLP.addConstr((q_5 == sum(self.C[s + 1][j] - self.o[s + 1][j]
+                                       - self.C[s][j] - self.u[s][j] for j in tmp_J for s in [0, 1])), "obj5")
+        self.MLP.addConstr(q_1 <= self.gamma, "obj1")
         # self.MLP.addConstr(q_1 >= self.gamma2, "obj1")
         # self.MLP.addConstr(q_2 <= self.theta, "obj2")
-        self.MLP.setObjective(q_1,
+        self.MLP.setObjective(q_5,
                               GRB.MINIMIZE)  # + 0.01 * q_2 # FIXME: match RL + 0.01 * q_2 + 0.01 * sum(self.C[s][j] for s in self.S for j in self.J)
         self.MLP.update()
 
@@ -648,7 +657,7 @@ def solve_model(MLP, inst_idx, solved_env: IterSolution = None, tag='', X_flag=T
     # MLP.Params.timelimit = 7200
     T1 = time.time()
     MLP.optimize()
-    print("time: " + str(time.time() - T1))
+    # print("time: " + str(time.time() - T1))
     if MLP.status == GRB.Status.INFEASIBLE:
         print('Optimization was stopped with status %d' % MLP.status)
         # do IIS, find infeasible constraints

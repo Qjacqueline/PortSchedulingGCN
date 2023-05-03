@@ -277,7 +277,7 @@ def BB_priority_wide(label, RLP, solu, g_ub, g_lb):
                 tmp_node.model.addConstr(tmp_node.model.getVarByName(var_idx) == 1, name='branch_' + str(var_idx))
                 tmp_node.model.update()
                 tmp_node.model.optimize()
-                if tmp_node.model.Status is 2:
+                if tmp_node.model.Status == 2:
                     tmp_node.local_LB = tmp_node.model.ObjVal \
                         if is_integer or (tmp_node.model.ObjVal > tmp_node.local_LB) else tmp_node.local_LB
                     tmp_node.local_UB = OT(tmp_node.solu, tmp_node.idx)
@@ -325,7 +325,7 @@ def check_integer(node: Node):
     for var in node.model.getVars():
         node.x_sol[var.varName] = var.x
         node.x_int_sol[var.varName] = int(var.x)  # round the solution to get an integer solution
-        if var.varName[0] is 'v' and abs(int(var.x) - var.x) >= eps:  # 判断解是否是整数,不是整数就分支
+        if var.varName[0] == 'v' and abs(int(var.x) - var.x) >= eps:  # 判断解是否是整数,不是整数就分支
             is_integer = False
             break
     node.is_integer = is_integer
@@ -438,18 +438,18 @@ def OP1(in_solu):
 
 if __name__ == '__main__':
 
-    m_num_ls = [12, 30, 10, 12, 27, 10, 15, 21, 10, 11, 21,
+    m_num_ls = [30, 10, 12, 27, 10, 15, 21, 10, 11, 21,
                 10, 11, 10, 14, 15, 10, 11, 12,
                 10, 17, 21, 10, 14, 18, 10, 16, 23]
-    inst_type_ls = ['A2_t', 'A2_t', 'A2_t', 'A2_t', 'A2_t', 'B2_t', 'B2_t', 'B2_t', 'C2_t', 'C2_t', 'C2_t',
+    inst_type_ls = ['A2_t', 'A2_t', 'A2_t', 'A2_t', 'B2_t', 'B2_t', 'B2_t', 'C2_t', 'C2_t', 'C2_t',
                     'D2_t', 'D2_t', 'E2_t', 'E2_t', 'E2_t', 'F2_t', 'F2_t', 'F2_t',
                     'G2_t', 'G2_t', 'G2_t', 'H2_t', 'H2_t', 'H2_t', 'Z2_t', 'Z2_t', 'Z2_t']
-    g_ub = [1223.43166168913, 3000, 1183.97772688239, 1223.43166168913, 1048.76179632512, 1324.85107007870,
+    g_ub = [3000, 1183.97772688239, 1223.43166168913, 1048.76179632512, 1324.85107007870,
             995.63552885192, 1032.38366645490, 907.13246727407, 928.89248051475,
             808.97556365474, 932.29264235740, 834.01168677771, 871.93889842301,
             863.85221949656, 1103.45317571000, 823.93362806332, 923.38973251718,
             840.04158281189, 876.27149628864]
-    g_lb = [1139.69147004542, 2223.444552527978, 1105.641815762578, 1168.9612626475478, 952.294837626547,
+    g_lb = [2223.444552527978, 1105.641815762578, 1168.9612626475478, 952.294837626547,
             1245.0040282370026,
             897.0901728221861,
             968.3427914422704, 884.702347423022, 927.1774936014718, 778.5358999880411, 791.9232719834832,
@@ -457,7 +457,7 @@ if __name__ == '__main__':
             785.0783940902456, 732.3827487287996, 756.4921667994806]
     makespan_forall = []
     time_forall = []
-    for i in range(1):  # len(m_num_ls)
+    for i in range(3,4):  # len(m_num_ls)
         solu = read_input('train', str(m_num_ls[i]), inst_type_ls[i], m_num_ls[i])
         device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
         agent = DDQN(

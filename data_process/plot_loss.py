@@ -30,11 +30,14 @@ def smooth(read_path, save_path, file_name, x='timestep', y='reward', weight=0.7
     save.to_csv(save_path + 'smooth_' + file_name)
 
 
-def draw_compare(vals, val_names, weight):
+def draw_loss(vals, weight):
     plt.figure()
     plt.style.use('classic')
     plt.rcParams['font.sans-serif'] = ['Times New Roman']
-    x = [[i.step for i in val] for val in vals]
+    rc = {'font.sans-serif': ['Times New Roman']}
+    plt.xlim((0, 10000))
+    plt.rcParams.update({'font.size': 16})
+    x = [[i.step * 20 for i in vals[0]], [i.step * 2 for i in vals[1]]]
     y = [[j.value / 50.0 for j in val] for val in vals]
     save = []
     tl = 293
@@ -45,14 +48,65 @@ def draw_compare(vals, val_names, weight):
             smoothed_val = last * weight + (1 - weight) * point
             smoothed.append(smoothed_val)
             last = smoothed_val
-        save.append(DataFrame({'timestep': x[0][0:tl], 'loss': smoothed}))
+        save.append(DataFrame({'Training episodes': x[0][0:tl], 'Loss': smoothed}))
     save1, save2 = save[0], save[1]
-    original1, original2 = DataFrame({'timestep': x[0][0:tl], 'loss': y[0][0:tl]}), \
-                           DataFrame({'timestep': x[0][0:tl], 'loss': y[1][0:tl]})
+    original1, original2 = DataFrame({'Training episodes': x[0][0:tl], 'Loss': y[0][0:tl]}), \
+                           DataFrame({'Training episodes': x[0][0:tl], 'Loss': y[1][0:tl]})
     df1, df2 = pd.concat([save1, original1], ignore_index=True), pd.concat([save2, original2], ignore_index=True)
 
-    sns.lineplot(data=df1, x="timestep", y="loss", label='Vector state')
-    sns.lineplot(data=df2, x="timestep", y="loss", label='Graph state')
+    fig = sns.lineplot(data=df1, x="Training episodes", y="Loss", label='Vector state')
+    sns.lineplot(data=df2, x="Training episodes", y="Loss", label='Graph state')
+    fig.legend(loc='upper right', fontsize=12)
+    return df1, df2
+
+
+def draw_reward(vals, weight):
+    plt.figure()
+    plt.style.use('classic')
+    plt.rcParams['font.sans-serif'] = ['Times New Roman']
+    # plt.legend(loc='lower right')
+    rc = {'font.sans-serif': ['Times New Roman']}
+    plt.xlim((0, 10000))
+    plt.rcParams.update({'font.size': 16})
+    x, y = [[i.step * 200 for i in val] for val in vals], []
+    y.append([j.value / 44 for j in vals[0]])
+    y.append([j.value / 40 for j in vals[1]])
+    save = []
+    tl = 293
+    for yy in y:
+        last = yy[0]
+        smoothed = []
+        for point in yy[0:tl]:
+            smoothed_val = last * weight + (1 - weight) * point
+            smoothed.append(smoothed_val)
+            last = smoothed_val
+        save.append(DataFrame({'Training episodes': x[0][0:tl], 'Reward': smoothed}))
+    save1, save2 = save[0], save[1]
+    original1, original2 = DataFrame({'Training episodes': x[0][0:tl], 'Reward': y[0][0:tl]}), \
+                           DataFrame({'Training episodes': x[0][0:tl], 'Reward': y[1][0:tl]})
+    df1, df2 = pd.concat([save1, original1], ignore_index=True), pd.concat([save2, original2], ignore_index=True)
+
+    sns.set(font_scale=2, rc=rc)
+    sns.set_style("whitegrid")
+    fig = sns.lineplot(data=df1, x="Training episodes", y="Reward", label='Graph state')
+    sns.lineplot(data=df2, x="Training episodes", y="Reward", label='Vector state')
+    fig.legend(loc='lower right', fontsize=12)
+    return df1, df2
+
+
+def draw_from_data():
+    l_1 = pd.read_csv("D:\\wangqi\\PortSchedulingGCN\\output_result\\loss\\loss1_p.csv")
+    l_2 = pd.read_csv("D:\\wangqi\\PortSchedulingGCN\\output_result\\loss\\loss2_p.csv")
+    r_1 = pd.read_csv("D:\\wangqi\\PortSchedulingGCN\\output_result\\loss\\reward1_p.csv")
+    r_2 = pd.read_csv("D:\\wangqi\\PortSchedulingGCN\\output_result\\loss\\reward2_p.csv")
+    plt.figure()
+    plt.style.use('classic')
+    plt.rcParams['font.sans-serif'] = ['Times New Roman']
+    rc = {'font.sans-serif': ['Times New Roman']}
+    plt.xlim((0, 10000))
+    fig = sns.lineplot(data=l_1, x="Training episodes", y="Loss", label='Vector state')
+    sns.lineplot(data=l_2, x="Training episodes", y="Loss", label='Graph state')
+    fig.legend(loc='upper right', fontsize=12)
 
 
 def draw_plt(vals, val_names):
@@ -87,6 +141,7 @@ def draw_plt(vals, val_names):
 
 
 if __name__ == "__main__":
+    # 作多图
     # tensorboard_path_A = 'D:\wangqi\PortSchedulingGCN\runss\A2_02_06_14_14\events.out.tfevents.1675664084.DESKTOP-LUMKFTK'#D:\\wangqi\\PortSchedulingGCN\\runss\\A2\\01_17_19_33\\events.out.tfevents.1673955197.DESKTOP-LUMKFTK'
     # tensorboard_path_B = 'D:\wangqi\PortSchedulingGCN\runss\B2_02_07_07_27\events.out.tfevents.1675726073.DESKTOP-LUMKFTK'#SD:\\wangqi\\PortSchedulingGCN\\runss\\B2\\01_17_11_29\\events.out.tfevents.1673926172.DESKTOP-LUMKFTK'
     # tensorboard_path_C = 'D:\\wangqi\\PortSchedulingGCN\\runss\\C2\\01_16_13_15\\events.out.tfevents.1673846126.DESKTOP-LUMKFTK'
@@ -107,10 +162,18 @@ if __name__ == "__main__":
     # # profiles = ['Profile ' + 'Z']
     # draw_plt(vars, profiles)
 
-    path_A = 'D:\\wangqi\\PortSchedulingGCN\\runss\\A2_02_06_14_14\\events.out.tfevents.1675664084.DESKTOP-LUMKFTK'
-    path_B = 'D:\\wangqi\\PortSchedulingGCN\\runss\\Z2_1000N_04_17_20_22\\events.out.tfevents.1681734133.DESKTOP-LUMKFTK'
+    # 读取数据并画图
+    path_A = 'D:\\wangqi\\PortSchedulingGCN\\runss\\A2N_04_28_15_32\\events.out.tfevents.1682667137.DESKTOP-LUMKFTK'
+    path_B = 'D:\\wangqi\\PortSchedulingGCN\\runss\\A2N_04_28_15_31\\events.out.tfevents.1682667117.DESKTOP-LUMKFTK'
+    # path_A = 'D:\\wangqi\\PortSchedulingGCN\\runss\\A2_02_06_14_14\\events.out.tfevents.1675664084.DESKTOP-LUMKFTK'
+    # path_B = 'D:\\wangqi\\PortSchedulingGCN\\runss\\A2N_04_20_10_00\\events.out.tfevents.1681956049.DESKTOP-LUMKFTK'
+    # path_A = 'D:\\wangqi\\PortSchedulingGCN\\runss\\Z2N_04_26_17_28\\events.out.tfevents.1682501322.DESKTOP-LUMKFTK'
+    vars_loss = [read_tensorboard_data(path_A, 'l_train/loss'),
+                 read_tensorboard_data(path_B, 'l_train/loss')]
+    x, y = draw_loss(vars_loss, 0.8)
+    vars_reward = [read_tensorboard_data(path_A, 'l_train_r/reward51'),
+                   read_tensorboard_data(path_B, 'l_train_r/reward51')]
+    xx, yy = draw_reward(vars_reward, 0.8)
 
-    vars = []
-    vars.append(read_tensorboard_data(path_A, 'l_train_r/reward51'))
-    vars.append(read_tensorboard_data(path_B, 'l_train_r/reward51'))
-    draw_compare(vars, ['Vector state', 'Graph state'], 0.9)
+    # 已有数据画图
+    draw_from_data()

@@ -230,11 +230,13 @@ class LACollector:
             total_loss += loss.data
             total_q_eval += q_eval.data
             total_q_eval_value += q_eval_value.data
-        self.rl_logger.add_scalar(tag=f'l_train/loss', scalar_value=total_loss, global_step=self.train_time)
-        self.rl_logger.add_scalar(tag=f'l_train/q', scalar_value=total_q_eval, global_step=self.train_time)
-        self.rl_logger.add_scalar(tag=f'l_train/q_all', scalar_value=total_q_eval_value, global_step=self.train_time)
         # 每20次eval一次
-        if self.train_time % 20 == 0:
+        if self.train_time % 5 == 0:
+            self.rl_logger.add_scalar(tag=f'l_train/loss', scalar_value=total_loss, global_step=self.train_time)
+            self.rl_logger.add_scalar(tag=f'l_train/q', scalar_value=total_q_eval, global_step=self.train_time)
+            self.rl_logger.add_scalar(tag=f'l_train/q_all', scalar_value=total_q_eval_value,
+                                      global_step=self.train_time)
+
             field_name = ['Epoch', 'loss', 'loss/q']
             value = [self.train_time, total_loss, torch.sqrt(total_loss) * train_num / total_q_eval]
             makespan_forall, reward_forall, _ = self.eval()
@@ -325,11 +327,13 @@ class LACollector:
             total_loss += loss.data
             total_q_eval += q_eval.data
             total_q_eval_value += q_eval_value.data
-        self.rl_logger.add_scalar(tag=f'l_train/loss', scalar_value=total_loss, global_step=self.train_time)
-        self.rl_logger.add_scalar(tag=f'l_train/q', scalar_value=total_q_eval, global_step=self.train_time)
-        self.rl_logger.add_scalar(tag=f'l_train/q_all', scalar_value=total_q_eval_value, global_step=self.train_time)
+
         # 每20次eval一次
-        if self.train_time % 20 == 0:
+        if self.train_time % 5 == 0:
+            self.rl_logger.add_scalar(tag=f'l_train/loss', scalar_value=total_loss, global_step=self.train_time)
+            self.rl_logger.add_scalar(tag=f'l_train/q', scalar_value=total_q_eval, global_step=self.train_time)
+            self.rl_logger.add_scalar(tag=f'l_train/q_all', scalar_value=total_q_eval_value,
+                                      global_step=self.train_time)
             field_name = ['Epoch', 'loss', 'loss/q']
             value = [self.train_time, total_loss, torch.sqrt(total_loss) * train_num / total_q_eval]
             makespan_forall, reward_forall, _ = self.eval_l()
